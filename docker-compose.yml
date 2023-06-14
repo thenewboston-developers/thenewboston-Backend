@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: postgres:14.2-alpine
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: thenewboston
+      POSTGRES_USER: thenewboston
+      POSTGRES_PASSWORD: thenewboston
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+    environment:
+      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
+      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: 'local/settings.prod.py'
+
+volumes:
+  postgresql-data:
+    driver: local
