@@ -1,7 +1,9 @@
+from typing import List
+
 DEBUG = False
 SECRET_KEY = NotImplemented
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: List[str] = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

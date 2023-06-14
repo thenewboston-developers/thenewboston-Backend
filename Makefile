@@ -2,6 +2,14 @@
 install:
 	poetry install
 
+.PHONY: install-pre-commit
+install-pre-commit:
+	poetry run pre-commit uninstall; poetry run pre-commit install
+
+.PHONY: lint
+lint:
+	poetry run pre-commit run --all-files
+
 .PHONY: migrate
 migrate:
 	poetry run python -m thenewboston.manage migrate
@@ -23,4 +31,4 @@ superuser:
 	poetry run python -m thenewboston.manage createsuperuser
 
 .PHONY: update
-update: install migrate ;
+update: install migrate install-pre-commit ;
