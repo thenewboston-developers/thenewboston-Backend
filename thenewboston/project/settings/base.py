@@ -4,6 +4,7 @@ DEBUG = False
 SECRET_KEY = NotImplemented
 
 ALLOWED_HOSTS: List[str] = ['*']
+APPEND_SLASH = False
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -12,6 +13,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third party
+    'rest_framework',
+    'django_filters',
+
+    # Apps
+    'thenewboston.users.apps.UsersConfig',
 ]
 
 MIDDLEWARE = [
