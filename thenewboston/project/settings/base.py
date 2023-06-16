@@ -16,9 +16,11 @@ INSTALLED_APPS = [
 
     # Third party
     'rest_framework',
+    'rest_framework_simplejwt',
     'django_filters',
 
     # Apps
+    'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.users.apps.UsersConfig',
 ]
 
