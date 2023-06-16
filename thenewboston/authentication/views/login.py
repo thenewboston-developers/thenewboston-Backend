@@ -1,11 +1,11 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..serializers.login import LoginSerializer
+from ..serializers.token import TokenSerializer
 
 
 class LoginView(APIView):
@@ -15,13 +15,9 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        refresh = RefreshToken.for_user(user)
 
         response = {
-            'authentication': {
-                'access_token': str(refresh.access_token),
-                'refresh_token': str(refresh),
-            },
+            'authentication': TokenSerializer(user).data,
             'user': UserReadSerializer(user).data,
         }
 
