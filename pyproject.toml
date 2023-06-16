@@ -17,6 +17,9 @@ django-split-settings = "^1.2.0"
 pyyaml = "^6.0"
 djangorestframework-simplejwt = "^5.2.2"
 django-cors-headers = "^4.1.0"
+pillow = "^9.5.0"
+django-storages = "^1.13.2"
+boto3 = "^1.26.155"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
