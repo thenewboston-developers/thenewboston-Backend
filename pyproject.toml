@@ -16,6 +16,7 @@ django-filter = "^23.2"
 django-split-settings = "^1.2.0"
 pyyaml = "^6.0"
 djangorestframework-simplejwt = "^5.2.2"
+django-cors-headers = "^4.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
