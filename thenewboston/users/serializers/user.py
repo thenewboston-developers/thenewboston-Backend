@@ -1,6 +1,8 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+
+User = get_user_model()
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -19,7 +21,6 @@ class UserWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
+        username = validated_data.get('username')
+        user = User.objects.create_user(username=username, password=password)
         return user
