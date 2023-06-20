@@ -1,4 +1,5 @@
 from django.contrib.auth.models import BaseUserManager
+from django.db import transaction
 
 from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.wallets.models.deposit_account import DepositAccount
@@ -12,6 +13,7 @@ class UserManager(BaseUserManager):
 
         return self.create_user(username, email, password, **extra_fields)
 
+    @transaction.atomic
     def create_user(self, username, email=None, password=None, **extra_fields):
         if not username:
             raise ValueError('The Username field must be set')
