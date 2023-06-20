@@ -20,6 +20,8 @@ django-cors-headers = "^4.1.0"
 pillow = "^9.5.0"
 django-storages = "^1.13.2"
 boto3 = "^1.26.155"
+pynacl = "^1.5.0"
+pydantic = "^1.10.9"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
