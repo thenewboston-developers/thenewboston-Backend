@@ -12,7 +12,7 @@ class WalletViewSet(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Wallet.objects.all()
+    queryset = Wallet.objects.none()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -21,6 +21,10 @@ class WalletViewSet(
         read_serializer = WalletReadSerializer(wallet, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        user = self.request.user
+        return Wallet.objects.filter(owner=user)
 
     def get_serializer_class(self):
         if self.action == 'create':

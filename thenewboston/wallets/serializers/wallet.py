@@ -1,10 +1,13 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from thenewboston.cores.serializers.core import CoreReadSerializer
+
 from ..models import Wallet
 
 
 class WalletReadSerializer(serializers.ModelSerializer):
+    core = CoreReadSerializer(read_only=True)
 
     class Meta:
         model = Wallet
