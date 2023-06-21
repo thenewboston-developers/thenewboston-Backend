@@ -2,10 +2,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from thenewboston.users.serializers.user import UserReadSerializer
+from thenewboston.general.authentication import get_user_auth_data
 
 from ..serializers.login import LoginSerializer
-from ..serializers.token import TokenSerializer
 
 
 class LoginView(APIView):
@@ -15,10 +14,4 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-
-        response = {
-            'authentication': TokenSerializer(user).data,
-            'user': UserReadSerializer(user).data,
-        }
-
-        return Response(response, status=status.HTTP_200_OK)
+        return Response(get_user_auth_data(user), status=status.HTTP_200_OK)
