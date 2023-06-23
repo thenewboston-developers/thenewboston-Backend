@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..models.core import Core
+from ..models import Core
 
 
 class CoreReadSerializer(serializers.ModelSerializer):
