@@ -38,7 +38,8 @@ class OrderMatchingEngine:
 
         for matching_order in matching_orders:
             fill_quantity = min(
-                order.quantity - order.filled_amount, matching_order.quantity - matching_order.filled_amount
+                order.quantity - order.filled_amount,
+                matching_order.quantity - matching_order.filled_amount,
             )
 
             order.filled_amount += fill_quantity
