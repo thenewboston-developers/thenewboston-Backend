@@ -29,4 +29,9 @@ class Order(CreatedModified):
     fill_status = models.CharField(choices=FillStatus.choices, default=FillStatus.OPEN, max_length=16)
 
     def __str__(self):
-        return str(self.pk)
+        return (
+            f'{self.order_type} | '
+            f'{self.quantity} {self.primary_currency.ticker} | '
+            f'{self.price} {self.secondary_currency.ticker} | '
+            f'{self.fill_status}'
+        )

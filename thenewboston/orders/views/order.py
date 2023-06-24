@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Order
+from ..order_matching.order_matching_engine import OrderMatchingEngine
 from ..serializers.order import OrderReadSerializer, OrderWriteSerializer
 
 
@@ -17,6 +18,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         read_serializer = OrderReadSerializer(order, context={'request': request})
+
+        order_matching_engine = OrderMatchingEngine()
+        order_matching_engine.process_new_order(order)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
