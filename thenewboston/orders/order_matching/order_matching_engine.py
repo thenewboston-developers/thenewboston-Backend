@@ -49,7 +49,7 @@ class OrderMatchingEngine:
             OrderMatchingEngine.update_order_status(order)
             OrderMatchingEngine.update_order_status(matching_order)
 
-            trade_price = matching_order.price
+            trade_price = min(order.price, matching_order.price)
             total_trade_price = fill_quantity * trade_price
 
             # Create a trade object
@@ -64,13 +64,13 @@ class OrderMatchingEngine:
             OrderMatchingEngine.update_wallet(
                 owner=order.owner,
                 core=primary_currency if is_buy_order else secondary_currency,
-                amount=fill_quantity,
+                amount=fill_quantity if is_buy_order else total_trade_price,
             )
 
             OrderMatchingEngine.update_wallet(
                 owner=matching_order.owner,
                 core=secondary_currency if is_buy_order else primary_currency,
-                amount=total_trade_price,
+                amount=total_trade_price if is_buy_order else fill_quantity,
             )
 
             order.save()
