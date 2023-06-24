@@ -61,13 +61,15 @@ class OrderMatchingEngine:
 
             # Update the wallets of the order and matching order's owners
             OrderMatchingEngine.update_wallet(
-                owner=order.owner, core=primary_currency if is_buy_order else secondary_currency, amount=fill_quantity
+                owner=order.owner,
+                core=primary_currency if is_buy_order else secondary_currency,
+                amount=fill_quantity,
             )
 
             OrderMatchingEngine.update_wallet(
                 owner=matching_order.owner,
                 core=secondary_currency if is_buy_order else primary_currency,
-                amount=total_trade_price
+                amount=total_trade_price,
             )
 
             order.save()
