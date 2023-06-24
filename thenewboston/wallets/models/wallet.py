@@ -10,4 +10,9 @@ class Wallet(models.Model):
         constraints = [models.UniqueConstraint(fields=['owner', 'core'], name='unique_owner_core')]
 
     def __str__(self):
-        return str(self.pk)
+        return (
+            f'Wallet ID: {self.pk} | '
+            f'Owner: {self.owner.username} | '
+            f'Core: {self.core.ticker} | '
+            f'Balance: {self.balance}'
+        )
