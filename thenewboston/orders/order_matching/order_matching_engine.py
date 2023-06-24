@@ -1,3 +1,6 @@
+from thenewboston.wallets.models import Wallet
+
+from ..models import Trade
 from ..models.order import FillStatus, Order, OrderType
 
 
@@ -35,12 +38,36 @@ class OrderMatchingEngine:
             else:
                 sell_order.fill_status = FillStatus.PARTIALLY_FILLED
 
+            Trade.objects.create(
+                buy_order=buy_order,
+                sell_order=sell_order,
+                fill_quantity=fill_quantity,
+                price=sell_order.price,
+            )
+
             total_trade_price = fill_quantity * sell_order.price
 
-            print(f'Total trade price: {total_trade_price}')
-            # TODO: create trade object
-            print(f'Buyer receives: {fill_quantity} {primary_currency.ticker}')
-            print(f'Seller receives: {total_trade_price} {secondary_currency.ticker}')
+            # Update buyer's wallet
+            buyer_wallet, created = Wallet.objects.get_or_create(
+                owner=buy_order.owner,
+                core=primary_currency,
+                defaults={'balance': fill_quantity},
+            )
+
+            if not created:
+                buyer_wallet.balance += fill_quantity
+                buyer_wallet.save()
+
+            # Update seller's wallet
+            seller_wallet, created = Wallet.objects.get_or_create(
+                owner=sell_order.owner,
+                core=secondary_currency,
+                defaults={'balance': total_trade_price},
+            )
+
+            if not created:
+                seller_wallet.balance += total_trade_price
+                seller_wallet.save()
 
             buy_order.save()
             sell_order.save()
