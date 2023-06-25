@@ -50,14 +50,16 @@ class OrderMatchingEngine:
             OrderMatchingEngine.update_order_status(matching_order)
 
             trade_price = min(order.price, matching_order.price)
-            total_trade_price = fill_quantity * trade_price
+            total_trade_price = trade_price * fill_quantity
+            overpayment_amount = abs(order.price - matching_order.price) * fill_quantity
 
             # Create a trade object
             Trade.objects.create(
                 buy_order=order if is_buy_order else matching_order,
                 sell_order=matching_order if is_buy_order else order,
                 fill_quantity=fill_quantity,
-                price=trade_price,
+                trade_price=trade_price,
+                overpayment_amount=overpayment_amount,
             )
 
             # Update the wallets of the order and matching order's owners
@@ -72,6 +74,13 @@ class OrderMatchingEngine:
                 core=secondary_currency if is_buy_order else primary_currency,
                 amount=total_trade_price if is_buy_order else fill_quantity,
             )
+
+            if overpayment_amount:
+                OrderMatchingEngine.update_wallet(
+                    owner=order.owner if is_buy_order else matching_order.owner,
+                    core=secondary_currency,
+                    amount=overpayment_amount,
+                )
 
             order.save()
             matching_order.save()
