@@ -3,9 +3,11 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.enums import MessageType
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.wallets.models import Wallet
 
+from ..consumers import OrderJsonWebsocketConsumer
 from ..models import Order
 from ..models.order import OrderType
 from ..order_matching.order_matching_engine import OrderMatchingEngine
@@ -27,6 +29,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         order_matching_engine = OrderMatchingEngine()
         order_matching_engine.process_new_order(order)
 
+        OrderJsonWebsocketConsumer.send_order_data(
+            message_type=MessageType.CREATE_ORDER, order_data=read_serializer.data
+        )
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     @staticmethod
@@ -56,4 +61,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
         read_serializer = OrderReadSerializer(order, context={'request': request})
 
+        OrderJsonWebsocketConsumer.send_order_data(
+            message_type=MessageType.UPDATE_ORDER, order_data=read_serializer.data
+        )
         return Response(read_serializer.data)
