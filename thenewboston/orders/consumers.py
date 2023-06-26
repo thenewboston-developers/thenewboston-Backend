@@ -9,14 +9,14 @@ class OrderJsonWebsocketConsumer(JsonWebsocketConsumer):
         self.accept()
         async_to_sync(get_channel_layer().group_add)('orders', self.channel_name)
 
-    def disconnect(self, close_code):
-        async_to_sync(get_channel_layer().group_discard)('orders', self.channel_name)
-
     def create_order(self, event):
         self.send_json({
             'order': event['payload'],
             'type': event['type'],
         })
+
+    def disconnect(self, close_code):
+        async_to_sync(get_channel_layer().group_discard)('orders', self.channel_name)
 
     @classmethod
     def send_order_data(cls, *, message_type, order_data):
