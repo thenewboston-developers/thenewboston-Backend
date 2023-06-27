@@ -1,5 +1,7 @@
 from django.db import transaction
 
+from thenewboston.general.enums import MessageType
+from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 
 from ..models import Trade
@@ -106,3 +108,4 @@ class OrderMatchingEngine:
         if not created:
             wallet.balance += amount
             wallet.save()
+            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
