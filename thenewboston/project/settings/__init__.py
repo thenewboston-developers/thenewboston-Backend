@@ -17,6 +17,7 @@ include(
     'base.py',
     'logging.py',
     'rest_framework.py',
+    'channels.py',
     'aws.py',
     'custom.py',
     optional(LOCAL_SETTINGS_PATH),

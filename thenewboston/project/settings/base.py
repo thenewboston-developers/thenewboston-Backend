@@ -14,6 +14,7 @@ INTERNAL_IPS = [
 APPEND_SLASH = False
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -65,6 +66,7 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = 'thenewboston.project.asgi.application'
 WSGI_APPLICATION = 'thenewboston.project.wsgi.application'
 
 DATABASES = {

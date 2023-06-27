@@ -1,7 +1,9 @@
 from rest_framework import serializers
 
+from thenewboston.wallets.models import Wallet
+
 from ..models import AssetPair, Order
-from ..models.order import FillStatus
+from ..models.order import FillStatus, OrderType
 
 
 class OrderReadSerializer(serializers.ModelSerializer):
@@ -41,9 +43,15 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if self.instance is None:
+            order_type = data.get('order_type')
             primary_currency = data.get('primary_currency')
             secondary_currency = data.get('secondary_currency')
             fill_status = data.get('fill_status', FillStatus.OPEN)
+
+            if order_type == OrderType.BUY:
+                self.validate_buy_order(data)
+            elif order_type == OrderType.SELL:
+                self.validate_sell_order(data)
         else:
             primary_currency = self.instance.primary_currency
             secondary_currency = self.instance.secondary_currency
@@ -63,3 +71,31 @@ class OrderWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Can only cancel an order if it's OPEN or PARTIALLY_FILLED.")
 
         return data
+
+    def validate_buy_order(self, data):
+        request = self.context.get('request')
+        secondary_currency = data.get('secondary_currency')
+        wallet = Wallet.objects.filter(owner=request.user, core=secondary_currency).first()
+
+        if not wallet:
+            raise serializers.ValidationError('Wallet does not exist.')
+
+        quantity = data.get('quantity')
+        price = data.get('price')
+        total = quantity * price
+
+        if total > wallet.balance:
+            raise serializers.ValidationError(f'Total of {total} exceeds wallet balance of {wallet.balance}')
+
+    def validate_sell_order(self, data):
+        request = self.context.get('request')
+        primary_currency = data.get('primary_currency')
+        wallet = Wallet.objects.filter(owner=request.user, core=primary_currency).first()
+
+        if not wallet:
+            raise serializers.ValidationError('Wallet does not exist.')
+
+        quantity = data.get('quantity')
+
+        if quantity > wallet.balance:
+            raise serializers.ValidationError(f'Quantity of {quantity} exceeds wallet balance of {wallet.balance}')
