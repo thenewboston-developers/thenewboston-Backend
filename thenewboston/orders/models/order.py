@@ -10,7 +10,6 @@ class FillStatus(models.TextChoices):
     PARTIALLY_FILLED = 'PARTIALLY_FILLED', _('Partially Filled')
     FILLED = 'FILLED', _('Filled')
     CANCELLED = 'CANCELLED', _('Cancelled')
-    FAILED = 'FAILED', _('Failed')
 
 
 class OrderType(models.TextChoices):
