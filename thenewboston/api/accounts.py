@@ -52,16 +52,15 @@ def sort_and_encode(dictionary):
     return json.dumps(dictionary, separators=(',', ':'), sort_keys=True).encode('utf-8')
 
 
-def transfer_funds():
-    signing_key_str = '74bf41e65361e8dba6358708fffe2b00b8b23a4d4ee8ee4d4d8693801709fbb3'  # bucky
-    signing_key = SigningKey(signing_key_str.encode('utf-8'), encoder=HexEncoder)
+def transfer_funds(*, amount, domain, recipient_account_number_str, sender_signing_key_str):
+    signing_key = SigningKey(sender_signing_key_str.encode('utf-8'), encoder=HexEncoder)
     account_number = get_verify_key(signing_key=signing_key)
 
     signed_data = {
-        'amount': 10,
+        'amount': amount,
         'id': str(uuid.uuid4()),
         'payload': {},
-        'recipient': '7c18d4ca28a32ff21d75fd604e6dc2572cafd68b7c1cff2ef732f6bdc6a0a60f',  # temp system
+        'recipient': recipient_account_number_str,
         'sender': encode_verify_key(verify_key=account_number),
         'transaction_fee': 1,
     }
@@ -69,6 +68,6 @@ def transfer_funds():
     signature = generate_signature(message=sort_and_encode(signed_data), signing_key=signing_key)
     request_data = {**signed_data, 'signature': signature}
 
-    server_address = 'https://vataxia.net/api'
+    server_address = f'https://{domain}/api'
     url = f'{server_address}/blocks'
     post(url=url, body=request_data)
