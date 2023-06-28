@@ -14,11 +14,18 @@ def encode_verify_key(*, verify_key):
     return verify_key.encode(encoder=HexEncoder).decode('utf-8')
 
 
-def fetch_balance():
-    response = requests.get(
-        'https://vataxia.net/api/accounts/d42a7ec1d703ab3c82c944fa262c62609abb351f0a20b4266219026f35f1804d'
-    )
-    return response.json()
+def fetch_balance(*, account_number, domain):
+    response = requests.get(f'https://{domain}/api/accounts/{account_number}')
+
+    if response.status_code == 200:
+        data = response.json()
+        balance = data.get('balance', 0)
+    elif response.status_code == 404:
+        balance = 0
+    else:
+        raise Exception('Could not fetch balance.')
+
+    return balance
 
 
 def generate_signature(*, message, signing_key):
