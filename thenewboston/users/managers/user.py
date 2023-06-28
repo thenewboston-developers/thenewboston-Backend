@@ -1,9 +1,6 @@
 from django.contrib.auth.models import BaseUserManager
 from django.db import transaction
 
-from thenewboston.general.utils.cryptography import generate_key_pair
-from thenewboston.wallets.models.deposit_account import DepositAccount
-
 
 class UserManager(BaseUserManager):
 
@@ -22,12 +19,5 @@ class UserManager(BaseUserManager):
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
-
-        key_pair = generate_key_pair()
-        DepositAccount.objects.create(
-            account_number=key_pair.public,
-            signing_key=key_pair.private,
-            user=user,
-        )
 
         return user
