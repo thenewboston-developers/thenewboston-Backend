@@ -1,0 +1,67 @@
+import json
+import uuid
+
+import requests
+from nacl.encoding import HexEncoder
+from nacl.signing import SigningKey, VerifyKey
+
+
+def encode_verify_key(*, verify_key):
+    """Return the hexadecimal representation of the binary account number data"""
+    if not isinstance(verify_key, VerifyKey):
+        raise RuntimeError('verify_key must be of type nacl.signing.VerifyKey')
+
+    return verify_key.encode(encoder=HexEncoder).decode('utf-8')
+
+
+def fetch_balance():
+    response = requests.get(
+        'https://vataxia.net/api/accounts/d42a7ec1d703ab3c82c944fa262c62609abb351f0a20b4266219026f35f1804d'
+    )
+    return response.json()
+
+
+def generate_signature(*, message, signing_key):
+    """Sign message using signing key and return signature"""
+    return signing_key.sign(message).signature.hex()
+
+
+def get_verify_key(*, signing_key):
+    """Return the verify key from the signing key"""
+    if not isinstance(signing_key, SigningKey):
+        raise RuntimeError('signing_key must be of type nacl.signing.SigningKey')
+
+    return signing_key.verify_key
+
+
+def post(*, url, body):
+    """Send a POST request and return response as Python object"""
+    response = requests.post(url, json=body)
+    return response.json()
+
+
+def sort_and_encode(dictionary):
+    """Sort dictionary and return encoded data"""
+    return json.dumps(dictionary, separators=(',', ':'), sort_keys=True).encode('utf-8')
+
+
+def transfer_funds():
+    signing_key_str = '74bf41e65361e8dba6358708fffe2b00b8b23a4d4ee8ee4d4d8693801709fbb3'  # bucky
+    signing_key = SigningKey(signing_key_str.encode('utf-8'), encoder=HexEncoder)
+    account_number = get_verify_key(signing_key=signing_key)
+
+    signed_data = {
+        'amount': 10,
+        'id': str(uuid.uuid4()),
+        'payload': {},
+        'recipient': '7c18d4ca28a32ff21d75fd604e6dc2572cafd68b7c1cff2ef732f6bdc6a0a60f',  # temp system
+        'sender': encode_verify_key(verify_key=account_number),
+        'transaction_fee': 1,
+    }
+
+    signature = generate_signature(message=sort_and_encode(signed_data), signing_key=signing_key)
+    request_data = {**signed_data, 'signature': signature}
+
+    server_address = 'https://vataxia.net/api'
+    url = f'{server_address}/blocks'
+    post(url=url, body=request_data)
