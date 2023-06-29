@@ -5,9 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.api.accounts import fetch_balance, transfer_funds
-from thenewboston.blocks.serializers.block import BlockSerializer
 from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
+from thenewboston.transfers.models import Transfer
+from thenewboston.transfers.models.transfer import TransferType
+from thenewboston.transfers.serializers.block import BlockSerializer
 
 from ..models import Wallet
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
@@ -37,18 +39,22 @@ class WalletViewSet(
             return Response({'error': f'Minimum balance of {minimum_balance} required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        block_data = transfer_funds(
+        block = transfer_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=settings.ACCOUNT_NUMBER,
             sender_signing_key_str=wallet.deposit_signing_key,
         )
-
-        block_serializer = BlockSerializer(data=block_data)
+        block_serializer = BlockSerializer(data=block)
 
         if block_serializer.is_valid():
-            block = block_serializer.save()
-            wallet.balance += block.amount
+            transfer = Transfer.objects.create(
+                **block_serializer.validated_data,
+                user=wallet.owner,
+                core=wallet.core,
+                transfer_type=TransferType.DEPOSIT,
+            )
+            wallet.balance += transfer.amount
             wallet.save()
 
         try:
@@ -101,17 +107,21 @@ class WalletViewSet(
         account_number = serializer.validated_data['account_number']
         amount = serializer.validated_data['amount']
 
-        block_data = transfer_funds(
+        block = transfer_funds(
             amount=amount - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=account_number,
             sender_signing_key_str=settings.SIGNING_KEY,
         )
-
-        block_serializer = BlockSerializer(data=block_data)
+        block_serializer = BlockSerializer(data=block)
 
         if block_serializer.is_valid():
-            block_serializer.save()
+            Transfer.objects.create(
+                **block_serializer.validated_data,
+                user=wallet.owner,
+                core=wallet.core,
+                transfer_type=TransferType.WITHDRAW,
+            )
             wallet.balance -= amount
             wallet.save()
 
