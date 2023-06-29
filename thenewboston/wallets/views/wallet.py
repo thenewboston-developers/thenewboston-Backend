@@ -11,6 +11,7 @@ from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Wallet
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
+from ..serializers.withdraw import WithdrawSerializer
 
 
 class WalletViewSet(
@@ -90,3 +91,35 @@ class WalletViewSet(
             return WalletWriteSerializer
 
         return WalletReadSerializer
+
+    @action(detail=True, methods=['post'])
+    def withdraw(self, request, pk=None):
+        wallet = self.get_object()
+        serializer = WithdrawSerializer(data=request.data, context={'wallet': wallet})
+        serializer.is_valid(raise_exception=True)
+
+        account_number = serializer.validated_data['account_number']
+        amount = serializer.validated_data['amount']
+
+        block_data = transfer_funds(
+            amount=amount - TRANSACTION_FEE,
+            domain=wallet.core.domain,
+            recipient_account_number_str=account_number,
+            sender_signing_key_str=settings.SIGNING_KEY,
+        )
+
+        block_serializer = BlockSerializer(data=block_data)
+
+        if block_serializer.is_valid():
+            block_serializer.save()
+            wallet.balance -= amount
+            wallet.save()
+
+        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
+
+        response_data = {
+            'block': block_serializer.data,
+            'wallet': wallet_serializer.data,
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
