@@ -5,6 +5,8 @@ import requests
 from nacl.encoding import HexEncoder
 from nacl.signing import SigningKey, VerifyKey
 
+from thenewboston.general.constants import TRANSACTION_FEE
+
 
 def encode_verify_key(*, verify_key):
     """Return the hexadecimal representation of the binary account number data"""
@@ -62,7 +64,7 @@ def transfer_funds(*, amount, domain, recipient_account_number_str, sender_signi
         'payload': {},
         'recipient': recipient_account_number_str,
         'sender': encode_verify_key(verify_key=account_number),
-        'transaction_fee': 1,
+        'transaction_fee': TRANSACTION_FEE,
     }
 
     signature = generate_signature(message=sort_and_encode(signed_data), signing_key=signing_key)

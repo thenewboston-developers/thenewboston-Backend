@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from thenewboston.api.accounts import fetch_balance, transfer_funds
 from thenewboston.blocks.serializers.block import BlockSerializer
+from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Wallet
@@ -29,12 +30,14 @@ class WalletViewSet(
     @action(detail=True, methods=['post'])
     def deposit(self, request, pk=None):
         wallet = self.get_object()
+        minimum_balance = TRANSACTION_FEE + 1
 
-        if wallet.deposit_balance < 2:
-            return Response({'error': 'Minimum balance of 2 required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if wallet.deposit_balance < minimum_balance:
+            return Response({'error': f'Minimum balance of {minimum_balance} required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         block_data = transfer_funds(
-            amount=wallet.deposit_balance - 1,
+            amount=wallet.deposit_balance - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=settings.ACCOUNT_NUMBER,
             sender_signing_key_str=wallet.deposit_signing_key,
