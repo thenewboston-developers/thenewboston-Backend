@@ -1,6 +1,7 @@
 from django.db import transaction
 
 from thenewboston.general.enums import MessageType
+from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 
@@ -99,10 +100,16 @@ class OrderMatchingEngine:
 
     @staticmethod
     def update_wallet(owner, core, amount):
+        key_pair = generate_key_pair()
+
         wallet, created = Wallet.objects.get_or_create(
             owner=owner,
             core=core,
-            defaults={'balance': amount},
+            defaults={
+                'balance': amount,
+                'deposit_account_number': key_pair.public,
+                'deposit_signing_key': key_pair.private,
+            },
         )
 
         if not created:

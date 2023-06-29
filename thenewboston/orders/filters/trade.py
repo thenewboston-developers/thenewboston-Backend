@@ -7,4 +7,4 @@ class TradeFilter(django_filters.FilterSet):
 
     class Meta:
         model = Trade
-        fields = ['buy_order', 'sell_order']
+        fields = ('buy_order', 'sell_order')
