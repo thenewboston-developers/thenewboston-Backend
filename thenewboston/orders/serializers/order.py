@@ -50,7 +50,7 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
             if order_type == OrderType.BUY:
                 self.validate_buy_order(data)
-            elif order_type == OrderType.SELL:
+            else:
                 self.validate_sell_order(data)
         else:
             primary_currency = self.instance.primary_currency

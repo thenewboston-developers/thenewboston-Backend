@@ -10,7 +10,7 @@ from thenewboston.wallets.models import Wallet
 
 from ..consumers.order import OrderConsumer
 from ..models import Order
-from ..models.order import OrderType
+from ..models.order import FillStatus, OrderType
 from ..order_matching.order_matching_engine import OrderMatchingEngine
 from ..serializers.order import OrderReadSerializer, OrderWriteSerializer
 
@@ -45,9 +45,27 @@ class OrderViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
+        old_fill_status = instance.fill_status
         order = serializer.save()
         OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order=order)
         read_serializer = OrderReadSerializer(order)
+
+        if old_fill_status in [
+            FillStatus.OPEN, FillStatus.PARTIALLY_FILLED
+        ] and instance.fill_status == FillStatus.CANCELLED:
+            unfilled_quantity = instance.quantity - instance.filled_amount
+
+            if instance.order_type == OrderType.BUY:
+                refund_amount = unfilled_quantity * instance.price
+                refund_currency = instance.secondary_currency
+            else:
+                refund_amount = unfilled_quantity
+                refund_currency = instance.primary_currency
+
+            wallet = Wallet.objects.get(owner=instance.owner, core=refund_currency)
+            wallet.balance += refund_amount
+            wallet.save()
+            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
 
         return Response(read_serializer.data)
 
@@ -55,12 +73,10 @@ class OrderViewSet(viewsets.ModelViewSet):
     def update_wallet_balance(order):
         if order.order_type == OrderType.BUY:
             wallet = Wallet.objects.filter(owner=order.owner, core=order.secondary_currency).first()
-            total = order.quantity * order.price
-            wallet.balance -= total
-            wallet.save()
-            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
-        elif order.order_type == OrderType.SELL:
+            wallet.balance -= order.quantity * order.price
+        else:
             wallet = Wallet.objects.filter(owner=order.owner, core=order.primary_currency).first()
             wallet.balance -= order.quantity
-            wallet.save()
-            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
+
+        wallet.save()
+        WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
