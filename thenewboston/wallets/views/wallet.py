@@ -5,9 +5,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.api.accounts import fetch_balance, transfer_funds
-from thenewboston.blocks.serializers.block import BlockSerializer
 from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
+from thenewboston.transfers.models import Transfer
+from thenewboston.transfers.models.transfer import TransferType
+from thenewboston.transfers.serializers.block import BlockSerializer
+from thenewboston.transfers.serializers.transfer import TransferSerializer
 
 from ..models import Wallet
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
@@ -37,19 +40,25 @@ class WalletViewSet(
             return Response({'error': f'Minimum balance of {minimum_balance} required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        block_data = transfer_funds(
+        block = transfer_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=settings.ACCOUNT_NUMBER,
             sender_signing_key_str=wallet.deposit_signing_key,
         )
+        block_serializer = BlockSerializer(data=block)
 
-        block_serializer = BlockSerializer(data=block_data)
-
-        if block_serializer.is_valid():
-            block = block_serializer.save()
-            wallet.balance += block.amount
+        if block_serializer.is_valid(raise_exception=True):
+            transfer = Transfer.objects.create(
+                **block_serializer.validated_data,
+                user=wallet.owner,
+                core=wallet.core,
+                transfer_type=TransferType.DEPOSIT,
+            )
+            wallet.balance += transfer.amount
             wallet.save()
+        else:
+            return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
@@ -58,11 +67,12 @@ class WalletViewSet(
 
         wallet.deposit_balance = deposit_balance
         wallet.save()
-        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
 
         response_data = {
-            'block': block_serializer.data,
-            'wallet': wallet_serializer.data,
+            'transfer': TransferSerializer(transfer).data,
+            'wallet': WalletReadSerializer(wallet, context={
+                'request': request
+            }).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
@@ -101,25 +111,31 @@ class WalletViewSet(
         account_number = serializer.validated_data['account_number']
         amount = serializer.validated_data['amount']
 
-        block_data = transfer_funds(
+        block = transfer_funds(
             amount=amount - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=account_number,
             sender_signing_key_str=settings.SIGNING_KEY,
         )
+        block_serializer = BlockSerializer(data=block)
 
-        block_serializer = BlockSerializer(data=block_data)
-
-        if block_serializer.is_valid():
-            block_serializer.save()
+        if block_serializer.is_valid(raise_exception=True):
+            transfer = Transfer.objects.create(
+                **block_serializer.validated_data,
+                user=wallet.owner,
+                core=wallet.core,
+                transfer_type=TransferType.WITHDRAW,
+            )
             wallet.balance -= amount
             wallet.save()
-
-        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
+        else:
+            return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         response_data = {
-            'block': block_serializer.data,
-            'wallet': wallet_serializer.data,
+            'transfer': TransferSerializer(transfer).data,
+            'wallet': WalletReadSerializer(wallet, context={
+                'request': request
+            }).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
