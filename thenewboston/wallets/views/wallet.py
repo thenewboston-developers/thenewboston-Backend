@@ -17,21 +17,6 @@ class WalletViewSet(
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Wallet.objects.none()
 
-    @action(detail=True, methods=['get'])
-    def balance(self, request, pk=None):
-        wallet = self.get_object()
-
-        try:
-            balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        wallet.deposit_balance = balance
-        wallet.save()
-        read_serializer = WalletReadSerializer(wallet, context={'request': request})
-
-        return Response(read_serializer.data, status=status.HTTP_200_OK)
-
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -58,15 +43,39 @@ class WalletViewSet(
 
         if block_serializer.is_valid():
             block = block_serializer.save()
-            print(block)
+            wallet.balance += block.amount
+            wallet.save()
 
-        # Add block amount to wallet.balance
-        # Fetch updated deposit balance
-        # Set wallet.deposit_balance to those results
-        # Save wallet
-        # Return block and updated wallet (with both balances updated)
+        try:
+            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({}, status=status.HTTP_201_CREATED)
+        wallet.deposit_balance = deposit_balance
+        wallet.save()
+        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
+
+        response_data = {
+            'block': block_serializer.data,
+            'wallet': wallet_serializer.data,
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def deposit_balance(self, request, pk=None):
+        wallet = self.get_object()
+
+        try:
+            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet.deposit_balance = deposit_balance
+        wallet.save()
+        read_serializer = WalletReadSerializer(wallet, context={'request': request})
+
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
 
     def get_queryset(self):
         user = self.request.user
