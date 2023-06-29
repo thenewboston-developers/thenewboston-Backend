@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -35,7 +36,7 @@ class WalletViewSet(
         block_data = transfer_funds(
             amount=wallet.deposit_balance - 1,
             domain=wallet.core.domain,
-            recipient_account_number_str='bb18d4ca28a32ff21d75fd604e6dc2572cafd68b7c1cff2ef732f6bdc6a0a60f',
+            recipient_account_number_str=settings.ACCOUNT_NUMBER,
             sender_signing_key_str=wallet.deposit_signing_key,
         )
 
