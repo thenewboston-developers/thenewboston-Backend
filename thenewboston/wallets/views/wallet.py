@@ -10,6 +10,7 @@ from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.transfers.models import Transfer
 from thenewboston.transfers.models.transfer import TransferType
 from thenewboston.transfers.serializers.block import BlockSerializer
+from thenewboston.transfers.serializers.transfer import TransferSerializer
 
 from ..models import Wallet
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
@@ -47,7 +48,7 @@ class WalletViewSet(
         )
         block_serializer = BlockSerializer(data=block)
 
-        if block_serializer.is_valid():
+        if block_serializer.is_valid(raise_exception=True):
             transfer = Transfer.objects.create(
                 **block_serializer.validated_data,
                 user=wallet.owner,
@@ -56,6 +57,8 @@ class WalletViewSet(
             )
             wallet.balance += transfer.amount
             wallet.save()
+        else:
+            return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
@@ -64,11 +67,12 @@ class WalletViewSet(
 
         wallet.deposit_balance = deposit_balance
         wallet.save()
-        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
 
         response_data = {
-            'block': block_serializer.data,
-            'wallet': wallet_serializer.data,
+            'transfer': TransferSerializer(transfer).data,
+            'wallet': WalletReadSerializer(wallet, context={
+                'request': request
+            }).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
@@ -115,8 +119,8 @@ class WalletViewSet(
         )
         block_serializer = BlockSerializer(data=block)
 
-        if block_serializer.is_valid():
-            Transfer.objects.create(
+        if block_serializer.is_valid(raise_exception=True):
+            transfer = Transfer.objects.create(
                 **block_serializer.validated_data,
                 user=wallet.owner,
                 core=wallet.core,
@@ -124,12 +128,14 @@ class WalletViewSet(
             )
             wallet.balance -= amount
             wallet.save()
-
-        wallet_serializer = WalletReadSerializer(wallet, context={'request': request})
+        else:
+            return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         response_data = {
-            'block': block_serializer.data,
-            'wallet': wallet_serializer.data,
+            'transfer': TransferSerializer(transfer).data,
+            'wallet': WalletReadSerializer(wallet, context={
+                'request': request
+            }).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
