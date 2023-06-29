@@ -15,7 +15,7 @@ class OrderMatchingEngine:
     def process_new_order(self, new_order):
         if new_order.order_type == OrderType.BUY:
             self.process_order(new_order, is_buy_order=True)
-        elif new_order.order_type == OrderType.SELL:
+        else:
             self.process_order(new_order, is_buy_order=False)
 
     @staticmethod
