@@ -70,4 +70,4 @@ def transfer_funds(*, amount, domain, recipient_account_number_str, sender_signi
 
     server_address = f'https://{domain}/api'
     url = f'{server_address}/blocks'
-    post(url=url, body=request_data)
+    return post(url=url, body=request_data)
