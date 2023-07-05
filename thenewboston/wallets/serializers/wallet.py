@@ -12,7 +12,16 @@ class WalletReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ('id', 'owner', 'core', 'balance', 'deposit_account_number', 'deposit_balance')
+        fields = (
+            'balance',
+            'core',
+            'created_date',
+            'deposit_account_number',
+            'deposit_balance',
+            'id',
+            'modified_date',
+            'owner',
+        )
 
 
 class WalletWriteSerializer(serializers.ModelSerializer):
