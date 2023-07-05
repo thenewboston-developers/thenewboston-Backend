@@ -51,8 +51,8 @@ class WalletViewSet(
         if block_serializer.is_valid(raise_exception=True):
             transfer = Transfer.objects.create(
                 **block_serializer.validated_data,
-                user=wallet.owner,
                 core=wallet.core,
+                owner=wallet.owner,
                 transfer_type=TransferType.DEPOSIT,
             )
             wallet.balance += transfer.amount
@@ -122,8 +122,8 @@ class WalletViewSet(
         if block_serializer.is_valid(raise_exception=True):
             transfer = Transfer.objects.create(
                 **block_serializer.validated_data,
-                user=wallet.owner,
                 core=wallet.core,
+                owner=wallet.owner,
                 transfer_type=TransferType.WITHDRAW,
             )
             wallet.balance -= amount
