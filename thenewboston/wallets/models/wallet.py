@@ -1,10 +1,11 @@
 from django.db import models
 
 from thenewboston.general.constants import ACCOUNT_NUMBER_LENGTH, SIGNING_KEY_LENGTH
+from thenewboston.general.models import CreatedModified
 from thenewboston.general.validators import HexStringValidator
 
 
-class Wallet(models.Model):
+class Wallet(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     core = models.ForeignKey('cores.Core', on_delete=models.CASCADE)
     balance = models.PositiveBigIntegerField(default=0)
