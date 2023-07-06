@@ -1,6 +1,9 @@
-from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from rest_framework import exceptions, serializers
 
 from ..models import Core
+
+User = get_user_model()
 
 
 class CoreReadSerializer(serializers.ModelSerializer):
@@ -23,8 +26,13 @@ class CoreWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
+
+        if not request.user.is_staff:
+            raise exceptions.PermissionDenied('You do not have permission to create a Core.')
+
         core = super().create({
             **validated_data,
             'owner': request.user,
         })
+
         return core
