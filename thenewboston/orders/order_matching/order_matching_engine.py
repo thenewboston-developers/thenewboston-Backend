@@ -4,6 +4,7 @@ from thenewboston.general.enums import MessageType
 from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
+from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..models import Trade
 from ..models.order import FillStatus, Order, OrderType
@@ -115,4 +116,5 @@ class OrderMatchingEngine:
         if not created:
             wallet.balance += amount
             wallet.save()
-            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
+            wallet_data = WalletReadSerializer(wallet).data
+            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)

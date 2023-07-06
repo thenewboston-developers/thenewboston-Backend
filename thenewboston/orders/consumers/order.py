@@ -2,8 +2,6 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 from channels.layers import get_channel_layer
 
-from ..serializers.order import OrderReadSerializer
-
 
 class OrderConsumer(JsonWebsocketConsumer):
 
@@ -21,12 +19,12 @@ class OrderConsumer(JsonWebsocketConsumer):
         async_to_sync(get_channel_layer().group_discard)('orders', self.channel_name)
 
     @classmethod
-    def stream_order(cls, *, message_type, order):
+    def stream_order(cls, *, message_type, order_data):
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             'orders',
             {
-                'payload': OrderReadSerializer(order).data,
+                'payload': order_data,
                 'type': message_type.value,
             },
         )

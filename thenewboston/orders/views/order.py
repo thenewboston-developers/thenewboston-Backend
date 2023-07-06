@@ -7,6 +7,7 @@ from thenewboston.general.enums import MessageType
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
+from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..consumers.order import OrderConsumer
 from ..models import Order
@@ -25,7 +26,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         self.update_wallet_balance(order)
-        OrderConsumer.stream_order(message_type=MessageType.CREATE_ORDER, order=order)
+        order_data = OrderReadSerializer(order).data
+        OrderConsumer.stream_order(message_type=MessageType.CREATE_ORDER, order_data=order_data)
         read_serializer = OrderReadSerializer(order)
 
         order_matching_engine = OrderMatchingEngine()
@@ -47,7 +49,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         old_fill_status = instance.fill_status
         order = serializer.save()
-        OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order=order)
+        order_data = OrderReadSerializer(order).data
+        OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=order_data)
         read_serializer = OrderReadSerializer(order)
 
         if old_fill_status in [
@@ -65,7 +68,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             wallet = Wallet.objects.get(owner=instance.owner, core=refund_currency)
             wallet.balance += refund_amount
             wallet.save()
-            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
+            wallet_data = WalletReadSerializer(wallet).data
+            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
 
         return Response(read_serializer.data)
 
@@ -79,4 +83,5 @@ class OrderViewSet(viewsets.ModelViewSet):
             wallet.balance -= order.quantity
 
         wallet.save()
-        WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet=wallet)
+        wallet_data = WalletReadSerializer(wallet).data
+        WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
