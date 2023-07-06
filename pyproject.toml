@@ -8,26 +8,27 @@ readme = "README.md"
 packages = [{include = "thenewboston"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+boto3 = "^1.26.155"
+channels = {extras = ["daphne"], version = "^4.0.0"}
 django = "^4.2.2"
-djangorestframework = "^3.14.0"
-psycopg2 = "^2.9.6"
+django-cors-headers = "^4.1.0"
 django-filter = "^23.2"
 django-split-settings = "^1.2.0"
-pyyaml = "^6.0"
-djangorestframework-simplejwt = "^5.2.2"
-django-cors-headers = "^4.1.0"
-pillow = "^9.5.0"
 django-storages = "^1.13.2"
-boto3 = "^1.26.155"
-pynacl = "^1.5.0"
+djangorestframework = "^3.14.0"
+djangorestframework-simplejwt = "^5.2.2"
+pillow = "^9.5.0"
+psycopg2 = "^2.9.6"
 pydantic = "^1.10.9"
-channels = {extras = ["daphne"], version = "^4.0.0"}
+pynacl = "^1.5.0"
+python = "^3.10"
+pyyaml = "^6.0"
 requests = "^2.31.0"
+whitenoise = "^6.5.0"
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^3.3.3"
 colorlog = "^6.7.0"
+pre-commit = "^3.3.3"
 
 [tool.isort]
 line_length = 119
