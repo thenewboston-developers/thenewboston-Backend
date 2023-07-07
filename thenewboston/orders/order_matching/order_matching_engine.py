@@ -6,8 +6,10 @@ from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
+from ..consumers.order import OrderConsumer
 from ..models import Trade
 from ..models.order import FillStatus, Order, OrderType
+from ..serializers.order import OrderReadSerializer
 
 
 class OrderMatchingEngine:
@@ -88,6 +90,11 @@ class OrderMatchingEngine:
 
             order.save()
             matching_order.save()
+
+            order_data = OrderReadSerializer(order).data
+            matching_order_data = OrderReadSerializer(matching_order).data
+            OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=order_data)
+            OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=matching_order_data)
 
             if order.fill_status == FillStatus.FILLED:
                 break
