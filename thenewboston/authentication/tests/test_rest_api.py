@@ -11,5 +11,10 @@ def test_login(api_client, bucky):
     expected_keys = ['authentication', 'user']
     assert all(key in response.data for key in expected_keys)
 
-    expected_user_keys = ['id', 'username']
-    assert all(key in response.data['user'] for key in expected_user_keys)
+    expected_authentication_keys = ['access_token', 'refresh_token']
+    assert all(key in response.data['authentication'] for key in expected_authentication_keys)
+
+    assert response.data['user'] == {
+        'id': bucky.id,
+        'username': bucky.username,
+    }
