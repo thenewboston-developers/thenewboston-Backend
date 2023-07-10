@@ -36,7 +36,7 @@ test:
 
 .PHONY: test-detailed
 test-detailed:
-	poetry run pytest -v -rs -s
+	poetry run pytest -vv -rs -s
 
 .PHONY: up-dependencies-only
 up-dependencies-only:
