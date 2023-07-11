@@ -30,6 +30,14 @@ shell:
 superuser:
 	poetry run python -m thenewboston.manage createsuperuser
 
+.PHONY: test
+test:
+	poetry run pytest -v -rs -n auto --show-capture=no
+
+.PHONY: test-detailed
+test-detailed:
+	poetry run pytest -vv -rs -s
+
 .PHONY: up-dependencies-only
 up-dependencies-only:
 	test -f .env || touch .env

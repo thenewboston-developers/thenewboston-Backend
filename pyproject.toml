@@ -25,6 +25,10 @@ python = "^3.10"
 pyyaml = "^6.0"
 requests = "^2.31.0"
 whitenoise = "^6.5.0"
+pytest = "^7.4.0"
+pytest-xdist = "^3.3.1"
+pytest-django = "^4.5.2"
+model-bakery = "^1.12.0"
 
 [tool.poetry.group.dev.dependencies]
 colorlog = "^6.7.0"
@@ -33,6 +37,13 @@ pre-commit = "^3.3.3"
 [tool.isort]
 line_length = 119
 multi_line_output = 5
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "thenewboston.project.settings"
+django_find_project = false
+python_files = "test_*.py"
+testpaths = ["thenewboston"]
+filterwarnings = "ignore::DeprecationWarning:^(?!node\\.).*:"
 
 [tool.yapf]
 align_closing_bracket_with_visual_indent = true
