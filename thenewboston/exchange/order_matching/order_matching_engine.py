@@ -6,10 +6,10 @@ from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
-from ..consumers.order import OrderConsumer
+from ..consumers.exchange_order import ExchangeOrderConsumer
 from ..models import Trade
-from ..models.order import FillStatus, Order, OrderType
-from ..serializers.order import OrderReadSerializer
+from ..models.exchange_order import ExchangeOrder, FillStatus, OrderType
+from ..serializers.exchange_order import ExchangeOrderReadSerializer
 
 
 class OrderMatchingEngine:
@@ -40,7 +40,7 @@ class OrderMatchingEngine:
             'secondary_currency': secondary_currency,
         }
 
-        matching_orders = Order.objects.filter(**matching_orders_filter).order_by(price_ordering)
+        matching_orders = ExchangeOrder.objects.filter(**matching_orders_filter).order_by(price_ordering)
 
         for matching_order in matching_orders:
             fill_quantity = min(
@@ -91,10 +91,14 @@ class OrderMatchingEngine:
             order.save()
             matching_order.save()
 
-            order_data = OrderReadSerializer(order).data
-            matching_order_data = OrderReadSerializer(matching_order).data
-            OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=order_data)
-            OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=matching_order_data)
+            order_data = ExchangeOrderReadSerializer(order).data
+            matching_order_data = ExchangeOrderReadSerializer(matching_order).data
+            ExchangeOrderConsumer.stream_exchange_order(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=order_data
+            )
+            ExchangeOrderConsumer.stream_exchange_order(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=matching_order_data
+            )
 
             if order.fill_status == FillStatus.FILLED:
                 break

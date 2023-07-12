@@ -9,16 +9,16 @@ from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
-from ..consumers.order import OrderConsumer
-from ..models import Order
-from ..models.order import FillStatus, OrderType
+from ..consumers.exchange_order import ExchangeOrderConsumer
+from ..models import ExchangeOrder
+from ..models.exchange_order import FillStatus, OrderType
 from ..order_matching.order_matching_engine import OrderMatchingEngine
-from ..serializers.order import OrderReadSerializer, OrderWriteSerializer
+from ..serializers.exchange_order import ExchangeOrderReadSerializer, ExchangeOrderWriteSerializer
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class ExchangeOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Order.objects.all()
+    queryset = ExchangeOrder.objects.all()
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -26,9 +26,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         self.update_wallet_balance(order)
-        order_data = OrderReadSerializer(order).data
-        OrderConsumer.stream_order(message_type=MessageType.CREATE_ORDER, order_data=order_data)
-        read_serializer = OrderReadSerializer(order)
+        order_data = ExchangeOrderReadSerializer(order).data
+        ExchangeOrderConsumer.stream_exchange_order(
+            message_type=MessageType.CREATE_EXCHANGE_ORDER, order_data=order_data
+        )
+        read_serializer = ExchangeOrderReadSerializer(order)
 
         order_matching_engine = OrderMatchingEngine()
         order_matching_engine.process_new_order(order)
@@ -37,9 +39,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:
-            return OrderWriteSerializer
+            return ExchangeOrderWriteSerializer
 
-        return OrderReadSerializer
+        return ExchangeOrderReadSerializer
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -49,9 +51,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         old_fill_status = instance.fill_status
         order = serializer.save()
-        order_data = OrderReadSerializer(order).data
-        OrderConsumer.stream_order(message_type=MessageType.UPDATE_ORDER, order_data=order_data)
-        read_serializer = OrderReadSerializer(order)
+        order_data = ExchangeOrderReadSerializer(order).data
+        ExchangeOrderConsumer.stream_exchange_order(
+            message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=order_data
+        )
+        read_serializer = ExchangeOrderReadSerializer(order)
 
         if old_fill_status in [
             FillStatus.OPEN, FillStatus.PARTIALLY_FILLED

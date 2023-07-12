@@ -4,8 +4,8 @@ from thenewboston.general.models import CreatedModified
 
 
 class Trade(CreatedModified):
-    buy_order = models.ForeignKey('orders.Order', related_name='buy_trades', on_delete=models.CASCADE)
-    sell_order = models.ForeignKey('orders.Order', related_name='sell_trades', on_delete=models.CASCADE)
+    buy_order = models.ForeignKey('exchange.ExchangeOrder', related_name='buy_trades', on_delete=models.CASCADE)
+    sell_order = models.ForeignKey('exchange.ExchangeOrder', related_name='sell_trades', on_delete=models.CASCADE)
     fill_quantity = models.PositiveBigIntegerField()
     trade_price = models.PositiveBigIntegerField()
     overpayment_amount = models.PositiveBigIntegerField()

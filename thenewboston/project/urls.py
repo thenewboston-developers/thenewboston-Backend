@@ -5,7 +5,7 @@ from django.urls import include, path
 
 import thenewboston.authentication.urls
 import thenewboston.cores.urls
-import thenewboston.orders.urls
+import thenewboston.exchange.urls
 import thenewboston.transfers.urls
 import thenewboston.users.urls
 import thenewboston.wallets.urls
@@ -16,7 +16,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path(API_PREFIX, include(thenewboston.authentication.urls)),
     path(API_PREFIX, include(thenewboston.cores.urls)),
-    path(API_PREFIX, include(thenewboston.orders.urls)),
+    path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.transfers.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
