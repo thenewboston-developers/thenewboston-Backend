@@ -11,7 +11,7 @@ from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..consumers.exchange_order import ExchangeOrderConsumer
 from ..models import ExchangeOrder
-from ..models.exchange_order import FillStatus, OrderType
+from ..models.exchange_order import ExchangeOrderType, FillStatus
 from ..order_matching.order_matching_engine import OrderMatchingEngine
 from ..serializers.exchange_order import ExchangeOrderReadSerializer, ExchangeOrderWriteSerializer
 
@@ -62,7 +62,7 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         ] and instance.fill_status == FillStatus.CANCELLED:
             unfilled_quantity = instance.quantity - instance.filled_amount
 
-            if instance.order_type == OrderType.BUY:
+            if instance.order_type == ExchangeOrderType.BUY:
                 refund_amount = unfilled_quantity * instance.price
                 refund_currency = instance.secondary_currency
             else:
@@ -79,7 +79,7 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def update_wallet_balance(order):
-        if order.order_type == OrderType.BUY:
+        if order.order_type == ExchangeOrderType.BUY:
             wallet = Wallet.objects.filter(owner=order.owner, core=order.secondary_currency).first()
             wallet.balance -= order.quantity * order.price
         else:
