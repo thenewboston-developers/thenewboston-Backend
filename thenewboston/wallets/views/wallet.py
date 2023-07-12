@@ -4,16 +4,15 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.api.accounts import fetch_balance, transfer_funds
+from thenewboston.api.accounts import fetch_balance, wire_funds
 from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
-from thenewboston.transfers.models import Transfer
-from thenewboston.transfers.models.transfer import TransferType
-from thenewboston.transfers.serializers.block import BlockSerializer
-from thenewboston.transfers.serializers.transfer import TransferSerializer
 
-from ..models import Wallet
+from ..models import Wallet, Wire
+from ..models.wire import WireType
+from ..serializers.block import BlockSerializer
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
+from ..serializers.wire import WireSerializer
 from ..serializers.withdraw import WithdrawSerializer
 
 
@@ -40,7 +39,7 @@ class WalletViewSet(
             return Response({'error': f'Minimum balance of {minimum_balance} required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        block = transfer_funds(
+        block = wire_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=settings.ACCOUNT_NUMBER,
@@ -49,13 +48,13 @@ class WalletViewSet(
         block_serializer = BlockSerializer(data=block)
 
         if block_serializer.is_valid(raise_exception=True):
-            transfer = Transfer.objects.create(
+            wire = Wire.objects.create(
                 **block_serializer.validated_data,
                 core=wallet.core,
                 owner=wallet.owner,
-                transfer_type=TransferType.DEPOSIT,
+                wire_type=WireType.DEPOSIT,
             )
-            wallet.balance += transfer.amount
+            wallet.balance += wire.amount
             wallet.save()
         else:
             return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
@@ -69,10 +68,10 @@ class WalletViewSet(
         wallet.save()
 
         response_data = {
-            'transfer': TransferSerializer(transfer).data,
             'wallet': WalletReadSerializer(wallet, context={
                 'request': request
             }).data,
+            'wire': WireSerializer(wire).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
@@ -111,7 +110,7 @@ class WalletViewSet(
         account_number = serializer.validated_data['account_number']
         amount = serializer.validated_data['amount']
 
-        block = transfer_funds(
+        block = wire_funds(
             amount=amount - TRANSACTION_FEE,
             domain=wallet.core.domain,
             recipient_account_number_str=account_number,
@@ -120,11 +119,11 @@ class WalletViewSet(
         block_serializer = BlockSerializer(data=block)
 
         if block_serializer.is_valid(raise_exception=True):
-            transfer = Transfer.objects.create(
+            wire = Wire.objects.create(
                 **block_serializer.validated_data,
                 core=wallet.core,
                 owner=wallet.owner,
-                transfer_type=TransferType.WITHDRAW,
+                wire_type=WireType.WITHDRAW,
             )
             wallet.balance -= amount
             wallet.save()
@@ -132,10 +131,10 @@ class WalletViewSet(
             return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         response_data = {
-            'transfer': TransferSerializer(transfer).data,
             'wallet': WalletReadSerializer(wallet, context={
                 'request': request
             }).data,
+            'wire': WireSerializer(wire).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
