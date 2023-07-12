@@ -54,7 +54,7 @@ def sort_and_encode(dictionary):
     return json.dumps(dictionary, separators=(',', ':'), sort_keys=True).encode('utf-8')
 
 
-def transfer_funds(*, amount, domain, recipient_account_number_str, sender_signing_key_str):
+def wire_funds(*, amount, domain, recipient_account_number_str, sender_signing_key_str):
     signing_key = SigningKey(sender_signing_key_str.encode('utf-8'), encoder=HexEncoder)
     account_number = get_verify_key(signing_key=signing_key)
 
