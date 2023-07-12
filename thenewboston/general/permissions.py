@@ -1,10 +1,25 @@
+from typing import Optional
+
 from rest_framework import permissions
 
 
-class IsObjectOwnerOrReadOnly(permissions.BasePermission):
+class IsFieldUserOrReadOnly(permissions.BasePermission):
+    user_field: Optional[str] = None
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return obj.owner == request.user
+        return getattr(obj, self.user_field) == request.user
+
+
+class IsObjectBuyerOrReadOnly(IsFieldUserOrReadOnly):
+    user_field = 'buyer'
+
+
+class IsObjectOwnerOrReadOnly(IsFieldUserOrReadOnly):
+    user_field = 'owner'
+
+
+class IsObjectSellerOrReadOnly(IsFieldUserOrReadOnly):
+    user_field = 'seller'
