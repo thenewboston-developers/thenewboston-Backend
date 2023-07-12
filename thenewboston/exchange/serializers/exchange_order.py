@@ -2,21 +2,21 @@ from rest_framework import serializers
 
 from thenewboston.wallets.models import Wallet
 
-from ..models import AssetPair, Order
-from ..models.order import FillStatus, OrderType
+from ..models import AssetPair, ExchangeOrder
+from ..models.exchange_order import FillStatus, OrderType
 
 
-class OrderReadSerializer(serializers.ModelSerializer):
+class ExchangeOrderReadSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Order
+        model = ExchangeOrder
         fields = '__all__'
 
 
-class OrderWriteSerializer(serializers.ModelSerializer):
+class ExchangeOrderWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Order
+        model = ExchangeOrder
         fields = (
             'primary_currency',
             'secondary_currency',

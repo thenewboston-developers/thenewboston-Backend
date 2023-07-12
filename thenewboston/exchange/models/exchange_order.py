@@ -17,7 +17,7 @@ class OrderType(models.TextChoices):
     SELL = 'SELL', _('Sell')
 
 
-class Order(CreatedModified):
+class ExchangeOrder(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     primary_currency = models.ForeignKey('cores.Core', on_delete=models.CASCADE, related_name='primary_orders')
     secondary_currency = models.ForeignKey('cores.Core', on_delete=models.CASCADE, related_name='secondary_orders')
