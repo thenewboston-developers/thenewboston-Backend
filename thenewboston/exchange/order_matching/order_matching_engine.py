@@ -8,7 +8,7 @@ from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..consumers.exchange_order import ExchangeOrderConsumer
 from ..models import Trade
-from ..models.exchange_order import ExchangeOrder, FillStatus, OrderType
+from ..models.exchange_order import ExchangeOrder, ExchangeOrderType, FillStatus
 from ..serializers.exchange_order import ExchangeOrderReadSerializer
 
 
@@ -16,7 +16,7 @@ class OrderMatchingEngine:
 
     @transaction.atomic
     def process_new_order(self, new_order):
-        if new_order.order_type == OrderType.BUY:
+        if new_order.order_type == ExchangeOrderType.BUY:
             self.process_order(new_order, is_buy_order=True)
         else:
             self.process_order(new_order, is_buy_order=False)
@@ -27,7 +27,7 @@ class OrderMatchingEngine:
         secondary_currency = order.secondary_currency
 
         # Choose the order type, price operator, and order_by argument based on whether it's a buy or sell order
-        order_type = OrderType.SELL if is_buy_order else OrderType.BUY
+        order_type = ExchangeOrderType.SELL if is_buy_order else ExchangeOrderType.BUY
         price_operator = '__lte' if is_buy_order else '__gte'
         price_ordering = 'price' if is_buy_order else '-price'
 

@@ -5,6 +5,11 @@ from django.utils.translation import gettext_lazy as _
 from thenewboston.general.models import CreatedModified
 
 
+class ExchangeOrderType(models.TextChoices):
+    BUY = 'BUY', _('Buy')
+    SELL = 'SELL', _('Sell')
+
+
 class FillStatus(models.TextChoices):
     OPEN = 'OPEN', _('Open')
     PARTIALLY_FILLED = 'PARTIALLY_FILLED', _('Partially Filled')
@@ -12,16 +17,11 @@ class FillStatus(models.TextChoices):
     CANCELLED = 'CANCELLED', _('Cancelled')
 
 
-class OrderType(models.TextChoices):
-    BUY = 'BUY', _('Buy')
-    SELL = 'SELL', _('Sell')
-
-
 class ExchangeOrder(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     primary_currency = models.ForeignKey('cores.Core', on_delete=models.CASCADE, related_name='primary_orders')
     secondary_currency = models.ForeignKey('cores.Core', on_delete=models.CASCADE, related_name='secondary_orders')
-    order_type = models.CharField(choices=OrderType.choices, max_length=4)
+    order_type = models.CharField(choices=ExchangeOrderType.choices, max_length=4)
     quantity = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
     price = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
     filled_amount = models.PositiveBigIntegerField(default=0)

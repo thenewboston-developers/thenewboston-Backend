@@ -3,7 +3,7 @@ from rest_framework import serializers
 from thenewboston.wallets.models import Wallet
 
 from ..models import AssetPair, ExchangeOrder
-from ..models.exchange_order import FillStatus, OrderType
+from ..models.exchange_order import ExchangeOrderType, FillStatus
 
 
 class ExchangeOrderReadSerializer(serializers.ModelSerializer):
@@ -48,7 +48,7 @@ class ExchangeOrderWriteSerializer(serializers.ModelSerializer):
             secondary_currency = data.get('secondary_currency')
             fill_status = data.get('fill_status', FillStatus.OPEN)
 
-            if order_type == OrderType.BUY:
+            if order_type == ExchangeOrderType.BUY:
                 self.validate_buy_order(data)
             else:
                 self.validate_sell_order(data)
