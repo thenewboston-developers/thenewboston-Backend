@@ -6,7 +6,7 @@ from ..models import Product
 
 
 class ProductReadSerializer(serializers.ModelSerializer):
-    seller = UserReadSerializer()
+    seller = UserReadSerializer(read_only=True)
 
     class Meta:
         model = Product
