@@ -1,9 +1,9 @@
 from django.db import models
 
-from thenewboston.general.models import CreatedModified
+from .item import Item
 
 
-class OrderProduct(CreatedModified):
+class OrderProduct(Item):
     order = models.ForeignKey('shop.Order', related_name='order_products', on_delete=models.CASCADE)
     product = models.ForeignKey('shop.Product', related_name='order_products', on_delete=models.CASCADE)
 

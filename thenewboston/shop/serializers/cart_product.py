@@ -41,10 +41,16 @@ class CartProductWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         product = attrs['product']
-        product_seller = attrs['product'].seller
+        product_seller = product.seller
+        quantity = attrs['quantity']
 
         if product.activation_status != ActivationStatus.ACTIVE:
             raise serializers.ValidationError('Product must be active to be added to the cart.')
+
+        if product.quantity < quantity:
+            raise serializers.ValidationError(
+                f'The quantity requested exceeds the available quantity. Only {product.quantity} unit(s) available.'
+            )
 
         request = self.context.get('request')
         cart_products = CartProduct.objects.filter(buyer=request.user)
@@ -56,3 +62,10 @@ class CartProductWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('You cannot add products from different sellers to the cart.')
 
         return attrs
+
+    @staticmethod
+    def validate_quantity(value):
+        if value <= 0:
+            raise serializers.ValidationError('Quantity must be greater than 0.')
+
+        return value

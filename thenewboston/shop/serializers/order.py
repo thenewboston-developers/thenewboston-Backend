@@ -43,8 +43,23 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         order = Order.objects.create(buyer=request.user, seller=seller, **validated_data)
 
         for cart_product in cart_products:
-            OrderProduct.objects.create(order=order, product=cart_product.product)
+            product = cart_product.product
+            quantity = cart_product.quantity
+
+            OrderProduct.objects.create(
+                description=product.description,
+                image=product.image,
+                name=product.name,
+                order=order,
+                price_amount=product.price_amount,
+                price_core=product.price_core,
+                product=product,
+                quantity=quantity,
+            )
+
             cart_product.delete()
+            product.quantity -= quantity
+            product.save()
 
         return order
 

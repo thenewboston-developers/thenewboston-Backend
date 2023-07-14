@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from thenewboston.users.serializers.user import UserReadSerializer
 
-from ..models import Product
+from ..models import CartProduct, Product
+from ..models.product import ActivationStatus
 
 
 class ProductReadSerializer(serializers.ModelSerializer):
@@ -33,3 +34,14 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         })
 
         return product
+
+    def update(self, instance, validated_data):
+        activation_status = validated_data.get('activation_status')
+
+        if (
+            activation_status and instance.activation_status == ActivationStatus.ACTIVE and
+            activation_status == ActivationStatus.DRAFT
+        ):
+            CartProduct.objects.filter(product=instance).delete()
+
+        return super().update(instance, validated_data)
