@@ -56,9 +56,9 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         payment_dict = defaultdict(int)
 
         for cart_product in cart_products:
-            core = cart_product.product.price_core
+            core_id = cart_product.product.price_core.id
             total_price = cart_product.product.price_amount * cart_product.quantity
-            payment_dict[core] += total_price
+            payment_dict[core_id] += total_price
 
         return payment_dict
 
@@ -85,17 +85,17 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def handle_payment(payment_dict, request, seller):
-        key_pairs = {core.id: generate_key_pair() for core in payment_dict.keys()}
+        key_pairs = {core_id: generate_key_pair() for core_id in payment_dict.keys()}
 
-        for core, total_price in payment_dict.items():
-            buyer_wallet = Wallet.objects.select_for_update().get(owner=request.user, core=core)
+        for core_id, total_price in payment_dict.items():
+            buyer_wallet = Wallet.objects.select_for_update().get(owner=request.user, core_id=core_id)
             seller_wallet, created = Wallet.objects.select_for_update().get_or_create(
                 owner=seller,
-                core=core,
+                core_id=core_id,
                 defaults={
                     'balance': 0,
-                    'deposit_account_number': key_pairs[core.id].public,
-                    'deposit_signing_key': key_pairs[core.id].private,
+                    'deposit_account_number': key_pairs[core_id].public,
+                    'deposit_signing_key': key_pairs[core_id].private,
                 }
             )
 
@@ -163,14 +163,14 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def validate_wallets_and_funds(payment_dict, user):
-        for core, total_price in payment_dict.items():
+        for core_id, total_price in payment_dict.items():
             try:
-                wallet = Wallet.objects.get(owner=user, core=core)
+                wallet = Wallet.objects.get(owner=user, core_id=core_id)
             except Wallet.DoesNotExist:
-                raise serializers.ValidationError(f'No wallet found for core {core} for the authenticated user.')
+                raise serializers.ValidationError(f'No wallet found for core ID {core_id} for the authenticated user.')
 
             if wallet.balance < total_price:
                 raise serializers.ValidationError(
-                    f'Insufficient funds in wallet for core {core}. '
+                    f'Insufficient funds in wallet for core ID {core_id}. '
                     f'Required: {total_price}, Available: {wallet.balance}'
                 )
