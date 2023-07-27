@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -19,6 +20,12 @@ class CartProductViewSet(viewsets.ModelViewSet):
         read_serializer = CartProductReadSerializer(cart_product, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def empty_cart(self, request):
+        cart_products = CartProduct.objects.filter(buyer=request.user)
+        cart_products.delete()
+        return Response({'detail': 'Cart emptied successfully.'}, status=status.HTTP_200_OK)
 
     def get_queryset(self):
         user = self.request.user
