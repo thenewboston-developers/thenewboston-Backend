@@ -15,6 +15,7 @@ def test_login(api_client, bucky):
     assert all(key in response.data['authentication'] for key in expected_authentication_keys)
 
     assert response.data['user'] == {
+        'avatar': None,
         'id': bucky.id,
         'username': bucky.username,
     }
