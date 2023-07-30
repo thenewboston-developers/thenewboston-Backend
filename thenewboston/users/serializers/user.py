@@ -21,7 +21,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
     def update(self, instance, validated_data):
-        instance.avatar = validated_data.get('avatar', instance.avatar)
+        instance.avatar = validated_data.get('avatar', '')
         instance.save()
         return instance
 
