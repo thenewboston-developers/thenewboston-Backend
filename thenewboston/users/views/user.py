@@ -18,7 +18,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        return Response(get_user_auth_data(user), status=status.HTTP_201_CREATED)
+        return Response(get_user_auth_data(user, request), status=status.HTTP_201_CREATED)
 
     def get_parsers(self):
         if self.request.method == 'POST':
