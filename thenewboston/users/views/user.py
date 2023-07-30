@@ -13,6 +13,13 @@ from ..serializers.user import UserReadSerializer, UserUpdateSerializer, UserWri
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(get_user_auth_data(user), status=status.HTTP_201_CREATED)
+
     def get_parsers(self):
         if self.request.method == 'POST':
             self.parser_classes = [JSONParser]
@@ -36,13 +43,6 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserUpdateSerializer
 
         return UserReadSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        return Response(get_user_auth_data(user), status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
