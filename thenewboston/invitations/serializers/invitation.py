@@ -5,16 +5,32 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
+from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Invitation, InvitationLimit
 
 
 class InvitationSerializer(serializers.ModelSerializer):
+    recipient = UserReadSerializer(read_only=True)
 
     class Meta:
         model = Invitation
-        fields = ('code', 'id', 'note', 'owner', 'recipient')
-        read_only_fields = ('code', 'owner', 'recipient')
+        fields = (
+            'code',
+            'created_date',
+            'id',
+            'modified_date',
+            'note',
+            'owner',
+            'recipient',
+        )
+        read_only_fields = (
+            'code',
+            'created_date',
+            'modified_date',
+            'owner',
+            'recipient',
+        )
 
     def create(self, validated_data):
         request = self.context.get('request')
