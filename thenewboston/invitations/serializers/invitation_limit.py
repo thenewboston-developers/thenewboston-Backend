@@ -7,5 +7,5 @@ class InvitationLimitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InvitationLimit
-        fields = ('owner', 'amount')
-        read_only_fields = ('owner', 'amount')
+        fields = ('amount', 'id', 'owner')
+        read_only_fields = ('amount', 'id', 'owner')
