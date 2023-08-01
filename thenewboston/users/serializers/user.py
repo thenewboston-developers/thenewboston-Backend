@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from thenewboston.invitations.models import Invitation
+from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
+from thenewboston.invitations.models import Invitation, InvitationLimit
 
 User = get_user_model()
 
@@ -39,7 +40,8 @@ class UserWriteSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         username = validated_data.get('username')
 
-        invitation = Invitation.objects.filter(code=invitation_code, user__isnull=True).first()
+        invitation = Invitation.objects.filter(code=invitation_code, recipient__isnull=True).first()
+        inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
 
         if not invitation:
             raise serializers.ValidationError('Invalid or used invitation code')
@@ -47,5 +49,12 @@ class UserWriteSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(username=username, password=password)
         invitation.user = user
         invitation.save()
+
+        if inviter_limit:
+            recipient_limit = max(inviter_limit.amount - 1, 0)
+        else:
+            recipient_limit = DEFAULT_INVITATION_LIMIT - 1
+
+        InvitationLimit.objects.create(owner=user, amount=recipient_limit)
 
         return user
