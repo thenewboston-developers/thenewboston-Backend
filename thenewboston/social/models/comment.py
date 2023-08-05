@@ -4,8 +4,8 @@ from thenewboston.general.models import CreatedModified
 
 
 class Comment(CreatedModified):
-    owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
-    post = models.ForeignKey('social.Post', on_delete=models.CASCADE)
+    owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='comments')
+    post = models.ForeignKey('social.Post', on_delete=models.CASCADE, related_name='comments')
     content = models.TextField()
 
     def __str__(self):

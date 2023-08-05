@@ -3,14 +3,17 @@ from rest_framework import serializers
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Post
+from ..serializers.comment import CommentReadSerializer
 
 
 class PostReadSerializer(serializers.ModelSerializer):
+    comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
 
     class Meta:
         model = Post
         fields = (
+            'comments',
             'content',
             'created_date',
             'id',
@@ -19,6 +22,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'owner',
         )
         read_only_fields = (
+            'comments',
             'content',
             'created_date',
             'id',
