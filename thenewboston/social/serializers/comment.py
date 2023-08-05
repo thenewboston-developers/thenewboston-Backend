@@ -2,41 +2,37 @@ from rest_framework import serializers
 
 from thenewboston.users.serializers.user import UserReadSerializer
 
-from ..models import Post
-from ..serializers.comment import CommentReadSerializer
+from ..models import Comment
 
 
-class PostReadSerializer(serializers.ModelSerializer):
-    comments = CommentReadSerializer(many=True, read_only=True)
+class CommentReadSerializer(serializers.ModelSerializer):
     owner = UserReadSerializer(read_only=True)
 
     class Meta:
-        model = Post
+        model = Comment
         fields = (
-            'comments',
             'content',
             'created_date',
             'id',
-            'image',
             'modified_date',
             'owner',
+            'post',
         )
         read_only_fields = (
-            'comments',
             'content',
             'created_date',
             'id',
-            'image',
             'modified_date',
             'owner',
+            'post',
         )
 
 
-class PostWriteSerializer(serializers.ModelSerializer):
+class CommentWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Post
-        fields = ('content', 'image')
+        model = Comment
+        fields = ('content', 'post')
 
     def create(self, validated_data):
         request = self.context.get('request')
