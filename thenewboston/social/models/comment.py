@@ -9,4 +9,4 @@ class Comment(CreatedModified):
     content = models.TextField()
 
     def __str__(self):
-        return self.content[:50]
+        return self.content[:20]
