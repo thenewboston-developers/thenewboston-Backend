@@ -16,7 +16,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
-        read_serializer = CommentReadSerializer(comment)
+        read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -32,6 +32,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
-        read_serializer = CommentReadSerializer(comment)
+        read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         return Response(read_serializer.data)
