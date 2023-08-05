@@ -47,7 +47,7 @@ class UserWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Invalid or used invitation code')
 
         user = User.objects.create_user(username=username, password=password)
-        invitation.user = user
+        invitation.recipient = user
         invitation.save()
 
         if inviter_limit:
