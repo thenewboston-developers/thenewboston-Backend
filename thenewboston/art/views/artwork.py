@@ -1,14 +1,18 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
+from ..filters.artwork import ArtworkFilter
 from ..models import Artwork
 from ..serializers.artwork import ArtworkReadSerializer, ArtworkWriteSerializer
 
 
 class ArtworkViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ArtworkFilter
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Artwork.objects.all()
 

@@ -15,6 +15,6 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         openai.api_key = settings.OPENAI_API_KEY
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        response = openai.Image.create(prompt=serializer.validated_data['prompt'], n=1, size='1024x1024')
+        response = openai.Image.create(prompt=serializer.validated_data['description'], n=1, size='1024x1024')
 
         return Response(response, status=status.HTTP_200_OK)
