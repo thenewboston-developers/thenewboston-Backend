@@ -28,4 +28,5 @@ include(
 )
 
 assert ACCOUNT_NUMBER  # type: ignore # noqa: F821
+assert OPENAI_API_KEY  # type: ignore # noqa: F821
 assert SIGNING_KEY  # type: ignore # noqa: F821

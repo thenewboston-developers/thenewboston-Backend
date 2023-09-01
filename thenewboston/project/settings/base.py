@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'storages',
 
     # Apps
+    'thenewboston.art.apps.ArtConfig',
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.cores.apps.CoresConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
