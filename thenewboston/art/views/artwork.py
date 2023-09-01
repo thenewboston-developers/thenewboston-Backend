@@ -2,12 +2,14 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
+
 from ..models import Artwork
 from ..serializers.artwork import ArtworkReadSerializer, ArtworkWriteSerializer
 
 
 class ArtworkViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Artwork.objects.all()
 
     def create(self, request, *args, **kwargs):
