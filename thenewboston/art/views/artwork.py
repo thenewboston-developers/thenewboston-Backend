@@ -29,3 +29,13 @@ class ArtworkViewSet(viewsets.ModelViewSet):
             return ArtworkWriteSerializer
 
         return ArtworkReadSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        artwork = serializer.save()
+        read_serializer = ArtworkReadSerializer(artwork, context={'request': request})
+
+        return Response(read_serializer.data)
