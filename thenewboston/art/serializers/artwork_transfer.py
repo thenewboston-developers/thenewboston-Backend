@@ -36,9 +36,6 @@ class ArtworkTransferWriteSerializer(serializers.ModelSerializer):
         transfer.artwork.save()
         return transfer
 
-    def update(self, request, *args, **kwargs):
-        raise serializers.ValidationError('Artwork transfers cannot be modified.')
-
     def validate(self, data):
         request = self.context.get('request')
         artwork = data['artwork']
