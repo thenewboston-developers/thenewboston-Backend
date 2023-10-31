@@ -1,12 +1,16 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from ..filters.artwork_transfer import ArtworkTransferFilter
 from ..models import ArtworkTransfer
 from ..serializers.artwork_transfer import ArtworkTransferReadSerializer, ArtworkTransferWriteSerializer
 
 
 class ArtworkTransferViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ArtworkTransferFilter
     permission_classes = [IsAuthenticated]
     queryset = ArtworkTransfer.objects.all()
 
