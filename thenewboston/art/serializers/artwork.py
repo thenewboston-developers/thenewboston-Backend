@@ -4,6 +4,7 @@ import requests
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
+from thenewboston.cores.models import Core
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Artwork
@@ -20,10 +21,11 @@ class ArtworkReadSerializer(serializers.ModelSerializer):
 
 class ArtworkWriteSerializer(serializers.ModelSerializer):
     image_url = serializers.URLField(write_only=True)
+    price_core = serializers.PrimaryKeyRelatedField(queryset=Core.objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = Artwork
-        fields = ('description', 'image_url', 'name')
+        fields = ('description', 'image_url', 'name', 'price_amount', 'price_core')
         read_only_fields = (
             'created_date',
             'creator',
