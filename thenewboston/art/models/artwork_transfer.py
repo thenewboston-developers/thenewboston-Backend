@@ -17,6 +17,8 @@ class ArtworkTransfer(CreatedModified):
         null=True,
         related_name='acquired_artworks',
     )
+    price_amount = models.PositiveBigIntegerField(blank=True, null=True)
+    price_core = models.ForeignKey('cores.Core', blank=True, null=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         previous_owner_username = getattr(self.previous_owner, 'username', 'None')
