@@ -17,8 +17,8 @@ class ArtworkTransferViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        transfer = serializer.save()
-        read_serializer = ArtworkTransferReadSerializer(transfer, context={'request': request})
+        artwork_transfer = serializer.save()
+        read_serializer = ArtworkTransferReadSerializer(artwork_transfer, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 

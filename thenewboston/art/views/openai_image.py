@@ -11,7 +11,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @staticmethod
-    def create(request, *args, **kwargs):
+    def create(request):
         openai.api_key = settings.OPENAI_API_KEY
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
