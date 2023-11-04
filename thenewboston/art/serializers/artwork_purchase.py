@@ -14,17 +14,15 @@ User = get_user_model()
 
 class ArtworkPurchaseSerializer(serializers.ModelSerializer):
     artwork = serializers.PrimaryKeyRelatedField(queryset=Artwork.objects.all(), required=True)
-    new_owner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=True)
 
     class Meta:
         model = ArtworkTransfer
-        fields = ('artwork', 'new_owner')
+        fields = ('artwork',)
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
         artwork = validated_data.get('artwork')
-        new_owner = validated_data.get('new_owner')
 
         buyer_wallet = Wallet.objects.select_for_update().get(owner=request.user, core=artwork.price_core)
 
@@ -42,13 +40,15 @@ class ArtworkPurchaseSerializer(serializers.ModelSerializer):
 
         artwork_transfer = ArtworkTransfer.objects.create(
             previous_owner=artwork.owner,
-            new_owner=new_owner,
+            new_owner=request.user,
             artwork=artwork,
             price_amount=artwork.price_amount,
             price_core=artwork.price_core,
         )
 
-        artwork.owner = new_owner
+        artwork.owner = request.user
+        artwork.price_amount = None
+        artwork.price_core = None
         artwork.save()
 
         buyer_wallet_data = WalletReadSerializer(buyer_wallet).data
@@ -88,11 +88,3 @@ class ArtworkPurchaseSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('The artwork must have a specified price and a core.')
 
         return artwork
-
-    def validate_new_owner(self, new_owner):
-        user = self.context['request'].user
-
-        if new_owner != user:
-            raise serializers.ValidationError('You cannot purchase artwork for other users.')
-
-        return new_owner
