@@ -58,3 +58,10 @@ class UserWriteSerializer(serializers.ModelSerializer):
         InvitationLimit.objects.create(owner=user, amount=recipient_limit)
 
         return user
+
+    @staticmethod
+    def validate_username(value):
+        if not value.isalnum():
+            raise serializers.ValidationError('Usernames can only contain alphanumeric characters.')
+
+        return value
