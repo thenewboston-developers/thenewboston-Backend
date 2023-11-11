@@ -18,6 +18,11 @@ migrate:
 migrations:
 	poetry run python -m thenewboston.manage makemigrations
 
+.PHONY: run-dependencies
+run-dependencies:
+	test -f .env || touch .env
+	docker-compose -f docker-compose.dev.yml up --force-recreate db
+
 .PHONY: run-server
 run-server:
 	poetry run python -m thenewboston.manage runserver
@@ -37,11 +42,6 @@ test:
 .PHONY: test-detailed
 test-detailed:
 	poetry run pytest -vv -rs -s
-
-.PHONY: up-dependencies-only
-up-dependencies-only:
-	test -f .env || touch .env
-	docker-compose -f docker-compose.dev.yml up --force-recreate db
 
 .PHONY: update
 update: install migrate install-pre-commit ;
