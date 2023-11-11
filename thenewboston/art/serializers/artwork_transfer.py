@@ -33,6 +33,8 @@ class ArtworkTransferWriteSerializer(serializers.ModelSerializer):
             previous_owner=request.user,
         )
         transfer.artwork.owner = transfer.new_owner
+        transfer.artwork.price_amount = None
+        transfer.artwork.price_core = None
         transfer.artwork.save()
         return transfer
 
