@@ -15,10 +15,13 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         openai.api_key = settings.OPENAI_API_KEY
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        response = openai.Image.create(
-            n=serializer.validated_data['quantity'],
-            prompt=serializer.validated_data['description'],
-            size='1024x1024',
-        )
 
-        return Response(response, status=status.HTTP_200_OK)
+        try:
+            response = openai.Image.create(
+                n=serializer.validated_data['quantity'],
+                prompt=serializer.validated_data['description'],
+                size='1024x1024',
+            )
+            return Response(response, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
