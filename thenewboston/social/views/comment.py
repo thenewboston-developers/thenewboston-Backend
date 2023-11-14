@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Comment
-from ..serializers.comment import CommentReadSerializer, CommentWriteSerializer
+from ..serializers.comment import CommentReadSerializer, CommentUpdateSerializer, CommentWriteSerializer
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -21,8 +21,11 @@ class CommentViewSet(viewsets.ModelViewSet):
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def get_serializer_class(self):
-        if self.action in ['create', 'partial_update', 'update']:
+        if self.action == 'create':
             return CommentWriteSerializer
+
+        if self.action in ['partial_update', 'update']:
+            return CommentUpdateSerializer
 
         return CommentReadSerializer
 
