@@ -1,5 +1,9 @@
+import uuid
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
@@ -22,7 +26,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
     def update(self, instance, validated_data):
-        instance.avatar = validated_data.get('avatar', '')
+        avatar = validated_data.get('avatar')
+
+        if avatar:
+            extension = Path(avatar.name).suffix
+            filename = f'{uuid.uuid4()}{extension}'
+            file = ContentFile(avatar.read(), filename)
+            instance.avatar = file
+        else:
+            instance.avatar = ''
+
         instance.save()
         return instance
 
