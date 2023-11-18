@@ -26,7 +26,7 @@ class ArtworkTransferViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'Deletion of ArtworkTransfers is not allowed.'}, status=status.HTTP_403_FORBIDDEN)
 
     def get_serializer_class(self):
-        if self.action in ['create']:
+        if self.action == 'create':
             return ArtworkTransferWriteSerializer
 
         return ArtworkTransferReadSerializer
