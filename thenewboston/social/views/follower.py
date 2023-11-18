@@ -1,14 +1,18 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.permissions import IsObjectFollowerOrReadOnly
 
+from ..filters.follower import FollowerFilter
 from ..models import Follower
 from ..serializers.follower import FollowerCreateSerializer, FollowerReadSerializer
 
 
 class FollowerViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = FollowerFilter
     permission_classes = [IsAuthenticated, IsObjectFollowerOrReadOnly]
     queryset = Follower.objects.all()
 
