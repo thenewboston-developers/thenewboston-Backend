@@ -8,6 +8,7 @@ import thenewboston.authentication.urls
 import thenewboston.cores.urls
 import thenewboston.exchange.urls
 import thenewboston.invitations.urls
+import thenewboston.notifications.urls
 import thenewboston.shop.urls
 import thenewboston.social.urls
 import thenewboston.users.urls
@@ -22,6 +23,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.cores.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.invitations.urls)),
+    path(API_PREFIX, include(thenewboston.notifications.urls)),
     path(API_PREFIX, include(thenewboston.shop.urls)),
     path(API_PREFIX, include(thenewboston.social.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
