@@ -3,6 +3,10 @@ from django.db import transaction
 from rest_framework import serializers
 
 from thenewboston.general.enums import MessageType
+from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.models import Notification
+from thenewboston.notifications.serializers.notification import NotificationReadSerializer
+from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
@@ -51,16 +55,31 @@ class ArtworkPurchaseSerializer(serializers.ModelSerializer):
         artwork.price_core = None
         artwork.save()
 
-        buyer_wallet_data = WalletReadSerializer(buyer_wallet).data
+        buyer_wallet_data = WalletReadSerializer(buyer_wallet, context={'request': request}).data
         WalletConsumer.stream_wallet(
             message_type=MessageType.UPDATE_WALLET,
             wallet_data=buyer_wallet_data,
         )
 
-        seller_wallet_data = WalletReadSerializer(seller_wallet).data
+        seller_wallet_data = WalletReadSerializer(seller_wallet, context={'request': request}).data
         WalletConsumer.stream_wallet(
             message_type=MessageType.UPDATE_WALLET,
             wallet_data=seller_wallet_data,
+        )
+
+        notification = Notification.objects.create(
+            owner=artwork_transfer.previous_owner,
+            payload={
+                'artwork_id': artwork.id,
+                'buyer': UserReadSerializer(artwork_transfer.new_owner, context={
+                    'request': request
+                }).data,
+                'notification_type': 'ARTWORK_PURCHASE',
+            }
+        )
+        notification_data = NotificationReadSerializer(notification).data
+        NotificationConsumer.stream_notification(
+            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
         )
 
         return artwork_transfer
