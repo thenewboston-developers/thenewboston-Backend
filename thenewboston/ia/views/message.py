@@ -1,14 +1,18 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.permissions import IsObjectSenderOrReadOnly
 
+from ..filters.message import MessageFilter
 from ..models import Message
 from ..serializers.message import MessageReadSerializer, MessageWriteSerializer
 
 
 class MessageViewSet(viewsets.ModelViewSet):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MessageFilter
     permission_classes = [IsAuthenticated, IsObjectSenderOrReadOnly]
     queryset = Message.objects.all()
 
@@ -19,6 +23,9 @@ class MessageViewSet(viewsets.ModelViewSet):
         read_serializer = MessageReadSerializer(message, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        return Message.objects.filter(sender=self.request.user)
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:

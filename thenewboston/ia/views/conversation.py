@@ -20,6 +20,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
+    def get_queryset(self):
+        return Conversation.objects.filter(owner=self.request.user)
+
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:
             return ConversationWriteSerializer
