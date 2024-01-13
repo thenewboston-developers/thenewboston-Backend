@@ -1,5 +1,5 @@
-import openai
 from django.conf import settings
+from openai import OpenAI
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,16 +12,18 @@ class OpenAIImageViewSet(viewsets.ViewSet):
 
     @staticmethod
     def create(request):
-        openai.api_key = settings.OPENAI_API_KEY
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            response = openai.Image.create(
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            response = client.images.generate(
+                model='dall-e-2',
                 n=serializer.validated_data['quantity'],
                 prompt=serializer.validated_data['description'],
+                quality='standard',
                 size='1024x1024',
             )
-            return Response(response, status=status.HTTP_200_OK)
+            return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
