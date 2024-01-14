@@ -27,7 +27,7 @@ class MessageConsumer(JsonWebsocketConsumer):
         details and 'type' indicating the action.
         """
 
-        logger.warning('456')
+        logger.warning('----- create_message -----')
         logger.warning(event)
 
         self.send_json({
@@ -59,6 +59,7 @@ class MessageConsumer(JsonWebsocketConsumer):
             'type': message_type.value,
         }
 
+        logger.warning('----- stream_message -----')
         logger.warning(cls.get_group_name(conversation_owner_id))
         logger.warning(message_event)
 

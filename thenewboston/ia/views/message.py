@@ -22,7 +22,12 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         message = serializer.save()
         read_serializer = MessageReadSerializer(message, context={'request': request})
+
+        # TODO: Run this as a background task
         generate_ias_response(message.conversation.id)
+
+        # TODO: This does not work
+        # generate_ias_response.delay(message.conversation.id)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
