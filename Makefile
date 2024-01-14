@@ -21,7 +21,7 @@ migrations:
 .PHONY: run-dependencies
 run-dependencies:
 	test -f .env || touch .env
-	docker-compose -f docker-compose.dev.yml up --force-recreate db
+	docker-compose -f docker-compose.dev.yml up --force-recreate db redis
 
 .PHONY: run-server
 run-server:
