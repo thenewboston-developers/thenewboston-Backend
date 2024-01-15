@@ -11,7 +11,7 @@ class SenderType(models.TextChoices):
 
 class Message(CreatedModified):
     conversation = models.ForeignKey('ia.Conversation', on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey('users.User', blank=True, null=True, on_delete=models.CASCADE)
+    sender = models.ForeignKey('users.User', on_delete=models.CASCADE)
     sender_type = models.CharField(choices=SenderType.choices, max_length=4, default=SenderType.USER)
     text = models.TextField()
 
