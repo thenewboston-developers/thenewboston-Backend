@@ -14,6 +14,14 @@ services:
     volumes:
       - postgresql-data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:6.2.6-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/var/lib/redis
+
   app:
     build: .
     restart: unless-stopped
@@ -21,10 +29,14 @@ services:
       - '8000:8000'
     depends_on:
       - db
+      - redis
     environment:
       THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
       THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: 'local/settings.prod.py'
+      THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
 
 volumes:
   postgresql-data:
+    driver: local
+  redis-data:
     driver: local
