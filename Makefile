@@ -1,3 +1,6 @@
+# TODO(dmu) MEDIUM: Upgrade docker everywhere and remove the following workaround
+DOCKER_COMPOSE_COMMAND := $(shell command -v docker-compose 2> /dev/null || echo "docker compose")
+
 .PHONY: install
 install:
 	poetry install
@@ -21,7 +24,7 @@ migrations:
 .PHONY: run-dependencies
 run-dependencies:
 	test -f .env || touch .env
-	docker-compose -f docker-compose.dev.yml up --force-recreate db redis
+	${DOCKER_COMPOSE_COMMAND} -f docker-compose.dev.yml up --force-recreate db redis
 
 .PHONY: run-server
 run-server:
