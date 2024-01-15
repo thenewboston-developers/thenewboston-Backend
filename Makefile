@@ -21,7 +21,7 @@ migrations:
 .PHONY: run-dependencies
 run-dependencies:
 	test -f .env || touch .env
-	docker-compose -f docker-compose.dev.yml up --force-recreate db
+	docker-compose -f docker-compose.dev.yml up --force-recreate db redis
 
 .PHONY: run-server
 run-server:
@@ -45,3 +45,7 @@ test-detailed:
 
 .PHONY: update
 update: install migrate install-pre-commit ;
+
+.PHONY: worker
+worker:
+	poetry run celery -A thenewboston.project worker -l INFO

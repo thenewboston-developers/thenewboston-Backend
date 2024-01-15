@@ -25,7 +25,8 @@ python = "^3.10"
 pyyaml = "^6.0"
 requests = "^2.31.0"
 whitenoise = "^6.5.0"
-openai = "^0.28.0"
+openai = "^1.7.2"
+celery = {extras = ["redis"], version = "^5.3.6"}
 
 [tool.poetry.group.dev.dependencies]
 colorlog = "^6.7.0"
