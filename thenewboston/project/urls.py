@@ -5,6 +5,7 @@ from django.urls import include, path
 
 import thenewboston.art.urls
 import thenewboston.authentication.urls
+import thenewboston.contributions.urls
 import thenewboston.cores.urls
 import thenewboston.exchange.urls
 import thenewboston.ia.urls
@@ -21,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path(API_PREFIX, include(thenewboston.art.urls)),
     path(API_PREFIX, include(thenewboston.authentication.urls)),
+    path(API_PREFIX, include(thenewboston.contributions.urls)),
     path(API_PREFIX, include(thenewboston.cores.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.ia.urls)),

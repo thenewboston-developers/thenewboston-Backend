@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     # Apps
     'thenewboston.art.apps.ArtConfig',
     'thenewboston.authentication.apps.AuthenticationConfig',
+    'thenewboston.contributions.apps.ContributionsConfig',
     'thenewboston.cores.apps.CoresConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.github.apps.GithubConfig',
