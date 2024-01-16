@@ -8,4 +8,4 @@ class Conversation(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'Conversation ID: {self.pk} | ' f'Name: {self.name}'
+        return f'Conversation ID: {self.pk} | Name: {self.name}'
