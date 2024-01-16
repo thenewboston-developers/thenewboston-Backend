@@ -32,8 +32,24 @@ services:
       - redis
     environment:
       THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
-      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: 'local/settings.prod.py'
+      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
       THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
+
+  celery:
+    build: .
+    restart: unless-stopped
+    entrypoint: ["poetry", "run", "celery", "-A", "thenewboston.project", "worker", "-l", "INFO"]
+    depends_on:
+      - db
+      - redis
+    environment:
+      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
+      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
+      THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
 
 volumes:
   postgresql-data:
