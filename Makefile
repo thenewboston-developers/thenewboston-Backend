@@ -54,6 +54,6 @@ test-detailed:
 .PHONY: update
 update: install migrate install-pre-commit ;
 
-.PHONY: worker
-worker:
+.PHONY: run-celery
+run-celery:
 	poetry run celery -A thenewboston.project worker -l INFO
