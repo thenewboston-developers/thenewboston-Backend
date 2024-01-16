@@ -6,7 +6,7 @@ services:
     image: postgres:14.2-alpine
     restart: unless-stopped
     ports:
-      - '5432:5432'
+      - 127.0.0.1:5432:5432
     environment:
       POSTGRES_DB: thenewboston
       POSTGRES_USER: thenewboston
@@ -18,7 +18,7 @@ services:
     image: redis:6.2.6-alpine
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/var/lib/redis
 
