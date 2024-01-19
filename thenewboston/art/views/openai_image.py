@@ -1,10 +1,13 @@
+import promptlayer
 from django.conf import settings
-from openai import OpenAI
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ..serializers.openai_image import OpenAIImageSerializer
+
+promptlayer.api_key = settings.PROMPTLAYER_API_KEY
+OpenAI = promptlayer.openai.OpenAI
 
 
 class OpenAIImageViewSet(viewsets.ViewSet):
@@ -16,7 +19,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            client = OpenAI()
             response = client.images.generate(
                 model='dall-e-2',
                 n=serializer.validated_data['quantity'],
