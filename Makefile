@@ -21,6 +21,10 @@ migrate:
 migrations:
 	poetry run python -m thenewboston.manage makemigrations
 
+.PHONY: run-celery
+run-celery:
+	poetry run celery -A thenewboston.project worker -l INFO
+
 .PHONY: run-dependencies
 run-dependencies:
 	test -f .env || touch .env
@@ -53,7 +57,3 @@ test-detailed:
 
 .PHONY: update
 update: install migrate install-pre-commit ;
-
-.PHONY: run-celery
-run-celery:
-	poetry run celery -A thenewboston.project worker -l INFO
