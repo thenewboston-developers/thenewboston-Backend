@@ -16,7 +16,7 @@ OpenAI = promptlayer.openai.OpenAI
 
 @app.task
 def generate_ias_response(conversation_id):
-    client = OpenAI()
+    client = OpenAI(api_key=settings.PROMPTLAYER_API_KEY)
     prompt = promptlayer.prompts.get('create-message', label='prod')
     system_message_content = prompt['messages'][0]['prompt']['template']
     messages = [{'role': 'system', 'content': system_message_content}]
