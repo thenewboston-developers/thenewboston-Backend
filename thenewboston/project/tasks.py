@@ -1,5 +1,5 @@
+import promptlayer
 from django.conf import settings
-from openai import OpenAI
 
 from thenewboston.general.enums import MessageType
 from thenewboston.ia.consumers.message import MessageConsumer
@@ -10,36 +10,33 @@ from thenewboston.ia.utils.ia import get_ia
 
 from .celery import app
 
+promptlayer.api_key = settings.PROMPTLAYER_API_KEY
+OpenAI = promptlayer.openai.OpenAI
+
 
 @app.task
 def generate_ias_response(conversation_id):
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    messages = get_messages(conversation_id)
-    response = client.chat.completions.create(
-        model='gpt-3.5-turbo',
-        messages=messages,
-    )
-    response_dict = response.dict()
-    text = response_dict['choices'][0]['message']['content']
+    client = OpenAI()
+    prompt = promptlayer.prompts.get('create-message', label='prod')
+    system_message_content = prompt['messages'][0]['prompt']['template']
+    messages = [{'role': 'system', 'content': system_message_content}]
+    messages += get_non_system_messages(conversation_id)
+
+    response = client.chat.completions.create(model='gpt-3.5-turbo', messages=messages)
 
     message = Message.objects.create(
         conversation_id=conversation_id,
         sender=get_ia(),
         sender_type=SenderType.IA,
-        text=text,
+        text=response.choices[0].message.content,
     )
     message_data = MessageReadSerializer(message).data
     MessageConsumer.stream_message(message_type=MessageType.CREATE_MESSAGE, message_data=message_data)
 
 
-def get_messages(conversation_id):
+def get_non_system_messages(conversation_id):
     messages = Message.objects.filter(conversation__id=conversation_id).order_by('created_date')
-    results = [
-        {
-            'role': 'system',
-            'content': 'Your name is Ia. Your job is to ask the user questions to get to know them.'
-        },
-    ]
+    results = []
 
     for message in messages:
         if message.sender_type == SenderType.IA:

@@ -3,6 +3,7 @@ SECRET_KEY = 'django-insecure--08t722@a3nhs))9%p=fzpda1@3y9c*-kprqzd9@3*w0o18@qe
 
 ACCOUNT_NUMBER = '074463d2996f2942d8c724304fafe121f76c376ec2c35c8a2b35ebd08f226cd9'
 OPENAI_API_KEY = 'abc123'
+PROMPTLAYER_API_KEY = 'abc123'
 SIGNING_KEY = '756eb20e5569a0c906ccb813263aa27159aeafa07d7208f860ae290c03066c51'
 
 LOGGING['formatters']['colored'] = {  # type: ignore
