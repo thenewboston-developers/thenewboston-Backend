@@ -19,7 +19,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            client = OpenAI()
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
             response = client.images.generate(
                 model='dall-e-2',
                 n=serializer.validated_data['quantity'],
