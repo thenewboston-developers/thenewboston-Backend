@@ -66,9 +66,9 @@ class CommentWriteSerializer(serializers.ModelSerializer):
             )
 
             transfer_coins(
-                amount=price_amount,
-                recipient_wallet=poster_wallet,
                 sender_wallet=commenter_wallet,
+                recipient_wallet=poster_wallet,
+                amount=price_amount,
             )
 
         post = super().create({

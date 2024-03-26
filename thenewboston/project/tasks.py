@@ -1,4 +1,5 @@
 import promptlayer
+from celery import shared_task
 from django.conf import settings
 
 from thenewboston.general.enums import MessageType
@@ -8,13 +9,11 @@ from thenewboston.ia.models.message import SenderType
 from thenewboston.ia.serializers.message import MessageReadSerializer
 from thenewboston.ia.utils.ia import get_ia
 
-from .celery import app
-
 promptlayer.api_key = settings.PROMPTLAYER_API_KEY
 OpenAI = promptlayer.openai.OpenAI
 
 
-@app.task
+@shared_task
 def generate_ias_response(conversation_id):
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     prompt = promptlayer.prompts.get('create-message', label='prod')
