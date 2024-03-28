@@ -7,6 +7,8 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH .
 ENV THENEWBOSTON_SETTING_IN_DOCKER true
 
+EXPOSE 8000
+
 RUN set -xe \
     && apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
@@ -14,16 +16,22 @@ RUN set -xe \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY ["README.md", "Makefile", "./"]
+
 COPY ["poetry.lock", "pyproject.toml", "./"]
 RUN poetry install --no-root
 
-COPY ["README.md", "Makefile", "./"]
+COPY scripts/run-django.sh ./
+RUN chmod a+x ./run-django.sh
+
+COPY scripts/run-celery.sh ./
+RUN chmod a+x ./run-celery.sh
+
+COPY scripts/run-celery-beat.sh ./
+RUN chmod a+x ./run-celery-beat.sh
+
+RUN mkdir local
+# TODO(dmu) HIGH: Copying local files with credentials might be not the best idea. Consider changing it
+COPY local/settings.prod.py local/settings.prod.py
+
 COPY thenewboston thenewboston
-COPY local local
-
-EXPOSE 8000
-
-COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod a+x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]

@@ -1,5 +1,22 @@
 version: '3.9'
 
+x-service: &service
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        # TODO(dmu) LOW: Add redis health check and change to `condition: service_healthy`
+        condition: service_started
+    environment:
+      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
+      # TODO(dmu) MEDIUM: Use `env_file: /etc/thenewboston/.env` option instead of `local/settings.prod.py` file
+      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
+      THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
+
 services:
 
   db:
@@ -11,6 +28,11 @@ services:
       POSTGRES_DB: thenewboston
       POSTGRES_USER: thenewboston
       POSTGRES_PASSWORD: thenewboston
+    healthcheck:
+      test: PGPASSWORD=$${POSTGRES_PASSWORD} pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 1
     volumes:
       - postgresql-data:/var/lib/postgresql/data
 
@@ -23,33 +45,18 @@ services:
       - redis-data:/var/lib/redis
 
   app:
-    build: .
-    restart: unless-stopped
+    <<: *service
+    command: ./run-django.sh
     ports:
-      - '8000:8000'
-    depends_on:
-      - db
-      - redis
-    environment:
-      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
-      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
-      THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
-      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
-      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
+      - 127.0.0.1:8000:8000
 
   celery:
-    build: .
-    restart: unless-stopped
-    entrypoint: ["poetry", "run", "celery", "-A", "thenewboston.project", "worker", "-l", "INFO"]
-    depends_on:
-      - db
-      - redis
-    environment:
-      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
-      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
-      THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
-      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
-      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
+    <<: *service
+    command: ./run-celery.sh
+
+  celery-beat:
+    <<: *service
+    command: ./run-celery-beat.sh
 
 volumes:
   postgresql-data:

@@ -37,6 +37,7 @@ class ArtworkPurchaseSerializer(serializers.ModelSerializer):
             owner=artwork.owner, core=artwork.price_core, defaults={'balance': 0}
         )
 
+        # TODO(dmu) MEDIUM: Consider reusing code from `thenewboston.general.utils.transfers`
         buyer_wallet.balance -= artwork.price_amount
         seller_wallet.balance += artwork.price_amount
         buyer_wallet.save()

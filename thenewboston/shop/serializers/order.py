@@ -3,7 +3,6 @@ from collections import defaultdict
 from django.db import transaction
 from rest_framework import serializers
 
-from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
@@ -83,27 +82,17 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def handle_payment(payment_dict, request, seller):
-        key_pairs = {core_id: generate_key_pair() for core_id in payment_dict.keys()}
-
         for core_id, total_price in payment_dict.items():
             buyer_wallet = Wallet.objects.select_for_update().get(owner=request.user, core_id=core_id)
-            seller_wallet, created = Wallet.objects.select_for_update().get_or_create(
-                owner=seller,
-                core_id=core_id,
-                defaults={
-                    'balance': 0,
-                    'deposit_account_number': key_pairs[core_id].public,
-                    'deposit_signing_key': key_pairs[core_id].private,
-                }
-            )
+            seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(owner=seller, core_id=core_id)
 
             if buyer_wallet.balance < total_price:
                 raise serializers.ValidationError('Insufficient funds')
 
             transfer_coins(
-                amount=total_price,
-                recipient_wallet=seller_wallet,
                 sender_wallet=buyer_wallet,
+                recipient_wallet=seller_wallet,
+                amount=total_price,
             )
 
     def validate(self, attrs):
