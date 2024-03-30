@@ -1,8 +1,4 @@
-# THENEWBOSTON
-
-DRF Backend of TheNewBoston 
-
-** Here goes some brief description about the project and it's backend **
+# Project setup
 
 **SECTIONS**
 1. [Initial Project Setup](#initial-project-setup)
@@ -31,7 +27,6 @@ Make sure Docker is installed in your machine and run the following commands:
 ```bash
 make run-dependencies  # Sets up the necessary Docker containers for Redis and PostgreSQL
 make install           # Installs project dependencies
-make migrations        # Creates database migrations
 make migrate           # Applies database migrations
 ```
 
