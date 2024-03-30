@@ -4,6 +4,7 @@ from rest_framework import serializers
 from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
+from thenewboston.wallets.utils.wallets import get_or_create_wallet
 
 from ..models import Comment
 
@@ -61,9 +62,7 @@ class CommentWriteSerializer(serializers.ModelSerializer):
             if commenter_wallet.balance < price_amount:
                 raise serializers.ValidationError('Insufficient funds')
 
-            poster_wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                owner=post.owner, core=price_core, defaults={'balance': 0}
-            )
+            poster_wallet, created = get_or_create_wallet(owner=post.owner, core_id=price_core.id, in_transaction=True)
 
             transfer_coins(
                 amount=price_amount,

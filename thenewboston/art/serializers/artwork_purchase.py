@@ -10,6 +10,7 @@ from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
+from thenewboston.wallets.utils.wallets import get_or_create_wallet
 
 from ..models import Artwork, ArtworkTransfer
 
@@ -33,8 +34,8 @@ class ArtworkPurchaseSerializer(serializers.ModelSerializer):
         if buyer_wallet.balance < artwork.price_amount:
             raise serializers.ValidationError('Insufficient funds')
 
-        seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(
-            owner=artwork.owner, core=artwork.price_core, defaults={'balance': 0}
+        seller_wallet, _ = get_or_create_wallet(
+            owner=artwork.owner, core_id=artwork.price_core.id, in_transaction=True
         )
 
         buyer_wallet.balance -= artwork.price_amount
