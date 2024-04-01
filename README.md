@@ -26,15 +26,15 @@ Make sure Docker is installed in your machine and run the following commands:
 
 ```bash
 make run-dependencies  # Sets up the necessary Docker containers for Redis and PostgreSQL
-make install           # Installs project dependencies
-make migrate           # Applies database migrations
+make update            # Installs project dependencies, pre-commit and applies database migrations 
 ```
 
 Fire Up the Server 🚀
 
 ```bash
-make run-server    # Starts the Django development server
-make run-celery    # Starts the Celery worker for background tasks and LLM chatbot
+make run-server       # Starts the Django development server
+make run-celery       # Starts the Celery worker for background tasks and LLM chatbot
+nake run-celery-beat  # Starts the Celery Beat
 ```
 
 Now you're all set! The backend is up and ready for action.
