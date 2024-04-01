@@ -3,24 +3,19 @@ version: '3.9'
 services:
 
   db:
-    image: postgres:14.2-alpine
-    restart: unless-stopped
-    ports:
-      - '5432:5432'
-    environment:
-      POSTGRES_DB: thenewboston
-      POSTGRES_USER: thenewboston
-      POSTGRES_PASSWORD: thenewboston
-    volumes:
-      - postgresql-data:/var/lib/postgresql/data
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
 
   redis:
-    image: redis:6.2.6-alpine
-    restart: unless-stopped
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis-data:/var/lib/redis
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+
+  app:
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+
+  celery:
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+
+  celery-beat:
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
 
 volumes:
   postgresql-data:
