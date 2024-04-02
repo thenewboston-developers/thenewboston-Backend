@@ -44,13 +44,13 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         wallet = Wallet.objects.filter(owner=user, core=get_default_core()).first()
 
         if not wallet:
-            raise Exception(f'Core {settings.DEFAULT_CORE_TICKER} Wallet not found.')
+            raise Exception(f'Core {settings.DEFAULT_CORE_TICKER} wallet not found.')
 
         total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * quantity
 
         if total_image_creation_fee > wallet.balance:
             raise Exception(
-                f'Insufficient balance. Total Artwork Creation Fee: {total_image_creation_fee}, '
+                f'Insufficient balance. Total artwork creation fee: {total_image_creation_fee}, '
                 f'Wallet balance: {wallet.balance}'
             )
 
