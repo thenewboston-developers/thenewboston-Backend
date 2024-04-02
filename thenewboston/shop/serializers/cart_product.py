@@ -63,6 +63,14 @@ class CartProductWriteSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def validate_product(self, product):
+        request = self.context.get('request')
+
+        if product.seller == request.user:
+            raise serializers.ValidationError('You cannot add your own product to the cart.')
+
+        return product
+
     @staticmethod
     def validate_quantity(value):
         if value <= 0:
