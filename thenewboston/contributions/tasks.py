@@ -7,7 +7,7 @@ from django.db import transaction
 from github.PullRequest import PullRequest
 
 from thenewboston.contributions.models import Contribution
-from thenewboston.cores.models import Core
+from thenewboston.cores.utils.core import get_default_core
 from thenewboston.general.utils.logging import log
 from thenewboston.general.utils.misc import identity_decorator, swallow_exception
 from thenewboston.general.utils.pytest import is_pytest_running
@@ -25,10 +25,6 @@ def get_repos(repo_id):
         query = query.filter(id=repo_id)
 
     return query.all()
-
-
-def get_default_core():
-    return Core.objects.get(ticker=settings.CONTRIBUTION_CORE_DEFAULT_TICKER)
 
 
 @log(with_arguments=True, exception_log_level=logging.INFO)

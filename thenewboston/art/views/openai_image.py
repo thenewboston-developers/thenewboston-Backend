@@ -1,10 +1,14 @@
 import promptlayer
 from django.conf import settings
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.clients.openai import OpenAIClient
+from thenewboston.cores.utils.core import get_default_core
+from thenewboston.general.constants import OPENAI_IMAGE_CREATION_FEE
+from thenewboston.wallets.models.wallet import Wallet
 
 from ..serializers.openai_image import OpenAIImageSerializer
 
@@ -15,18 +19,41 @@ OpenAI = promptlayer.openai.OpenAI
 class OpenAIImageViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    @staticmethod
-    def create(request):
+    def create(self, request):
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        validated_data = serializer.validated_data
+        description = serializer.validated_data['description']
+        quantity = serializer.validated_data['quantity']
         try:
+            self.charge_image_creation_fee(request.user, quantity)
             response = OpenAIClient.get_instance().generate_image(
-                prompt=validated_data['description'],
-                quantity=validated_data['quantity'],
+                prompt=description,
+                quantity=quantity,
             )
             # TODO(dmu) LOW: Consider using status.HTTP_201_CREATED instead
             return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    def charge_image_creation_fee(user, quantity):
+        """
+        Charges the image creation fee by deducting the calculated amount
+        from the user's default core's wallet balance.
+        """
+        wallet = Wallet.objects.filter(owner=user, core=get_default_core()).first()
+
+        if not wallet:
+            raise ValidationError(f'Core {settings.DEFAULT_CORE_TICKER} Wallet not found.')
+
+        total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * quantity
+
+        if total_image_creation_fee > wallet.balance:
+            raise ValidationError(
+                f'Insufficient balance. Total Artwork Creation Fee: {total_image_creation_fee},'
+                'Wallet balance: {wallet.balance}'
+            )
+
+        wallet.balance -= total_image_creation_fee
+        wallet.save()
