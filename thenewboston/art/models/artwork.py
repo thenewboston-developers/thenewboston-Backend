@@ -7,6 +7,7 @@ class Artwork(CreatedModified):
     creator = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='created_artworks')
     description = models.TextField()
     image = models.ImageField(upload_to='images/')
+    image_url = models.URLField(max_length=1024, unique=True, null=True, help_text='URL of an OpenAI-generated image')
     name = models.CharField(max_length=200)
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='owned_artworks')
     price_amount = models.PositiveBigIntegerField(blank=True, null=True)
