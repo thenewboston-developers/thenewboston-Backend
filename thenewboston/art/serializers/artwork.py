@@ -2,11 +2,9 @@ import uuid
 
 import requests
 from django.core.files.base import ContentFile
-from django.db import IntegrityError
 from rest_framework import serializers
 
 from thenewboston.cores.models import Core
-from thenewboston.general.constants import GENERIC_ERROR_MESSAGE
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Artwork
@@ -39,15 +37,10 @@ class ArtworkWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         image_url = validated_data.get('image_url')
 
-        try:
-            response = requests.get(image_url)
-            image = ContentFile(response.content, f'{uuid.uuid4()}.png')
+        if Artwork.objects.filter(owner=request.user, image_url=image_url).exists():
+            raise serializers.ValidationError('You have already saved this Artwork.')
 
-            artwork = Artwork.objects.create(creator=request.user, image=image, owner=request.user, **validated_data)
-            return artwork
-
-        except IntegrityError as e:
-            if 'image_url' in str(e):
-                raise serializers.ValidationError('You have already saved this Artwork.')
-            else:
-                raise serializers.ValidationError(GENERIC_ERROR_MESSAGE)
+        response = requests.get(image_url)
+        image = ContentFile(response.content, f'{uuid.uuid4()}.png')
+        artwork = Artwork.objects.create(creator=request.user, image=image, owner=request.user, **validated_data)
+        return artwork

@@ -13,6 +13,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='artwork',
             name='image_url',
-            field=models.URLField(help_text='URL of an OpenAI-generated image', max_length=1024, null=True, unique=True),
+            field=models.URLField(
+                help_text='URL of an OpenAI-generated image', max_length=1024, null=True, unique=True
+            ),
         ),
     ]
