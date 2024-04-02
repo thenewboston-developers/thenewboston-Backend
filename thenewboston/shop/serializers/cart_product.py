@@ -27,11 +27,16 @@ class CartProductWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
+        buyer = request.user
+        product = validated_data.get('product')
+
+        if product.seller == buyer:
+            raise serializers.ValidationError('You cannot add your own product to the cart.')
 
         try:
             cart_product = super().create({
                 **validated_data,
-                'buyer': request.user,
+                'buyer': buyer,
             })
         except IntegrityError:
             raise serializers.ValidationError('This product is already in your cart.')
