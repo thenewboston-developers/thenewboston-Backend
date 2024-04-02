@@ -1,7 +1,6 @@
 import promptlayer
 from django.conf import settings
 from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -45,14 +44,14 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         wallet = Wallet.objects.filter(owner=user, core=get_default_core()).first()
 
         if not wallet:
-            raise ValidationError(f'Core {settings.DEFAULT_CORE_TICKER} Wallet not found.')
+            raise Exception(f'Core {settings.DEFAULT_CORE_TICKER} Wallet not found.')
 
         total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * quantity
 
         if total_image_creation_fee > wallet.balance:
-            raise ValidationError(
-                f'Insufficient balance. Total Artwork Creation Fee: {total_image_creation_fee},'
-                'Wallet balance: {wallet.balance}'
+            raise Exception(
+                f'Insufficient balance. Total Artwork Creation Fee: {total_image_creation_fee}, '
+                f'Wallet balance: {wallet.balance}'
             )
 
         wallet.balance -= total_image_creation_fee
