@@ -37,7 +37,7 @@ class ArtworkWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         image_url = validated_data.get('image_url')
 
-        if Artwork.objects.filter(owner=request.user, image_url=image_url).exists():
+        if Artwork.objects.filter(image_url=image_url, owner=request.user).exists():
             raise serializers.ValidationError('You have already saved this Artwork.')
 
         response = requests.get(image_url)
