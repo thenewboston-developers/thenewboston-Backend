@@ -4,6 +4,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..filters.post import PostFilter
@@ -17,6 +18,7 @@ class PostViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Post.objects.all()
+    pagination_class = CustomPageNumberPagination
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
