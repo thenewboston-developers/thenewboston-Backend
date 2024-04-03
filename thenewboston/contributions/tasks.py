@@ -88,13 +88,14 @@ def create_contribution(core, pull_request):
     github_user = pull_request.github_user
     reward_recipient = github_user.reward_recipient
     assert reward_recipient
+    assert pull_request.assessment_points is not None
 
     Contribution.objects.create(
         core=core,
         github_user=github_user,
         pull=pull_request,
         repo=pull_request.repo,
-        reward_amount=pull_request.value_points,
+        reward_amount=pull_request.assessment_points,
         user=reward_recipient,
     )
 
@@ -106,8 +107,15 @@ def reward_contributor(core_id: int, pull_request: Pull):
 
     wallet = github_user.get_reward_wallet_for_core(core_id)
     assert wallet
+    assert pull_request.assessment_points is not None
 
-    change_wallet_balance(wallet, pull_request.value_points)
+    change_wallet_balance(wallet, pull_request.assessment_points)
+
+
+@log(with_arguments=True, exception_log_level=logging.INFO)
+@transaction_atomic
+def pre_process_pull_request(pull_request: Pull):
+    pull_request.assess()
 
 
 @log(with_arguments=True, exception_log_level=logging.INFO)
@@ -136,6 +144,15 @@ def process_repo(repo: Repo, limit=None):
 
     for pull_request in query:
         try:
+            pre_process_pull_request(pull_request)  # purposefully do it in a separate transaction
+            if pull_request.assessment_points is None:
+                logger.warning(
+                    'Assessment points were not assigned to pull request number %s in repo %s',
+                    pull_request.issue_number,
+                    repo,
+                )
+                continue
+
             process_pull_request(pull_request)
         except Exception:
             logger.warning(

@@ -1,7 +1,10 @@
+from django.conf import settings
 from django.db import models
 
+from thenewboston.general.clients.openai import OpenAIClient, ResultFormat
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.misc import null_object
+from thenewboston.github.client import GitHubClient
 
 
 class Pull(CreatedModified):
@@ -9,6 +12,8 @@ class Pull(CreatedModified):
     repo = models.ForeignKey('Repo', on_delete=models.CASCADE, related_name='pulls')
     issue_number = models.PositiveIntegerField()
     title = models.CharField(max_length=256)
+    assessment_points = models.PositiveIntegerField(null=True, blank=True)
+    assessment_explanation = models.TextField(null=True, blank=True)
 
     # Potentially there may be pull requests without contributions (like low value PRs or similar),
     # more than one contribution per pull request (if there are more than one author of the PR,
@@ -37,6 +42,20 @@ class Pull(CreatedModified):
     def username(self):
         return (self.github_user or null_object).github_username
 
-    @property
-    def value_points(self) -> int:
-        return min(self.issue_number * 10, 1000)  # TODO(dmu) CRITICAL: Replace this with real implementation
+    def fetch_diff(self):
+        return GitHubClient().get_pull_request_diff(self.repo_owner_name, self.repo_name, self.issue_number)
+
+    def assess(self, save=True):
+        # All potential exceptions must be handled by the caller of the method
+
+        result = OpenAIClient.get_instance().get_chat_completion(
+            settings.GITHUB_PR_ASSESSMENT_TEMPLATE_NAME,
+            input_variables={'git_diff': self.fetch_diff()},
+            track=True,
+            result_format=ResultFormat.JSON,
+            tracked_user=(self.github_user or null_object).reward_recipient,
+        )
+        self.assessment_points = result['assessment']
+        self.assessment_explanation = result['explanation']
+        if save:
+            self.save()

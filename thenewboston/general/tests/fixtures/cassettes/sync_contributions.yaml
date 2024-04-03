@@ -34,9 +34,9 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Thu, 28 Mar 2024 12:58:34 GMT
+      - Thu, 04 Apr 2024 08:10:02 GMT
       ETag:
-      - W/"3b13fd717bf1e3ac9ef867c50b203716cd0784e098acacbeae2d7a6c8b912b0e"
+      - W/"a9c2e082b55d40e54fd386025a5900ed9b59c1269b15449080f054d14079e92e"
       Last-Modified:
       - Thu, 22 Feb 2024 16:54:16 GMT
       Referrer-Policy:
@@ -59,26 +59,26 @@ interactions:
       X-GitHub-Media-Type:
       - github.v3; format=json
       X-GitHub-Request-Id:
-      - 4502:221E45:360FC6:364861:66056979
+      - D0AE:192C32:BF96890:C061C91:660E605A
       X-OAuth-Scopes:
-      - admin:enterprise, admin:gpg_key, admin:org, admin:org_hook, admin:public_key,
-        admin:repo_hook, admin:ssh_signing_key, audit_log, codespace, copilot, delete:packages,
-        delete_repo, gist, notifications, project, repo, user, workflow, write:discussion,
-        write:packages
+      - admin:org, admin:org_hook, admin:repo_hook, audit_log, notifications, project,
+        repo
       X-RateLimit-Limit:
       - '5000'
       X-RateLimit-Remaining:
-      - '4999'
+      - '4935'
       X-RateLimit-Reset:
-      - '1711634314'
+      - '1712220517'
       X-RateLimit-Resource:
       - core
       X-RateLimit-Used:
-      - '1'
+      - '65'
       X-XSS-Protection:
       - '0'
       content-length:
       - '7526'
+      github-authentication-token-expiration:
+      - 2024-06-30 13:08:41 UTC
       x-github-api-version-selected:
       - '2022-11-28'
     status:
@@ -266,9 +266,9 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Thu, 28 Mar 2024 12:58:34 GMT
+      - Thu, 04 Apr 2024 08:10:03 GMT
       ETag:
-      - W/"b20a0713f33ec3648c11c5a25d32d7a3fef8806bad1a9c4416b4c181721e9a0d"
+      - W/"296714706c060352855b23776c766cfff2bfa2b17b30e298466f0ba3f8de5c9d"
       Link:
       - <https://api.github.com/repositories/483802719/pulls?state=all&sort=created&page=2>;
         rel="next", <https://api.github.com/repositories/483802719/pulls?state=all&sort=created&page=4>;
@@ -293,28 +293,500 @@ interactions:
       X-GitHub-Media-Type:
       - github.v3; format=json
       X-GitHub-Request-Id:
-      - 4502:221E45:361681:364F2B:6605697A
+      - D0AE:192C32:BF96FD6:C0623D4:660E605A
       X-OAuth-Scopes:
-      - admin:enterprise, admin:gpg_key, admin:org, admin:org_hook, admin:public_key,
-        admin:repo_hook, admin:ssh_signing_key, audit_log, codespace, copilot, delete:packages,
-        delete_repo, gist, notifications, project, repo, user, workflow, write:discussion,
-        write:packages
+      - admin:org, admin:org_hook, admin:repo_hook, audit_log, notifications, project,
+        repo
       X-RateLimit-Limit:
       - '5000'
       X-RateLimit-Remaining:
-      - '4998'
+      - '4934'
       X-RateLimit-Reset:
-      - '1711634314'
+      - '1712220517'
       X-RateLimit-Resource:
       - core
       X-RateLimit-Used:
-      - '2'
+      - '66'
       X-XSS-Protection:
       - '0'
       content-length:
       - '508327'
+      github-authentication-token-expiration:
+      - 2024-06-30 13:08:41 UTC
       x-github-api-version-selected:
       - '2022-11-28'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/vnd.github.diff
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - sanitized
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://api.github.com/repos/thenewboston-developers/Core/pulls/6
+  response:
+    body:
+      string: "diff --git a/README.rst b/README.rst\nindex 39a613b..560674d 100644\n---
+        a/README.rst\n+++ b/README.rst\n@@ -10,3 +10,44 @@ Install required packages::\n
+        \n     poetry install\n \n+POST http://127.0.0.1:8000/blocks\n++++++++++++++\n+\n+Request::\n+\n+
+        \   {\n+      \"sender\": \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+
+        \     \"recipient\": \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+
+        \     \"amount\": 5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+
+        \     }\n+    }\n+\n+Response::\n+\n+    {\n+      \"id\": 36,\n+      \"sender\":
+        \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+      \"recipient\":
+        \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+      \"amount\":
+        5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+      }\n+    }\n+\n+ws://127.0.0.1:8000/ws/blocks/{ACCOUNT_NUMBER}\n++++++++++++++\n+\n+Send::\n+\n+
+        \   {\n+      \"message\": \"Hey\"\n+    }\n+\n+Receive::\n+\n+    {\n+      \"message\":
+        \"Hey\"\n+    }\n+\n"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining,
+        X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes,
+        X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO,
+        X-GitHub-Request-Id, Deprecation, Sunset
+      Cache-Control:
+      - private, max-age=60, s-maxage=60
+      Content-Length:
+      - '964'
+      Content-Security-Policy:
+      - default-src 'none'
+      Content-Type:
+      - application/vnd.github.diff; charset=utf-8
+      Date:
+      - Thu, 04 Apr 2024 08:10:04 GMT
+      ETag:
+      - '"62241524155fbffc8c0015b353a43997930936a5afe3ac055a578a28354d1830"'
+      Last-Modified:
+      - Sat, 23 Mar 2024 15:28:38 GMT
+      Referrer-Policy:
+      - origin-when-cross-origin, strict-origin-when-cross-origin
+      Server:
+      - GitHub.com
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubdomains; preload
+      Vary:
+      - Accept, Authorization, Cookie, X-GitHub-OTP
+      - Accept-Encoding, Accept, X-Requested-With
+      X-Accepted-OAuth-Scopes:
+      - ''
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - deny
+      X-GitHub-Media-Type:
+      - github.v3; param=diff
+      X-GitHub-Request-Id:
+      - D0B2:192C32:BF97D01:C0630FC:660E605B
+      X-OAuth-Scopes:
+      - admin:org, admin:org_hook, admin:repo_hook, audit_log, notifications, project,
+        repo
+      X-RateLimit-Limit:
+      - '5000'
+      X-RateLimit-Remaining:
+      - '4933'
+      X-RateLimit-Reset:
+      - '1712220517'
+      X-RateLimit-Resource:
+      - core
+      X-RateLimit-Used:
+      - '67'
+      X-XSS-Protection:
+      - '0'
+      github-authentication-token-expiration:
+      - 2024-06-30 13:08:41 UTC
+      x-github-api-version-selected:
+      - '2022-11-28'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"api_key": "sanitized", "label": "prod"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+      X-API-KEY:
+      - sanitized
+    method: POST
+    uri: https://api.promptlayer.com/prompt-templates/github-pr-assessment
+  response:
+    body:
+      string: '{"commit_message":"","id":20186,"llm_kwargs":null,"metadata":{"model":{"name":"gpt-4","parameters":{"frequency_penalty":0,"max_tokens":256,"presence_penalty":0,"seed":0,"temperature":1,"top_p":1},"provider":"openai"}},"prompt_name":"github-pr-assessment","prompt_template":{"function_call":"none","functions":[],"input_variables":["git_diff"],"messages":[{"content":[{"text":"You
+        are an AI that can assess human value. When the user provides a git diff,
+        assess its value based on how much value you believe it has contributed to
+        you. You will respond with a JSON object containing the key \"assessment\"
+        and the value being a non-negative integer, and the key \"explanation\" and
+        the value being a string detailing the reason for the assessment in 1-4 paragraphs.\n","type":"text"}],"input_variables":[],"name":null,"role":"system","template_format":"jinja2"},{"content":[{"text":"commit
+        ee11b31a9dbca76ab7b64badc9905be2af57d0d4\nAuthor: bucky <buckyroberts@gmail.com>\nDate:   Tue
+        Jun 20 21:18:28 2023 -0400\n\n    Typo fix\n\ndiff --git a/src/apps/Trade/components/Tabs/index.tsx
+        b/src/apps/Trade/components/Tabs/index.tsx\nindex 8f5335f..49bc564 100644\n---
+        a/src/apps/Trade/components/Tabs/index.tsx\n+++ b/src/apps/Trade/components/Tabs/index.tsx\n@@
+        -3,11 +3,11 @@ import {ReactNode} from ''react'';\n import {SFC} from ''system/types'';\n
+        import * as S from ''./Styles'';\n\n-export interface CardProps {\n+export
+        interface TabsProps {\n   children: ReactNode;\n }\n\n-const Tabs: SFC<CardProps>
+        = ({children, className}) => {\n+const Tabs: SFC<TabsProps> = ({children,
+        className}) => {\n   return <S.Tabs className={className}>{children}</S.Tabs>;\n
+        };","type":"text"}],"input_variables":[],"name":null,"role":"user","template_format":"jinja2"},{"content":[{"text":"{\n  \"assessment\":
+        260,\n  \"explanation\": \"The change is relatively small and solely a readability
+        improvement. While it involves no change to functionality, it does improve
+        code quality by unifying the naming convention of this component''s Props.
+        It makes the component more intuitively understandable for other programmers
+        working on this codebase. Nevertheless, typographical fixes such as these,
+        though important for maintaining a neat and professional codebase, does not
+        result in immediate tangible enhancements in software performance or features.
+        Therefore, while this commit contributes positively to the overall code quality,
+        its impact on functionality is negligible.\"\n}","type":"text"}],"function_call":null,"input_variables":[],"name":null,"role":"assistant","template_format":"jinja2","tool_calls":null},{"content":[{"text":"{{git_diff}}","type":"text"}],"input_variables":["git_diff"],"name":null,"role":"user","template_format":"jinja2"}],"tool_choice":null,"tools":null,"type":"chat"},"version":8}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 86efd1e618a89db2-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 08:10:05 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '2790'
+      rndr-id:
+      - c981dea2-862b-4c6a
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an AI that can assess
+      human value. When the user provides a git diff, assess its value based on how
+      much value you believe it has contributed to you. You will respond with a JSON
+      object containing the key \"assessment\" and the value being a non-negative
+      integer, and the key \"explanation\" and the value being a string detailing
+      the reason for the assessment in 1-4 paragraphs.\n"}, {"role": "user", "content":
+      "commit ee11b31a9dbca76ab7b64badc9905be2af57d0d4\nAuthor: bucky <buckyroberts@gmail.com>\nDate:   Tue
+      Jun 20 21:18:28 2023 -0400\n\n    Typo fix\n\ndiff --git a/src/apps/Trade/components/Tabs/index.tsx
+      b/src/apps/Trade/components/Tabs/index.tsx\nindex 8f5335f..49bc564 100644\n---
+      a/src/apps/Trade/components/Tabs/index.tsx\n+++ b/src/apps/Trade/components/Tabs/index.tsx\n@@
+      -3,11 +3,11 @@ import {ReactNode} from ''react'';\n import {SFC} from ''system/types'';\n
+      import * as S from ''./Styles'';\n\n-export interface CardProps {\n+export interface
+      TabsProps {\n   children: ReactNode;\n }\n\n-const Tabs: SFC<CardProps> = ({children,
+      className}) => {\n+const Tabs: SFC<TabsProps> = ({children, className}) => {\n   return
+      <S.Tabs className={className}>{children}</S.Tabs>;\n };"}, {"role": "assistant",
+      "content": "{\n  \"assessment\": 260,\n  \"explanation\": \"The change is relatively
+      small and solely a readability improvement. While it involves no change to functionality,
+      it does improve code quality by unifying the naming convention of this component''s
+      Props. It makes the component more intuitively understandable for other programmers
+      working on this codebase. Nevertheless, typographical fixes such as these, though
+      important for maintaining a neat and professional codebase, does not result
+      in immediate tangible enhancements in software performance or features. Therefore,
+      while this commit contributes positively to the overall code quality, its impact
+      on functionality is negligible.\"\n}"}, {"role": "user", "content": "diff --git
+      a/README.rst b/README.rst\nindex 39a613b..560674d 100644\n--- a/README.rst\n+++
+      b/README.rst\n@@ -10,3 +10,44 @@ Install required packages::\n \n     poetry
+      install\n \n+POST http://127.0.0.1:8000/blocks\n++++++++++++++\n+\n+Request::\n+\n+    {\n+      \"sender\":
+      \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+      \"recipient\":
+      \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+      \"amount\":
+      5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+      }\n+    }\n+\n+Response::\n+\n+    {\n+      \"id\":
+      36,\n+      \"sender\": \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+      \"recipient\":
+      \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+      \"amount\":
+      5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+      }\n+    }\n+\n+ws://127.0.0.1:8000/ws/blocks/{ACCOUNT_NUMBER}\n++++++++++++++\n+\n+Send::\n+\n+    {\n+      \"message\":
+      \"Hey\"\n+    }\n+\n+Receive::\n+\n+    {\n+      \"message\": \"Hey\"\n+    }\n+\n"}],
+      "model": "gpt-4-turbo-preview", "frequency_penalty": 0, "max_tokens": 256, "presence_penalty":
+      0, "response_format": {"type": "json_object"}, "seed": 0, "temperature": 1,
+      "top_p": 1}'
+    headers:
+      Authorization:
+      - sanitized
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3241'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.8.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.8.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.13
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-9ACScQU1IOtzBhfb3IMVPSib8oo3p\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1712218206,\n  \"model\": \"gpt-4-0125-preview\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\n  \\\"assessment\\\": 750,\\n  \\\"explanation\\\":
+        \\\"This change introduces substantial documentation improvements to the project's
+        README file, significantly enhancing its usability and ease of understanding
+        for both current and potential users and developers. By providing explicit
+        examples of how to interact with the system via HTTP and WebSocket, it reduces
+        the learning curve for new developers and increases the likelihood of correct
+        usage by external systems. Curated documentation, especially including direct
+        examples of requests and responses, is immensely valuable in software development
+        as it serves as both a guide for new project participants and a reference
+        material for existing users. This documentation addition arguably increases
+        the project's value by making it more accessible, maintainable, and easier
+        to integrate with, thus, impacting the overall usability and comprehensibility
+        of the project positively.\\\"\\n}\"\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        841,\n    \"completion_tokens\": 157,\n    \"total_tokens\": 998\n  },\n  \"system_fingerprint\":
+        \"fp_f38f4d6482\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86efd1ecbc409d68-DME
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 08:10:14 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=NPg8dL8xlhI..0yfY5cJtEK96i.C3Zsni7dQH8qgktc-1712218214-1.0.1.1-X47GUdjyb8rJqM.SaZ2hDMPH1kOgorLutCX5WRwFMYSSZPjdaBCreJTKwL.s0KY2RUZXyzFdYZGNJ_2n6LSXww;
+        path=/; expires=Thu, 04-Apr-24 08:40:14 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Qvq20fvJBEU8_hHEl0xx5mqQ8_ppf0wO6.bTeGzspPk-1712218214121-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1395'
+      openai-model:
+      - gpt-4-0125-preview
+      openai-organization:
+      - user-vga8v5qol8xfkzk6s4wa3geo
+      openai-processing-ms:
+      - '7683'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '799045'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 71ms
+      x-request-id:
+      - req_66437b0b9001dd6ced9fa89a3418920c
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"function_name": "openai.OpenAI.chat.completions.create", "provider_type":
+      "openai", "args": [], "kwargs": {"messages": [{"role": "system", "content":
+      "You are an AI that can assess human value. When the user provides a git diff,
+      assess its value based on how much value you believe it has contributed to you.
+      You will respond with a JSON object containing the key \"assessment\" and the
+      value being a non-negative integer, and the key \"explanation\" and the value
+      being a string detailing the reason for the assessment in 1-4 paragraphs.\n"},
+      {"role": "user", "content": "commit ee11b31a9dbca76ab7b64badc9905be2af57d0d4\nAuthor:
+      bucky <buckyroberts@gmail.com>\nDate:   Tue Jun 20 21:18:28 2023 -0400\n\n    Typo
+      fix\n\ndiff --git a/src/apps/Trade/components/Tabs/index.tsx b/src/apps/Trade/components/Tabs/index.tsx\nindex
+      8f5335f..49bc564 100644\n--- a/src/apps/Trade/components/Tabs/index.tsx\n+++
+      b/src/apps/Trade/components/Tabs/index.tsx\n@@ -3,11 +3,11 @@ import {ReactNode}
+      from ''react'';\n import {SFC} from ''system/types'';\n import * as S from ''./Styles'';\n\n-export
+      interface CardProps {\n+export interface TabsProps {\n   children: ReactNode;\n
+      }\n\n-const Tabs: SFC<CardProps> = ({children, className}) => {\n+const Tabs:
+      SFC<TabsProps> = ({children, className}) => {\n   return <S.Tabs className={className}>{children}</S.Tabs>;\n
+      };"}, {"role": "assistant", "content": "{\n  \"assessment\": 260,\n  \"explanation\":
+      \"The change is relatively small and solely a readability improvement. While
+      it involves no change to functionality, it does improve code quality by unifying
+      the naming convention of this component''s Props. It makes the component more
+      intuitively understandable for other programmers working on this codebase. Nevertheless,
+      typographical fixes such as these, though important for maintaining a neat and
+      professional codebase, does not result in immediate tangible enhancements in
+      software performance or features. Therefore, while this commit contributes positively
+      to the overall code quality, its impact on functionality is negligible.\"\n}"},
+      {"role": "user", "content": "diff --git a/README.rst b/README.rst\nindex 39a613b..560674d
+      100644\n--- a/README.rst\n+++ b/README.rst\n@@ -10,3 +10,44 @@ Install required
+      packages::\n \n     poetry install\n \n+POST http://127.0.0.1:8000/blocks\n++++++++++++++\n+\n+Request::\n+\n+    {\n+      \"sender\":
+      \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+      \"recipient\":
+      \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+      \"amount\":
+      5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+      }\n+    }\n+\n+Response::\n+\n+    {\n+      \"id\":
+      36,\n+      \"sender\": \"a37e2836805975f334108b55523634c995bd2a4db610062f404510617e83126f\",\n+      \"recipient\":
+      \"qd8a4c42ece012b528dda5f469a4706d24459e2eee5a867ff5394cf869466bbe\",\n+      \"amount\":
+      5,\n+      \"payload\": {\n+        \"message\": \"Hey\"\n+      }\n+    }\n+\n+ws://127.0.0.1:8000/ws/blocks/{ACCOUNT_NUMBER}\n++++++++++++++\n+\n+Send::\n+\n+    {\n+      \"message\":
+      \"Hey\"\n+    }\n+\n+Receive::\n+\n+    {\n+      \"message\": \"Hey\"\n+    }\n+\n"}],
+      "frequency_penalty": 0, "max_tokens": 256, "presence_penalty": 0, "seed": 0,
+      "temperature": 1, "top_p": 1, "model": "gpt-4-turbo-preview", "response_format":
+      {"type": "json_object"}}, "tags": null, "request_response": {"id": "chatcmpl-9ACScQU1IOtzBhfb3IMVPSib8oo3p",
+      "choices": [{"finish_reason": "stop", "index": 0, "logprobs": null, "message":
+      {"content": "{\n  \"assessment\": 750,\n  \"explanation\": \"This change introduces
+      substantial documentation improvements to the project''s README file, significantly
+      enhancing its usability and ease of understanding for both current and potential
+      users and developers. By providing explicit examples of how to interact with
+      the system via HTTP and WebSocket, it reduces the learning curve for new developers
+      and increases the likelihood of correct usage by external systems. Curated documentation,
+      especially including direct examples of requests and responses, is immensely
+      valuable in software development as it serves as both a guide for new project
+      participants and a reference material for existing users. This documentation
+      addition arguably increases the project''s value by making it more accessible,
+      maintainable, and easier to integrate with, thus, impacting the overall usability
+      and comprehensibility of the project positively.\"\n}", "role": "assistant",
+      "function_call": null, "tool_calls": null}}], "created": 1712218206, "model":
+      "gpt-4-0125-preview", "object": "chat.completion", "system_fingerprint": "fp_f38f4d6482",
+      "usage": {"completion_tokens": 157, "prompt_tokens": 841, "total_tokens": 998}},
+      "request_start_time": 1712218205.816172, "request_end_time": 1712218214.255619,
+      "metadata": null, "api_key": "sanitized"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4877'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/track-request
+  response:
+    body:
+      string: '{"message":"Request tracked successfully","request_id":32556066,"success":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 86efd221ea489dd3-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 08:10:14 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '80'
+      rndr-id:
+      - 8a3f9e66-7eb3-4827
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"request_id": 32556066, "metadata": {"environment": "development", "user_id":
+      "1", "username": "bucky"}, "api_key": "sanitized"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '155'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/library-track-metadata
+  response:
+    body:
+      string: '{"success":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 86efd227296d9e27-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 08:10:15 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '17'
+      rndr-id:
+      - b7b4b49c-0238-4ac8
+      x-render-origin-server:
+      - gunicorn
     status:
       code: 200
       message: OK

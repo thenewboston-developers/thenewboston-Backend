@@ -26,7 +26,7 @@ Make sure Docker is installed in your machine and run the following commands:
 
 ```bash
 make run-dependencies  # Sets up the necessary Docker containers for Redis and PostgreSQL
-make update            # Installs project dependencies, pre-commit and applies database migrations 
+make update            # Installs project dependencies, pre-commit and applies database migrations
 ```
 
 Fire Up the Server 🚀
