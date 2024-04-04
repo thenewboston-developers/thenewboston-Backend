@@ -4,11 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-<<<<<<< HEAD
 from thenewboston.general.clients.openai import OpenAIClient
-from thenewboston.cores.utils.core import get_default_core
-=======
->>>>>>> 5230d6d (fix: checking balance before image creation and charging after image creation)
 from thenewboston.general.constants import OPENAI_IMAGE_CREATION_FEE
 from thenewboston.general.enums import MessageType
 from thenewboston.wallets.consumers.wallet import WalletConsumer
@@ -25,18 +21,20 @@ class OpenAIImageViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request):
-        serializer = OpenAIImageSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        description = serializer.validated_data['description']
-        quantity = serializer.validated_data['quantity']
-        total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * quantity
-
-        wallet = get_default_wallet(request.user)
-        if not wallet:
-            raise Exception(f'Core {settings.DEFAULT_CORE_TICKER} wallet not found.')
         try:
-            self.charge_image_creation_fee(request.user, quantity)
+            serializer = OpenAIImageSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            description = serializer.validated_data['description']
+            quantity = serializer.validated_data['quantity']
+            total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * quantity
+
+            wallet = get_default_wallet(request.user)
+            if not wallet:
+                raise Exception(f'Core {settings.DEFAULT_CORE_TICKER} wallet not found.')
+
+            self.has_sufficient_balance_for_image_creation(wallet, total_image_creation_fee)
+
             response = OpenAIClient.get_instance().generate_image(
                 prompt=description,
                 quantity=quantity,
@@ -57,7 +55,6 @@ class OpenAIImageViewSet(viewsets.ViewSet):
                 f'Insufficient balance. Total artwork creation fee: {total_image_creation_fee}, '
                 f'Wallet balance: {wallet.balance}'
             )
-        return True
 
     @staticmethod
     def charge_image_creation_fee(wallet, total_image_creation_fee):
