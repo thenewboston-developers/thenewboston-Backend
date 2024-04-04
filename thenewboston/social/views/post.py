@@ -17,7 +17,7 @@ class PostViewSet(viewsets.ModelViewSet):
     filterset_class = PostFilter
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Post.objects.all()
+    queryset = Post.objects.all().order_by('-created_date')
     pagination_class = CustomPageNumberPagination
 
     def create(self, request, *args, **kwargs):

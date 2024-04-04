@@ -1,4 +1,5 @@
 from rest_framework.pagination import PageNumberPagination
+
 from thenewboston.general.constants import DEFAULT_PAGE_SIZE
 
 
