@@ -7,7 +7,10 @@ from rest_framework.response import Response
 from thenewboston.general.clients.openai import OpenAIClient
 from thenewboston.cores.utils.core import get_default_core
 from thenewboston.general.constants import OPENAI_IMAGE_CREATION_FEE
+from thenewboston.general.enums import MessageType
+from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models.wallet import Wallet
+from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..serializers.openai_image import OpenAIImageSerializer
 
@@ -56,3 +59,5 @@ class OpenAIImageViewSet(viewsets.ViewSet):
 
         wallet.balance -= total_image_creation_fee
         wallet.save()
+        wallet_data = WalletReadSerializer(wallet).data
+        WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
