@@ -41,6 +41,8 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             )
 
             self.charge_image_creation_fee(wallet, total_image_creation_fee)
+
+            # TODO(dmu) LOW: Consider using status.HTTP_201_CREATED instead
             return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
