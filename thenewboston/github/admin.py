@@ -25,6 +25,7 @@ class PullAdmin(admin.ModelAdmin):
         'username',
         'issue_number',
         'title',
+        'assessment_points',
     )
     # TODO(dmu) MEDIUM: Improve filtering by including owner_name
     list_filter = ('repo__name', 'github_user__github_username')

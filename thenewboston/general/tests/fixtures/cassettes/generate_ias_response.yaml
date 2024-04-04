@@ -1,0 +1,222 @@
+interactions:
+- request:
+    body: '{"api_key": "sanitized", "label": "prod"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+      X-API-KEY:
+      - sanitized
+    method: POST
+    uri: https://api.promptlayer.com/prompt-templates/create-message
+  response:
+    body:
+      string: '{"commit_message":"","id":17536,"llm_kwargs":null,"metadata":{"model":{"name":"gpt-3.5-turbo","parameters":{"frequency_penalty":0,"max_tokens":256,"presence_penalty":0,"seed":0,"temperature":1,"top_p":1},"provider":"openai"}},"prompt_name":"create-message","prompt_template":{"function_call":"none","functions":null,"input_variables":[],"messages":[{"content":[{"text":"Your
+        name is Ia. Your job is to ask the user questions to get to know them.","type":"text"}],"input_variables":[],"name":null,"role":"system","template_format":"f-string"}],"tool_choice":null,"tools":null,"type":"chat"},"version":4}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 86f25c9a0f379d71-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 15:34:18 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '603'
+      rndr-id:
+      - be0c90d3-d298-4c93
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "Your name is Ia. Your job
+      is to ask the user questions to get to know them."}], "model": "gpt-4-turbo-preview",
+      "frequency_penalty": 0, "max_tokens": 256, "presence_penalty": 0, "seed": 0,
+      "temperature": 1, "top_p": 1}'
+    headers:
+      Authorization:
+      - sanitized
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '263'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.8.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.8.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.13
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-9AJOU6y1pCqPPc8RQWqlvBLLllufu\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1712244858,\n  \"model\": \"gpt-4-0125-preview\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"That sounds great! Let's start with
+        some basics to get to know you a bit better. What are some of your hobbies
+        or interests?\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 27,\n    \"completion_tokens\":
+        28,\n    \"total_tokens\": 55\n  },\n  \"system_fingerprint\": \"fp_f38f4d6482\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 86f25c9e8e3c9d2e-DME
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 15:34:21 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ZT2.m2dqtyi_Nns8xzCsgnl6RCSlbEyO1EOV_FXRf7U-1712244861-1.0.1.1-uUCNIMesyD6FZ4leZeP5KwdZmlO.TNuKMCccDk9gt4oVZeszSGPsbbsRos5z5uXQbkMCz8vTI9N1jRjM56E9VQ;
+        path=/; expires=Thu, 04-Apr-24 16:04:21 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=hOV6Bbz7p6fWhZ9hzOid_mWzjSOAw6MIdv9lxXSnfZQ-1712244861161-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '585'
+      openai-model:
+      - gpt-4-0125-preview
+      openai-organization:
+      - user-vga8v5qol8xfkzk6s4wa3geo
+      openai-processing-ms:
+      - '2278'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '799724'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 20ms
+      x-request-id:
+      - req_564753e82fa1f16d383f36c635cad166
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"function_name": "openai.OpenAI.chat.completions.create", "provider_type":
+      "openai", "args": [], "kwargs": {"messages": [{"role": "system", "content":
+      "Your name is Ia. Your job is to ask the user questions to get to know them."}],
+      "frequency_penalty": 0, "max_tokens": 256, "presence_penalty": 0, "seed": 0,
+      "temperature": 1, "top_p": 1, "model": "gpt-4-turbo-preview"}, "tags": null,
+      "request_response": {"id": "chatcmpl-9AJOU6y1pCqPPc8RQWqlvBLLllufu", "choices":
+      [{"finish_reason": "stop", "index": 0, "logprobs": null, "message": {"content":
+      "That sounds great! Let''s start with some basics to get to know you a bit better.
+      What are some of your hobbies or interests?", "role": "assistant", "function_call":
+      null, "tool_calls": null}}], "created": 1712244858, "model": "gpt-4-0125-preview",
+      "object": "chat.completion", "system_fingerprint": "fp_f38f4d6482", "usage":
+      {"completion_tokens": 28, "prompt_tokens": 27, "total_tokens": 55}}, "request_start_time":
+      1712244858.251175, "request_end_time": 1712244861.285488, "metadata": null,
+      "api_key": "sanitized"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1089'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/track-request
+  response:
+    body:
+      string: '{"message":"Request tracked successfully","request_id":32594966,"success":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 86f25cb20ec42de5-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Apr 2024 15:34:22 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '80'
+      rndr-id:
+      - 92de9fb6-8bf6-4429
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+version: 1

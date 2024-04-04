@@ -4,6 +4,8 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.clients.openai import OpenAIClient
+
 from ..serializers.openai_image import OpenAIImageSerializer
 
 promptlayer.api_key = settings.PROMPTLAYER_API_KEY
@@ -18,15 +20,13 @@ class OpenAIImageViewSet(viewsets.ViewSet):
         serializer = OpenAIImageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        validated_data = serializer.validated_data
         try:
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            response = client.images.generate(
-                model='dall-e-2',
-                n=serializer.validated_data['quantity'],
-                prompt=serializer.validated_data['description'],
-                quality='standard',
-                size='1024x1024',
+            response = OpenAIClient.get_instance().generate_image(
+                prompt=validated_data['description'],
+                quantity=validated_data['quantity'],
             )
+            # TODO(dmu) LOW: Consider using status.HTTP_201_CREATED instead
             return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

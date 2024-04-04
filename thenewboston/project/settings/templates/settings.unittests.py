@@ -15,5 +15,7 @@ OPENAI_API_KEY = 'abc123'  # replace with actual value
 PROMPTLAYER_API_KEY = 'abc123'  # replace with actual value
 GITHUB_API_ACCESS_TOKEN = 'abc123'  # replace with actual value
 
+ENV_NAME = 'local-unittests'
+
 # Unomment the following line to record vcrpy cassette
 # IS_CASSETTE_RECORDING = False

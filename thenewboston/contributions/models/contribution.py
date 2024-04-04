@@ -1,6 +1,7 @@
 from django.db import models
 
 from thenewboston.general.models import CreatedModified
+from thenewboston.general.utils.misc import null_object
 
 
 class Contribution(CreatedModified):
@@ -24,6 +25,10 @@ class Contribution(CreatedModified):
     #                   `github_user->reward_recipient`. Consider keeping just one of them or add a comment
     #                   describing why both should stay
     user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+
+    @property
+    def explanation(self):
+        return (self.pull or null_object).assessment_explanation
 
     def __str__(self):
         return f'ID: {self.pk} | Reward Amount: {self.reward_amount}'
