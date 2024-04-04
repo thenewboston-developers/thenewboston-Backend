@@ -37,7 +37,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
                 quantity=quantity,
             )
 
-            self.charge_image_creation_fee(request.user, quantity)
+            self.charge_image_creation_fee(wallet, quantity)
             return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
