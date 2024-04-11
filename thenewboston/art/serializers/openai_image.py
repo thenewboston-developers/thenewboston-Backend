@@ -11,8 +11,8 @@ class OpenAIImageSerializer(serializers.Serializer):
 
     def validate_quantity(self, value):
 
-        user = self.context.get('user')
-        wallet = get_default_wallet(user)
+        request = self.context.get('request')
+        wallet = get_default_wallet(request.user)
         if not wallet:
             raise serializers.ValidationError(f'Core {settings.DEFAULT_CORE_TICKER} wallet not found.')
 

@@ -22,7 +22,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
 
     def create(self, request):
         try:
-            serializer = OpenAIImageSerializer(data=request.data, context={'user': request.user})
+            serializer = OpenAIImageSerializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
 
             description = serializer.validated_data['description']
