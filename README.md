@@ -7,13 +7,13 @@
 
 # Initial Project Setup
 
-Clone the Repository
+1. Clone the Repository
 
 ```bash
 git clone https://github.com/thenewboston-developers/thenewboston-Backend.git
 ```
 
-Copy the settings templates into a new local directory:
+2. Copy the settings templates into a new local directory:
 
 ```bash
 mkdir -p local
@@ -21,15 +21,24 @@ cp thenewboston/project/settings/templates/settings.dev.py ./local/settings.dev.
 cp thenewboston/project/settings/templates/settings.unittests.py ./local/settings.unittests.py
 ```
 
-Commands for setting up local environment
-Make sure Docker is installed in your machine and run the following commands:
+3. Install / upgrade docker as described at https://docs.docker.com/engine/install/
+```bash
+# Known working versions described in the comments below 
+
+docker --version # Docker version 26.0.1, build d260a54
+
+# (!!!) At least Docker Compose version v2.24.0 is required
+docker compose version # Docker Compose version v2.26.1
+```
+
+4. Commands for setting up local environment. Run the following commands:
 
 ```bash
 make run-dependencies  # Sets up the necessary Docker containers for Redis and PostgreSQL
 make update            # Installs project dependencies, pre-commit and applies database migrations
 ```
 
-Fire Up the Server 🚀
+5. Fire Up the Server 🚀
 
 ```bash
 make run-server       # Starts the Django development server

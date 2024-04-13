@@ -1,7 +1,5 @@
-version: '3.9'
-
 x-service: &service
-    build: .
+    image: thenewboston-backend:current
     restart: unless-stopped
     depends_on:
       db:
@@ -9,32 +7,15 @@ x-service: &service
       redis:
         # TODO(dmu) LOW: Add redis health check and change to `condition: service_healthy`
         condition: service_started
+    env_file:
+      - path: '/etc/thenewboston/.env'
+        required: false
     environment:
-      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
-      # TODO(dmu) MEDIUM: Use `env_file: /etc/thenewboston/.env` option instead of `local/settings.prod.py` file
-      THENEWBOSTON_SETTING_LOCAL_SETTINGS_PATH: local/settings.prod.py
       THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
       THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
       THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
 
 services:
-
-  db:
-    image: postgres:14.2-alpine
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:5432:5432
-    environment:
-      POSTGRES_DB: thenewboston
-      POSTGRES_USER: thenewboston
-      POSTGRES_PASSWORD: thenewboston
-    healthcheck:
-      test: PGPASSWORD=$${POSTGRES_PASSWORD} pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
-      interval: 10s
-      timeout: 5s
-      retries: 1
-    volumes:
-      - postgresql-data:/var/lib/postgresql/data
 
   redis:
     image: redis:6.2.6-alpine
@@ -59,7 +40,5 @@ services:
     command: ./run-celery-beat.sh
 
 volumes:
-  postgresql-data:
-    driver: local
   redis-data:
     driver: local
