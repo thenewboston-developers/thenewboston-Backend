@@ -1,21 +1,43 @@
-version: '3.9'
+x-service-override: &service-override
+    env_file:
+      - path: '.env'
+        required: false
+    environment:
+      THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
 
 services:
 
   db:
-    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    image: postgres:16.2-alpine
+    restart: 'no'
+    ports:
+      - 127.0.0.1:5432:5432
+    environment:
+      POSTGRES_DB: thenewboston
+      POSTGRES_USER: thenewboston
+      POSTGRES_PASSWORD: thenewboston
+    healthcheck:
+      test: PGPASSWORD=$${POSTGRES_PASSWORD} pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 1
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
 
   redis:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
 
   app:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    <<: *service-override
 
   celery:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    <<: *service-override
 
   celery-beat:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    <<: *service-override
 
 volumes:
   postgresql-data:

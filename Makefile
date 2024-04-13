@@ -1,19 +1,16 @@
-# TODO(dmu) MEDIUM: Upgrade docker everywhere and remove the following workaround
-DOCKER_COMPOSE_COMMAND := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
-
-
 .PHONY: build
 build:
-	${DOCKER_COMPOSE_COMMAND} build --no-cache
+	# We are not building with Docker compose on purpose, so we can have just one image (and probably save disk space)
+	docker build . -t thenewboston-backend:current --no-cache
 
 .PHONY: run-production
-run-production:
-	${DOCKER_COMPOSE_COMMAND} up -d --force-recreate
+run-production:  # purposefully do not depend on `build` target
+	docker compose up -d --force-recreate
 
 .PHONY: run-development
-run-development:
+run-development: build
 	# docker-compose.yml is inherited and overridden by docker-compose.dev.yml
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --force-recreate
 
 .PHONY: deploy
 deploy: build run-production;
@@ -48,9 +45,8 @@ run-celery-beat:
 
 .PHONY: run-dependencies
 run-dependencies:
-	test -f .env || touch .env
 	# docker-compose.yml is inherited and overridden by docker-compose.dev.yml
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.yml -f docker-compose.dev.yml up --force-recreate db redis
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --force-recreate db redis
 
 .PHONY: run-server
 run-server:

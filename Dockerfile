@@ -30,8 +30,4 @@ RUN chmod a+x ./run-celery.sh
 COPY scripts/run-celery-beat.sh ./
 RUN chmod a+x ./run-celery-beat.sh
 
-RUN mkdir local
-# TODO(dmu) HIGH: Copying local files with credentials might be not the best idea. Consider changing it
-COPY local/settings.prod.py local/settings.prod.py
-
 COPY thenewboston thenewboston
