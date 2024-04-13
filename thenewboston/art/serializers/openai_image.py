@@ -10,13 +10,14 @@ class OpenAIImageSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(required=True, min_value=1, max_value=10)
 
     def validate_quantity(self, value):
-
         request = self.context.get('request')
         wallet = get_default_wallet(request.user)
+
         if not wallet:
             raise serializers.ValidationError(f'Core {settings.DEFAULT_CORE_TICKER} wallet not found.')
 
         total_image_creation_fee = OPENAI_IMAGE_CREATION_FEE * value
+
         if total_image_creation_fee > wallet.balance:
             raise serializers.ValidationError(
                 f'Insufficient balance. Total artwork creation fee: {total_image_creation_fee}, '
