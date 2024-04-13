@@ -22,7 +22,7 @@ PROMPT_TEMPLATE_LABEL = 'prod'
 
 GITHUB_API_ACCESS_TOKEN = None
 
-CONTRIBUTION_CORE_DEFAULT_TICKER = 'TNB'
+DEFAULT_CORE_TICKER = 'TNB'
 
 # Settings useful for testing and debugging
 GITHUB_PULL_REQUEST_STATE_FILTER = 'open'  # Useful for debugging (when set to 'all')
