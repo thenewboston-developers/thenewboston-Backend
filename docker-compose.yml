@@ -2,8 +2,6 @@ x-service: &service
     image: thenewboston-backend:current
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         # TODO(dmu) LOW: Add redis health check and change to `condition: service_healthy`
         condition: service_started

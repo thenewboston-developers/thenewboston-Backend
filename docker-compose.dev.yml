@@ -4,6 +4,9 @@ x-service-override: &service-override
         required: false
     environment:
       THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
+    depends_on:
+      db:
+        condition: service_healthy
 
 services:
 
