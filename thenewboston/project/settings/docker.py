@@ -8,4 +8,6 @@ if IN_DOCKER or os.path.isfile('/.dockerenv'):  # type: ignore # noqa: F821
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')  # type: ignore # noqa: F821
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     if not KEEP_DEFAULT_STATICFILES_STORAGE:  # type: ignore # noqa: F821 # Useful for testing staff locally
+        # TODO(dmu) LOW: Collecting static files to S3 is slow therefore adds more down time during deployment.
+        #                Improve it
         STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

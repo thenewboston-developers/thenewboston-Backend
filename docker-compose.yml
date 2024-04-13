@@ -19,6 +19,7 @@ services:
     image: redis:6.2.6-alpine
     restart: unless-stopped
     ports:
+      # TODO(dmu) LOW: Do we need to expose to expose Redis to localhost in production?
       - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/var/lib/redis
