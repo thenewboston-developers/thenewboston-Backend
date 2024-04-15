@@ -27,8 +27,8 @@ class MessageConsumer(JsonWebsocketConsumer):
         details and 'type' indicating the action.
         """
 
-        logger.warning('----- create_message -----')
-        logger.warning(event)
+        logger.info('----- create_message -----')
+        logger.info(event)
 
         self.send_json({
             'message': event['payload'],
@@ -37,7 +37,7 @@ class MessageConsumer(JsonWebsocketConsumer):
 
     def disconnect(self, close_code):
         """Remove the client from the group on disconnection."""
-        logger.warning('client disconnecting')
+        logger.info('client disconnecting')
         async_to_sync(get_channel_layer().group_discard)(self.group_name, self.channel_name)
 
     @staticmethod
@@ -59,8 +59,8 @@ class MessageConsumer(JsonWebsocketConsumer):
             'type': message_type.value,
         }
 
-        logger.warning('----- stream_message -----')
-        logger.warning(cls.get_group_name(conversation_owner_id))
-        logger.warning(message_event)
+        logger.info('----- stream_message -----')
+        logger.info(cls.get_group_name(conversation_owner_id))
+        logger.info(message_event)
 
         async_to_sync(channel_layer.group_send)(cls.get_group_name(conversation_owner_id), message_event)
