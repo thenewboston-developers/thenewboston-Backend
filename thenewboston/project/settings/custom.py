@@ -11,6 +11,9 @@ SIGNING_KEY = None
 
 ENV_NAME = 'unknown'
 
+SENTRY_EVENT_LEVEL = 'WARNING'
+SENTRY_DSN = None
+
 # OpenAI related
 OPENAI_API_KEY = None
 PROMPTLAYER_API_KEY = None

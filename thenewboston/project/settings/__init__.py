@@ -25,6 +25,7 @@ include(
     'custom.py',
     optional(LOCAL_SETTINGS_PATH),
     'envvars.py',
+    'sentry.py',
     'docker.py',
 )
 
