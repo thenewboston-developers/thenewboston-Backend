@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'thenewboston.shop.apps.ShopConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
+    'thenewboston.university.apps.UniversityConfig',
     'thenewboston.wallets.apps.WalletsConfig',
 ]
 
