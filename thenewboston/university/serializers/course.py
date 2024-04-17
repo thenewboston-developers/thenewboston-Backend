@@ -11,6 +11,7 @@ class CourseReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = (
+            'id',
             'name',
             'description',
             'publication_status',
@@ -20,5 +21,6 @@ class CourseReadSerializer(serializers.ModelSerializer):
             'modified_date',
         )
         read_only_fields = (
-            'name', 'description', 'publication_status', 'thumbnail', 'instructor', 'created_date', 'modified_date'
+            'id', 'name', 'description', 'publication_status', 'thumbnail', 'instructor', 'created_date',
+            'modified_date'
         )
