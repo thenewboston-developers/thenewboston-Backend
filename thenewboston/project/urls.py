@@ -31,8 +31,8 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.notifications.urls)),
     path(API_PREFIX, include(thenewboston.shop.urls)),
     path(API_PREFIX, include(thenewboston.social.urls)),
-    path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.university.urls)),
+    path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
 ]
 
