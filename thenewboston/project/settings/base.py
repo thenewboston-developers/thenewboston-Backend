@@ -28,20 +28,20 @@ INSTALLED_APPS = [
     'storages',
 
     # Apps
-    'thenewboston.general',
     'thenewboston.art.apps.ArtConfig',
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.contributions.apps.ContributionsConfig',
     'thenewboston.cores.apps.CoresConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
+    'thenewboston.general',
     'thenewboston.github.apps.GithubConfig',
     'thenewboston.ia.apps.IaConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
     'thenewboston.shop.apps.ShopConfig',
     'thenewboston.social.apps.SocialConfig',
-    'thenewboston.users.apps.UsersConfig',
     'thenewboston.university.apps.UniversityConfig',
+    'thenewboston.users.apps.UsersConfig',
     'thenewboston.wallets.apps.WalletsConfig',
 ]
 
