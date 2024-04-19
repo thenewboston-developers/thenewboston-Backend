@@ -13,6 +13,7 @@ import thenewboston.invitations.urls
 import thenewboston.notifications.urls
 import thenewboston.shop.urls
 import thenewboston.social.urls
+import thenewboston.university.urls
 import thenewboston.users.urls
 import thenewboston.wallets.urls
 
@@ -30,6 +31,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.notifications.urls)),
     path(API_PREFIX, include(thenewboston.shop.urls)),
     path(API_PREFIX, include(thenewboston.social.urls)),
+    path(API_PREFIX, include(thenewboston.university.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
 ]
