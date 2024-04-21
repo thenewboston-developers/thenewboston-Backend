@@ -6,7 +6,7 @@ from thenewboston.general.pagination import CustomPageNumberPagination
 
 from ..filters.lecture import LectureFilter
 from ..models import Lecture
-from ..models.base import PublicationStatusStatus
+from ..models.base import PublicationStatus
 from ..serializers.lecture import LectureReadSerializer
 
 
@@ -15,5 +15,6 @@ class LectureViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = LectureFilter
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPageNumberPagination
-    queryset = Lecture.objects.filter(publication_status=PublicationStatusStatus.PUBLISHED).order_by('-created_date')
+    queryset = Lecture.objects.filter(publication_status=PublicationStatus.PUBLISHED
+                                      ).order_by('position', '-created_date')
     serializer_class = LectureReadSerializer
