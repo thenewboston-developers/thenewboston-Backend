@@ -78,7 +78,7 @@ aws rds modify-db-instance --db-instance-identifier $TARGET_DB_IDENTIFIER --mast
 ssh ubuntu@thenewboston.network
 ```
 
-3. Fetch the latest code:
+2. Fetch the latest code:
 
 ```bash
 cd thenewboston-Backend && git fetch origin
