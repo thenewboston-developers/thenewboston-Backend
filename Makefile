@@ -3,9 +3,17 @@ build:
 	# We are not building with Docker compose on purpose, so we can have just one image (and probably save disk space)
 	docker build . -t thenewboston-backend:current --no-cache
 
+.PHONY: update-docker-compose-yaml
+update-docker-compose-yaml:
+	cd; cp docker-compose.yml ~/
+
+.PHONY: docker-compose-down
+docker-compose-down:
+	cd; docker compose down
+
 .PHONY: run-production
 run-production:  # purposefully do not depend on `build` target
-	docker compose up -d --force-recreate
+	docker compose up -d --no-build --force-recreate
 
 .PHONY: run-development
 run-development: build
@@ -13,7 +21,7 @@ run-development: build
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --force-recreate
 
 .PHONY: deploy
-deploy: build run-production;
+deploy: build docker-compose-down update-docker-compose-yaml run-production;
 
 .PHONY: install
 install:
