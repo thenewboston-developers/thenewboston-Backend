@@ -5,7 +5,7 @@ build:
 
 .PHONY: update-docker-compose-yaml
 update-docker-compose-yaml:
-	cd; cp docker-compose.yml ~/
+	cp docker-compose.yml ~/
 
 .PHONY: docker-compose-down
 docker-compose-down:
@@ -13,7 +13,7 @@ docker-compose-down:
 
 .PHONY: run-production
 run-production:  # purposefully do not depend on `build` target
-	docker compose up -d --no-build --force-recreate
+	cd; docker compose up -d --no-build --force-recreate
 
 .PHONY: run-development
 run-development: build
