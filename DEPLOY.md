@@ -60,12 +60,13 @@ swapon --show
 cat /proc/sys/vm/swappiness
 ```
 
-5. Upgrade to the latest software:
+5. Install the latest software and prerequisites:
 
 ```bash
 ssh ubuntu@thenewboston.network  # if necessary
 
 sudo apt update && sudo apt upgrade
+sudo apt install make
 sudo reboot
 ```
 
@@ -154,7 +155,7 @@ git clone https://github.com/thenewboston-developers/thenewboston-Backend.git
 ```bash
 ssh ubuntu@thenewboston.network  # if necessary
 
-cd ~/thenewboston-Backend && make update-docker-compose-yaml
+bash -c 'cd ~/thenewboston-Backend && make update-docker-compose-yaml'
 ```
 
 14. Run [Update](#Update) section
@@ -169,7 +170,7 @@ ssh ubuntu@thenewboston.network
 2. Fetch the latest code:
 
 ```bash
-cd thenewboston-Backend && git fetch origin && git checkout origin/master
+cd ~/thenewboston-Backend && git fetch origin && git checkout origin/master
 ```
 
 3. Redeploy:
