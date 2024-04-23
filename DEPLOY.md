@@ -66,11 +66,21 @@ cat /proc/sys/vm/swappiness
 ssh ubuntu@thenewboston.network  # if necessary
 
 sudo apt update && sudo apt upgrade
-sudo apt install make
+sudo apt install make nginx
 sudo reboot
 ```
 
-6. Create environment specific configuration file:
+6. Configure nginx:
+```bash
+# Run on local machine:
+scp thenewboston/project/settings/templates/nginx.conf ubuntu@thenewboston.network:/tmp/thenewboston.conf && \
+ssh ubuntu@thenewboston.network 'sudo cp /tmp/thenewboston.conf /etc/nginx/sites-available/ && sudo ln -s /etc/nginx/sites-available/thenewboston.conf /etc/nginx/sites-enabled/thenewboston.conf && sudo rm /etc/nginx/sites-available/default'
+```
+
+7. Install certbot as described at https://certbot.eff.org/instructions?ws=nginx&os=ubuntufocal
+   (use buckyroberts@gmail.com for urgent renewal and security notices)
+
+8. Create environment specific configuration file:
 
 ```bash
 # Run on local machine:
@@ -79,7 +89,7 @@ scp thenewboston/project/settings/templates/template.env ubuntu@thenewboston.net
 ssh ubuntu@thenewboston.network 'sudo cp /tmp/template.env /etc/thenewboston/.env'
 ```
 
-7. Update `/etc/thenewboston/.env` with actual values at thenewboston.network:
+9. Update `/etc/thenewboston/.env` with actual values at thenewboston.network:
 
 ```bash
 ssh ubuntu@thenewboston.network
@@ -87,8 +97,8 @@ ssh ubuntu@thenewboston.network
 sudo vim /etc/thenewboston/.env
 ```
    
-8. Install docker as described at https://docs.docker.com/engine/install/ on thenewboston.network
-9. Setup and check docker installation:
+10. Install docker as described at https://docs.docker.com/engine/install/ on thenewboston.network
+11. Setup and check docker installation:
 
 ```bash
 ssh ubuntu@thenewboston.network
@@ -104,7 +114,7 @@ docker --version # Docker version 26.0.1, build d260a54
 docker compose version # Docker Compose version v2.26.1
 ```
 
-10. Create database RDS instance:
+12. Create database RDS instance:
 
    3.1 Open AWS RDS -> Databases: https://us-west-2.console.aws.amazon.com/rds/home?region=us-west-2#databases
 
@@ -142,7 +152,7 @@ docker compose version # Docker Compose version v2.26.1
    - Additional configuration -> Deletion protection -> Enable deletion protection: checked
    - Additional configuration: leave defaults for the rest of the options
 
-12. Clone git repo:
+13. Clone git repo:
 
 ```bash
 ssh ubuntu@thenewboston.network  # if necessary
@@ -150,7 +160,7 @@ ssh ubuntu@thenewboston.network  # if necessary
 git clone https://github.com/thenewboston-developers/thenewboston-Backend.git
 ```
 
-13. Update docker-compose.yaml:
+14. Update docker-compose.yaml:
 
 ```bash
 ssh ubuntu@thenewboston.network  # if necessary
@@ -158,7 +168,7 @@ ssh ubuntu@thenewboston.network  # if necessary
 bash -c 'cd ~/thenewboston-Backend && make update-docker-compose-yaml'
 ```
 
-14. Run [Update](#Update) section
+15. Run [Update](#Update) section
 
 ## Update
 1. Login:
