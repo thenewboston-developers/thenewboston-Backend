@@ -3,7 +3,7 @@ from django.test import override_settings
 from thenewboston.general.tests.vcr import assert_played, yield_cassette
 
 
-def test_create_openai_images(api_client_bucky):
+def test_create_openai_images(api_client_bucky, sample_core, sample_wallet):
     payload = {
         'description': 'A cat',
         'quantity': 1,
