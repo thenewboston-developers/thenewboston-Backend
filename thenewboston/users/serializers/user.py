@@ -54,7 +54,6 @@ class UserWriteSerializer(serializers.ModelSerializer):
         username = validated_data.get('username')
 
         invitation = Invitation.objects.filter(code=invitation_code, recipient__isnull=True).first()
-        inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
 
         if not invitation:
             raise serializers.ValidationError('Invalid or used invitation code')
@@ -62,6 +61,7 @@ class UserWriteSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(username=username, password=password)
         invitation.recipient = user
         invitation.save()
+        inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
 
         if inviter_limit:
             recipient_limit = max(inviter_limit.amount - 1, 0)
