@@ -21,6 +21,10 @@ class IsObjectFollowerOrReadOnly(IsFieldUserOrReadOnly):
     user_field = 'follower'
 
 
+class IsObjectInstructorOrReadOnly(IsFieldUserOrReadOnly):
+    user_field = 'instructor'
+
+
 class IsObjectOwnerOrReadOnly(IsFieldUserOrReadOnly):
     user_field = 'owner'
 

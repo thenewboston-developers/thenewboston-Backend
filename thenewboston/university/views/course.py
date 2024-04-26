@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
+from thenewboston.general.permissions import IsObjectInstructorOrReadOnly
 
 from ..filters.course import CourseFilter
 from ..models import Course
@@ -16,7 +17,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     filterset_class = CourseFilter
     pagination_class = CustomPageNumberPagination
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsObjectInstructorOrReadOnly]
     queryset = Course.objects.all().order_by('-created_date')
 
     def create(self, request, *args, **kwargs):

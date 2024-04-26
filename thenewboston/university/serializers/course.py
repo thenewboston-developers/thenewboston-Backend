@@ -1,4 +1,4 @@
-from rest_framework import exceptions, serializers
+from rest_framework import serializers
 
 from thenewboston.general.utils.image import process_image
 from thenewboston.users.serializers.user import UserReadSerializer
@@ -49,12 +49,6 @@ class CourseWriteSerializer(serializers.ModelSerializer):
             'instructor': request.user,
         })
         return course
-
-    def update(self, instance, validated_data):
-        request = self.context.get('request')
-        if instance.instructor != request.user:
-            raise exceptions.PermissionDenied('You do not have permission to edit this course.')
-        return super().update(instance, validated_data)
 
     def validate_publication_status(self, value):
         if value:
