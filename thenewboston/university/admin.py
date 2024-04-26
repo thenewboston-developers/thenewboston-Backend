@@ -5,9 +5,7 @@ from .models import Course, Lecture
 
 class LectureInline(admin.TabularInline):
     extra = 1
-    fields = (
-        'name', 'description', 'publication_status', 'youtube_id', 'position', 'thumbnail_url', 'duration_seconds'
-    )
+    fields = ('name', 'description', 'publication_status', 'youtube_id', 'position', 'thumbnail_url')
     model = Lecture
 
 
@@ -22,7 +20,7 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Lecture)
 class LectureAdmin(admin.ModelAdmin):
-    list_display = ('name', 'course', 'youtube_id', 'position', 'duration_seconds', 'created_date')
+    list_display = ('name', 'course', 'youtube_id', 'position', 'created_date')
     list_filter = ('course', 'publication_status')
     readonly_fields = ('created_date', 'modified_date')
     search_fields = ('name', 'youtube_id', 'description')
