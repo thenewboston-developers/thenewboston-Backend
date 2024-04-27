@@ -7,6 +7,7 @@ class Repo(CreatedModified):
     # TODO(dmu) MEDIUM: Should we rather have `owner = models.ForeignKey('GitHubUser')`?
     owner_name = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
+    contribution_branch = models.CharField(max_length=100, default='main')
 
     # TODO(dmu) LOW: Consider adding `is_active` field
 

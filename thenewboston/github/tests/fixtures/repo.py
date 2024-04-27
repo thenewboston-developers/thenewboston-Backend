@@ -8,4 +8,5 @@ def sample_repo(db):
         'github.Repo',
         owner_name='thenewboston-developers',
         name='Core',
+        contribution_branch='master',
     )
