@@ -26,3 +26,14 @@ def swallow_exception(callable_, *args, **kwargs):
         callable_(*args, **kwargs)
     except Exception:
         pass
+
+
+def get_nested_attr(obj, attr):
+    """
+    Utility function to fetch nested attributes safely.
+    """
+    for key in attr.split('__'):
+        obj = getattr(obj, key, None)
+        if obj is None:
+            return None
+    return obj

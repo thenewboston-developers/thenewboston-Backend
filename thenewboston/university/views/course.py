@@ -23,8 +23,8 @@ class CourseViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        post = serializer.save()
-        read_serializer = CourseReadSerializer(post, context={'request': request})
+        course = serializer.save()
+        read_serializer = CourseReadSerializer(course)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -33,7 +33,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         course = serializer.save()
-        read_serializer = CourseReadSerializer(course, context={'request': request})
+        read_serializer = CourseReadSerializer(course)
 
         return Response(read_serializer.data)
 
