@@ -22,7 +22,7 @@ class LectureViewSet(viewsets.ModelViewSet):
     serializer_class = LectureReadSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         lecture = serializer.save()
         read_serializer = LectureReadSerializer(lecture)
