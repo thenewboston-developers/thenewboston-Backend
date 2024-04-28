@@ -12,11 +12,11 @@ class LectureReadSerializer(serializers.ModelSerializer):
         model = Lecture
         fields = (
             'id', 'course', 'name', 'description', 'publication_status', 'youtube_id', 'position', 'thumbnail_url',
-            'duration_seconds', 'created_date', 'modified_date'
+            'created_date', 'modified_date'
         )
         read_only_fields = (
             'id', 'course', 'name', 'description', 'publication_status', 'youtube_id', 'position', 'thumbnail_url',
-            'duration_seconds', 'created_date', 'modified_date'
+            'created_date', 'modified_date'
         )
 
 

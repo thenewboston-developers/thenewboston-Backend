@@ -8,7 +8,6 @@ class Lecture(Base):
     youtube_id = models.CharField(max_length=255)
     position = models.PositiveIntegerField(blank=True, null=True)
     thumbnail_url = models.URLField(blank=True, null=True)
-    duration_seconds = models.PositiveIntegerField()
 
     def __str__(self):
         return self.name
