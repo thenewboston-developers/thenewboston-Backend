@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("university", "0001_initial"),
+        ("university", "0002_remove_lecture_duration_seconds"),
     ]
 
     operations = [
