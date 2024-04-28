@@ -10,4 +10,7 @@ class CourseFilter(django_filters.FilterSet):
 
     class Meta:
         model = Course
-        fields = ('instructor_id',)
+        fields = (
+            'instructor_id',
+            'publication_status',
+        )

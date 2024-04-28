@@ -11,4 +11,8 @@ class LectureFilter(django_filters.FilterSet):
 
     class Meta:
         model = Lecture
-        fields = ('course_id',)
+        fields = (
+            'course_id',
+            'instructor_id',
+            'publication_status',
+        )
