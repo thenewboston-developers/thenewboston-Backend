@@ -1,9 +1,6 @@
-import uuid
-from pathlib import Path
-
-from django.core.files.base import ContentFile
 from rest_framework import serializers
 
+from thenewboston.general.utils.image import process_image
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Post
@@ -57,9 +54,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         validated_data.pop('is_image_cleared', None)
 
         if image:
-            extension = Path(image.name).suffix
-            filename = f'{uuid.uuid4()}{extension}'
-            file = ContentFile(image.read(), filename)
+            file = process_image(image)
             validated_data['image'] = file
 
         post = super().create({
@@ -79,9 +74,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         image = validated_data.get('image')
         instance.content = validated_data.get('content', instance.content)
         if image:
-            extension = Path(image.name).suffix
-            filename = f'{uuid.uuid4()}{extension}'
-            file = ContentFile(image.read(), filename)
+            file = process_image(image)
             instance.image = file
         elif validated_data.get('is_image_cleared'):
             instance.image = None
