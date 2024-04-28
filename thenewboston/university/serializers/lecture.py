@@ -27,7 +27,7 @@ class LectureWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lecture
-        fields = ('course_id', 'description', 'name', 'publication_status', 'thumbnail_url', 'youtube_id')
+        fields = ('course_id', 'description', 'name', 'publication_status', 'position', 'thumbnail_url', 'youtube_id')
 
     def validate_course_id(self, value):
         request = self.context.get('request')
