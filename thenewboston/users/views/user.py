@@ -7,7 +7,7 @@ from thenewboston.general.authentication import get_user_auth_data
 from thenewboston.general.permissions import IsSelfOrReadOnly
 
 from ..models import User
-from ..serializers.user import UserReadSerializer, UserUpdateSerializer, UserWriteSerializer
+from ..serializers.user import UserStatsReadSerializer, UserUpdateSerializer, UserWriteSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -42,7 +42,7 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.request.method in ['PATCH', 'PUT']:
             return UserUpdateSerializer
 
-        return UserReadSerializer
+        return UserStatsReadSerializer
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -50,6 +50,6 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        read_serializer = UserReadSerializer(instance, context={'request': request})
+        read_serializer = UserStatsReadSerializer(instance, context={'request': request})
 
         return Response(read_serializer.data)

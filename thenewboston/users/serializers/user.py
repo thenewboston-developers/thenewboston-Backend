@@ -5,6 +5,7 @@ from rest_framework import serializers
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
 from thenewboston.general.utils.image import process_image
 from thenewboston.invitations.models import Invitation, InvitationLimit
+from thenewboston.wallets.utils.wallet import get_default_wallet
 
 User = get_user_model()
 
@@ -14,6 +15,29 @@ class UserReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar', 'id', 'username')
+
+
+class UserStatsReadSerializer(UserReadSerializer):
+
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    wallet_balance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('avatar', 'id', 'username', 'followers_count', 'following_count', 'wallet_balance')
+
+    def get_wallet_balance(self, obj):
+        wallet = get_default_wallet(obj)
+        return wallet.balance if wallet else 0
+
+    def get_followers_count(self, obj):
+        followers = getattr(obj, 'followers', None)
+        return followers.count() if followers else 0
+
+    def get_following_count(self, obj):
+        following = getattr(obj, 'following', None)
+        return following.count() if following else 0
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
