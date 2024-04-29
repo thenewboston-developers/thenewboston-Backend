@@ -25,7 +25,7 @@ class UserStatsReadSerializer(UserReadSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar', 'id', 'username', 'followers_count', 'following_count', 'wallet_balance')
+        fields = UserReadSerializer.Meta.fields + ('followers_count', 'following_count', 'wallet_balance')
 
     def get_wallet_balance(self, obj):
         wallet = get_default_wallet(obj)
