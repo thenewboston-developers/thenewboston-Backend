@@ -23,6 +23,7 @@ include(
     'aws.py',
     'celery.py',
     'custom.py',
+    'testing.py',
     optional(LOCAL_SETTINGS_PATH),
     'envvars.py',
     'sentry.py',

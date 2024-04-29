@@ -1,5 +1,4 @@
 import pytest
-from django.test import override_settings
 
 from thenewboston.contributions.models import Contribution
 from thenewboston.contributions.tasks import sync_contributions
@@ -8,15 +7,18 @@ from thenewboston.github.models import Pull
 from thenewboston.wallets.models import Wallet
 
 ASSESSMENT_EXPLANATION = (
-    "This change introduces substantial documentation improvements to the project's README file, "
-    'significantly enhancing its usability and ease of understanding for both current and potential '
-    'users and developers. By providing explicit examples of how to interact with the system via HTTP '
-    'and WebSocket, it reduces the learning curve for new developers and increases the likelihood of '
-    'correct usage by external systems. Curated documentation, especially including direct examples of '
-    'requests and responses, is immensely valuable in software development as it serves as both a guide '
-    'for new project participants and a reference material for existing users. This documentation addition '
-    "arguably increases the project's value by making it more accessible, maintainable, and easier to "
-    'integrate with, thus, impacting the overall usability and comprehensibility of the project positively.'
+    "This change introduces comprehensive examples for a blockchain service's API in the documentation, "
+    "which significantly enhances the project's usability and accessibility for developers. By providing clear, "
+    'working examples of how to interact with the API, including both HTTP and WebSocket interactions, '
+    'it substantially lowers the barrier to entry for developers looking to integrate with or build upon '
+    'this service. The examples cover not only the request format but also the expected responses, '
+    'facilitating a smoother development process and reducing the scope for misunderstandings. '
+    "Furthermore, the inclusion of 'payload' with a casual message in the examples subtly encourages "
+    'experimentation, making the documentation not only useful but also engaging. '
+    'This sort of documentation is invaluable for open-source projects, as it directly impacts '
+    'the developer experience, potentially increasing adoption and contribution rates. Given the detailed '
+    'nature of these examples and their potential to significantly assist developers, '
+    'this change is assessed as highly valuable.'
 )
 
 
@@ -26,9 +28,8 @@ def test_sync_contributions(sample_repo, sample_github_user, sample_core):
     assert Wallet.objects.count() == 0
 
     with (
-        override_settings(GITHUB_PULL_REQUEST_STATE_FILTER='all'),
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=7),
+        assert_played(cassette, count=8),
     ):
         sync_contributions(limit=1)
 
@@ -69,9 +70,8 @@ def test_sync_contributions__no_github_user():
     assert Wallet.objects.count() == 0
 
     with (
-        override_settings(GITHUB_PULL_REQUEST_STATE_FILTER='all'),
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=2),
+        assert_played(cassette, count=3),
     ):
         sync_contributions(limit=1)
 
@@ -89,9 +89,8 @@ def test_sync_contributions__reward_recipient_not_set(sample_repo, sample_github
     assert Wallet.objects.count() == 0
 
     with (
-        override_settings(GITHUB_PULL_REQUEST_STATE_FILTER='all'),
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=7),
+        assert_played(cassette, count=8),
     ):
         sync_contributions(limit=1)
 
@@ -114,9 +113,8 @@ def test_sync_contributions__no_core(sample_repo, sample_github_user):
     assert Wallet.objects.count() == 0
 
     with (
-        override_settings(GITHUB_PULL_REQUEST_STATE_FILTER='all'),
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=7),
+        assert_played(cassette, count=8),
     ):
         sync_contributions(limit=1)
 
@@ -143,9 +141,8 @@ def test_sync_contributions__wallet_already_exists(sample_repo, sample_github_us
     )
 
     with (
-        override_settings(GITHUB_PULL_REQUEST_STATE_FILTER='all'),
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=7),
+        assert_played(cassette, count=8),
     ):
         sync_contributions(limit=1)
 
