@@ -4,7 +4,6 @@ from thenewboston.general.utils.image import process_image
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Course
-from ..models.base import PublicationStatus
 
 
 class CourseReadSerializer(serializers.ModelSerializer):
@@ -30,8 +29,6 @@ class CourseReadSerializer(serializers.ModelSerializer):
 
 class CourseWriteSerializer(serializers.ModelSerializer):
 
-    publication_status = serializers.BooleanField()
-
     class Meta:
         model = Course
         fields = ('name', 'description', 'thumbnail', 'publication_status')
@@ -49,8 +46,3 @@ class CourseWriteSerializer(serializers.ModelSerializer):
             'instructor': request.user,
         })
         return course
-
-    def validate_publication_status(self, value):
-        if value:
-            return PublicationStatus.PUBLISHED
-        return PublicationStatus.DRAFT
