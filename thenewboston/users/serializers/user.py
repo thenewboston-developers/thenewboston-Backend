@@ -19,15 +19,15 @@ class UserReadSerializer(serializers.ModelSerializer):
 
 class UserStatsReadSerializer(UserReadSerializer):
 
+    default_wallet_balance = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
-    wallet_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = UserReadSerializer.Meta.fields + ('followers_count', 'following_count', 'wallet_balance')
+        fields = UserReadSerializer.Meta.fields + ('default_wallet_balance', 'followers_count', 'following_count')
 
-    def get_wallet_balance(self, obj):
+    def get_default_wallet_balance(self, obj):
         wallet = get_default_wallet(obj)
         return wallet.balance if wallet else 0
 
