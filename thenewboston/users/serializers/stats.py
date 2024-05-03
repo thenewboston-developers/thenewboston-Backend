@@ -14,7 +14,7 @@ class StatsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('default_wallet_balance', 'followers_count', 'following_count')
+        fields = ('id', 'default_wallet_balance', 'followers_count', 'following_count')
 
     def __init__(self, *args, **kwargs):
         super(StatsSerializer, self).__init__(*args, **kwargs)

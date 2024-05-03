@@ -9,5 +9,5 @@ router.register('users', UserViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('user/stats/', StatsAPIView.as_view(), name='user-stats'),
+    path('user/<int:user_id>/stats', StatsAPIView.as_view(), name='user-stats'),
 ]
