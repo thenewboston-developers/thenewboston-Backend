@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -30,3 +31,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         read_serializer = NotificationReadSerializer(notification)
 
         return Response(read_serializer.data)
+
+    @action(detail=False, methods=['patch'])
+    def mark_all_as_read(self, request):
+        notifications = self.get_queryset().filter(is_read=False)
+        notifications.update(is_read=True)
+        return Response({'detail': 'All notifications marked as read'})
