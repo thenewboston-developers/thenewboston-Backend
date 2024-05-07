@@ -51,8 +51,8 @@ class Pull(CreatedModified):
         result = OpenAIClient.get_instance().get_chat_completion(
             settings.GITHUB_PR_ASSESSMENT_TEMPLATE_NAME,
             input_variables={'git_diff': self.fetch_diff()},
-            track=True,
             result_format=ResultFormat.JSON,
+            track=True,
             tracked_user=(self.github_user or null_object).reward_recipient,
         )
         self.assessment_points = result['assessment']
