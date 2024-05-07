@@ -24,7 +24,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         read_serializer = MessageReadSerializer(message, context={'request': request})
         # TODO(dmu) MEDIUM: Consider using on_commit for this task, since task may start earlier than transaction
         #                   commits in the database
-        generate_ias_response.delay(message.conversation.id, tracked_user_id=str(request.user.id))
+        generate_ias_response.delay(message.conversation.id)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):

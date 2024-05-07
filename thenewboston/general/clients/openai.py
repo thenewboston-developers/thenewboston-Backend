@@ -78,11 +78,11 @@ class OpenAIClient:
         self,
         template,
         *,
+        extra_messages=(),
         input_variables=None,
         label=settings.PROMPT_TEMPLATE_LABEL,
-        track=False,
-        extra_messages=(),
         result_format: ResultFormat = ResultFormat.RAW,
+        track=False,
         tracked_user: Optional['User'] = None,
     ):
         # TODO(dmu) LOW: Once PromptPlayer improve software design and get rid of global object move getting client
