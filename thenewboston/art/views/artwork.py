@@ -16,7 +16,7 @@ class ArtworkViewSet(viewsets.ModelViewSet):
     filterset_class = ArtworkFilter
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Artwork.objects.all()
+    queryset = Artwork.objects.all().order_by('-created_date')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
