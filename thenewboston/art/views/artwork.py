@@ -3,6 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..filters.artwork import ArtworkFilter
@@ -13,6 +14,7 @@ from ..serializers.artwork import ArtworkReadSerializer, ArtworkWriteSerializer
 class ArtworkViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ArtworkFilter
+    pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Artwork.objects.all()
 
