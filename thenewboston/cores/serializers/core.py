@@ -28,6 +28,7 @@ class CoreWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
 
         if not request.user.is_staff:
+            # TODO(dmu) MEDIUM: Use `permission_classes` for checking permissions
             raise exceptions.PermissionDenied('You do not have permission to create a Core.')
 
         core = super().create({

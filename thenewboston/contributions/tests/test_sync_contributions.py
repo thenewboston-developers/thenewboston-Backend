@@ -1,7 +1,7 @@
 import pytest
 
 from thenewboston.contributions.models import Contribution
-from thenewboston.contributions.tasks import sync_contributions
+from thenewboston.contributions.tasks import sync_contributions_task
 from thenewboston.general.tests.vcr import assert_played, yield_cassette
 from thenewboston.github.models import Pull
 from thenewboston.wallets.models import Wallet
@@ -31,27 +31,33 @@ def test_sync_contributions(sample_repo, sample_github_user, sample_core):
         yield_cassette('sync_contributions.yaml') as cassette,
         assert_played(cassette, count=8),
     ):
-        sync_contributions(limit=1)
+        sync_contributions_task(limit=1)
 
     assert Pull.objects.count() == 1
     pull = Pull.objects.get()
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
+    assert pull.description == 'Closes x'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
 
     assert Contribution.objects.count() == 1
     contribution = Contribution.objects.get()
+    assert contribution.contribution_type == 1  # ContributionType.PULL_REQUEST
     assert contribution.core == sample_core
     assert contribution.github_user == sample_github_user
     assert contribution.issue is None
     assert contribution.pull == pull
     assert contribution.repo == sample_repo
-    assert contribution.reward_amount == 750
     assert contribution.user == sample_github_user.reward_recipient
-    assert contribution.explanation == ASSESSMENT_EXPLANATION
+    assert contribution.description == 'Closes x'
+    assert contribution.is_assessed()
+    assert contribution.assessment_points == 750
+    assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
+    assert contribution.is_rewarded()
+    assert contribution.reward_amount == 750
 
     assert Wallet.objects.count() == 1
     wallet = Wallet.objects.get()
@@ -73,7 +79,7 @@ def test_sync_contributions__no_github_user():
         yield_cassette('sync_contributions.yaml') as cassette,
         assert_played(cassette, count=3),
     ):
-        sync_contributions(limit=1)
+        sync_contributions_task(limit=1)
 
     assert Pull.objects.count() == 0
     assert Contribution.objects.count() == 0
@@ -92,13 +98,14 @@ def test_sync_contributions__reward_recipient_not_set(sample_repo, sample_github
         yield_cassette('sync_contributions.yaml') as cassette,
         assert_played(cassette, count=8),
     ):
-        sync_contributions(limit=1)
+        sync_contributions_task(limit=1)
 
     assert Pull.objects.count() == 1
     pull = Pull.objects.get()
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
+    assert pull.description == 'Closes x'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -116,13 +123,14 @@ def test_sync_contributions__no_core(sample_repo, sample_github_user):
         yield_cassette('sync_contributions.yaml') as cassette,
         assert_played(cassette, count=8),
     ):
-        sync_contributions(limit=1)
+        sync_contributions_task(limit=1)
 
     assert Pull.objects.count() == 1
     pull = Pull.objects.get()
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
+    assert pull.description == 'Closes x'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -144,27 +152,33 @@ def test_sync_contributions__wallet_already_exists(sample_repo, sample_github_us
         yield_cassette('sync_contributions.yaml') as cassette,
         assert_played(cassette, count=8),
     ):
-        sync_contributions(limit=1)
+        sync_contributions_task(limit=1)
 
     assert Pull.objects.count() == 1
     pull = Pull.objects.get()
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
+    assert pull.description == 'Closes x'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
 
     assert Contribution.objects.count() == 1
     contribution = Contribution.objects.get()
+    assert contribution.contribution_type == 1  # ContributionType.PULL_REQUEST
     assert contribution.core == sample_core
     assert contribution.github_user == sample_github_user
     assert contribution.issue is None
     assert contribution.pull == pull
     assert contribution.repo == sample_repo
-    assert contribution.reward_amount == 750
     assert contribution.user == sample_github_user.reward_recipient
-    assert contribution.explanation == ASSESSMENT_EXPLANATION
+    assert contribution.description == 'Closes x'
+    assert contribution.is_assessed()
+    assert contribution.assessment_points == 750
+    assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
+    assert contribution.is_rewarded()
+    assert contribution.reward_amount == 750
 
     assert Wallet.objects.count() == 1
     wallet = Wallet.objects.get()

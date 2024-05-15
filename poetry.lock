@@ -902,6 +902,22 @@ files = [
 Django = ">=3.2"
 
 [[package]]
+name = "django-restql"
+version = "0.15.4"
+description = "Turn your API made with Django REST Framework(DRF) into a GraphQL like API."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "django-restql-0.15.4.tar.gz", hash = "sha256:3d208fbe2e187f4a484a68fc6018e800ccc088be30109d4bb77384eaa77516e6"},
+    {file = "django_restql-0.15.4-py3-none-any.whl", hash = "sha256:4c3185ab4d12fbb4f2af4e780112289165675e17b8d3f89af393ca226f4c3612"},
+]
+
+[package.dependencies]
+django = ">=1.11"
+djangorestframework = ">=3.5"
+pypeg2 = ">=2.15.2"
+
+[[package]]
 name = "django-split-settings"
 version = "1.2.0"
 description = "Organize Django settings into multiple files and directories. Easily override and modify settings. Use wildcards and optional settings files."
@@ -1015,6 +1031,20 @@ files = [
 [package.extras]
 docs = ["furo (>=2023.5.20)", "sphinx (>=7.0.1)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)"]
 testing = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "diff-cover (>=7.5)", "pytest (>=7.3.1)", "pytest-cov (>=4.1)", "pytest-mock (>=3.10)", "pytest-timeout (>=2.1)"]
+
+[[package]]
+name = "freezegun"
+version = "1.5.1"
+description = "Let your Python tests travel through time"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "freezegun-1.5.1-py3-none-any.whl", hash = "sha256:bf111d7138a8abe55ab48a71755673dbaa4ab87f4cff5634a4442dfec34c15f1"},
+    {file = "freezegun-1.5.1.tar.gz", hash = "sha256:b29dedfcda6d5e8e083ce71b2b542753ad48cfec44037b3fc79702e2980a89e9"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.7"
 
 [[package]]
 name = "frozenlist"
@@ -2188,6 +2218,16 @@ docs = ["sphinx (!=5.2.0,!=5.2.0.post0)", "sphinx-rtd-theme"]
 test = ["flaky", "pretend", "pytest (>=3.0.1)"]
 
 [[package]]
+name = "pypeg2"
+version = "2.15.2"
+description = "An intrinsic PEG Parser-Interpreter for Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyPEG2-2.15.2.tar.gz", hash = "sha256:2b2d4f80d8e1a9370b2a91f4a25f4abf7f69b85c8da84cd23ec36451958a1f6d"},
+]
+
+[[package]]
 name = "pytest"
 version = "8.1.1"
 description = "pytest: simple powerful testing with Python"
@@ -2262,6 +2302,20 @@ tomli = {version = ">=2.0.1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 test = ["covdefaults (>=2.3)", "coverage (>=7.3.2)", "pytest-mock (>=3.12)"]
+
+[[package]]
+name = "pytest-parametrize-cases"
+version = "0.1.2"
+description = "A more user-friendly way to write parametrized tests."
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "pytest-parametrize-cases-0.1.2.tar.gz", hash = "sha256:e112425a7baaf4f72de4881a539270ac847696d8cb0b7e74f5549cee02767c12"},
+    {file = "pytest_parametrize_cases-0.1.2-py3-none-any.whl", hash = "sha256:aefc24ca8aebf4255a2b75ecbe5a70c49ef5c22d28d25462f2eebdcb15529f4c"},
+]
+
+[package.dependencies]
+pytest = ">=6.1.2"
 
 [[package]]
 name = "pytest-xdist"
@@ -3123,4 +3177,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2f39c203aad724c2b29b857a71532c85b20cc8f10945742669d64a4616f87c0e"
+content-hash = "d4dd7633aaa7fffa3bcd7f1fc4de0874eec5a45d280ec44cd39ddaa6d0006251"

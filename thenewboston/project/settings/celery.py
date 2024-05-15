@@ -7,4 +7,8 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.sync_contributions',
         'schedule': 60 * 60,  # 1 hour
     },
+    'reward-manual-contributions': {
+        'task': 'tasks.reward_manual_contributions',
+        'schedule': 60 * 60,  # 1 hour
+    },
 }

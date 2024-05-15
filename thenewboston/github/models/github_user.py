@@ -1,7 +1,6 @@
 from django.db import models
 
 from thenewboston.general.models import CreatedModified
-from thenewboston.wallets.models import Wallet
 
 
 class GitHubUser(CreatedModified):
@@ -22,9 +21,4 @@ class GitHubUser(CreatedModified):
         if not (reward_recipient := self.reward_recipient):
             return None
 
-        query = Wallet.objects
-        if with_for_update:
-            query = query.select_for_update()
-
-        wallet, _ = query.get_or_create(core_id=core_id, owner=reward_recipient)
-        return wallet
+        return reward_recipient.get_reward_wallet_for_core(self, core_id, with_for_update=with_for_update)
