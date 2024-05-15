@@ -25,3 +25,11 @@ def api_client_bucky(bucky):
     token = _get_access_token(api_client, bucky)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
     return api_client
+
+
+@pytest.fixture
+def authenticated_api_client(bucky):
+    api_client = APIClient()  # we create own instance of `APIClient`, so `api_client` authentication is kept intact
+    api_client.force_authenticate(bucky)
+    api_client.forced_user = bucky
+    return api_client

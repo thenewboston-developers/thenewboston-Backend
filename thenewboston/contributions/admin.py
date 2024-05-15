@@ -11,10 +11,11 @@ class ContributionAdmin(admin.ModelAdmin):
         'issue_number',
         'pull_number',
         'repo_name',
+        'contribution_type',
         'reward_amount',
         'created_date',
     )
-    list_filter = ('user', 'repo')
+    list_filter = ('contribution_type', 'repo', 'user')
 
     def github_user_username(self, obj):
         return obj.github_user.github_username if obj.github_user else None

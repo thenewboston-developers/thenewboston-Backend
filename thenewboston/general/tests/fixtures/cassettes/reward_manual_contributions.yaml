@@ -1,0 +1,302 @@
+interactions:
+- request:
+    body: '{"api_key": "sanitized", "label": "prod"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+      X-API-KEY:
+      - sanitized
+    method: POST
+    uri: https://api.promptlayer.com/prompt-templates/manual-assessment
+  response:
+    body:
+      string: '{"commit_message":"","id":23221,"llm_kwargs":null,"metadata":{"model":{"name":"gpt-4-turbo-preview","parameters":{"frequency_penalty":0,"max_tokens":256,"presence_penalty":0,"seed":0,"temperature":1,"top_p":1},"provider":"openai"}},"prompt_name":"manual-assessment","prompt_template":{"function_call":"none","functions":[],"input_variables":["description"],"messages":[{"content":[{"text":"You
+        are an AI that can assess human value. When the user provides a contribution
+        description, assess its value based on how much value you believe it has contributed
+        to you. You will respond with a JSON object containing the key \"assessment\"
+        and the value being a non-negative integer, and the key \"explanation\" and
+        the value being a string detailing the reason for the assessment in 1-4 paragraphs.","type":"text"}],"input_variables":[],"name":null,"raw_request_display_role":"","role":"system","template_format":"jinja2"},{"content":[{"text":"{{description}}","type":"text"}],"input_variables":["description"],"name":null,"raw_request_display_role":"","role":"user","template_format":"jinja2"}],"tool_choice":null,"tools":null,"type":"chat"},"provider_base_url":null,"version":1,"workspace_id":8353}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 88547ab76b0f9d45-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 17 May 2024 15:00:50 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1196'
+      rndr-id:
+      - 08202887-1ad8-4aca
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an AI that can assess
+      human value. When the user provides a contribution description, assess its value
+      based on how much value you believe it has contributed to you. You will respond
+      with a JSON object containing the key \"assessment\" and the value being a non-negative
+      integer, and the key \"explanation\" and the value being a string detailing
+      the reason for the assessment in 1-4 paragraphs."}, {"role": "user", "content":
+      "I made 3 new designs in Figma"}], "model": "gpt-4-turbo-preview", "frequency_penalty":
+      0, "max_tokens": 256, "presence_penalty": 0, "response_format": {"type": "json_object"},
+      "seed": 0, "temperature": 1, "top_p": 1}'
+    headers:
+      Authorization:
+      - sanitized
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '697'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.8.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.8.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.13
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-9PtMhToJSxnxTxtJO806cMeQbnHQT\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1715958051,\n  \"model\": \"gpt-4-0125-preview\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\n  \\\"assessment\\\": 9,\\n  \\\"explanation\\\":
+        \\\"As an AI developed by OpenAI, I'm not equipped with the capacity to directly
+        view, access, or assess visual designs such as those created in Figma. My
+        functionality is centered around processing text-based input and generating
+        text-based output. Therefore, I cannot directly evaluate the quality, creativity,
+        or impact of your Figma designs. Assessment of visual design work requires
+        subjective analysis and consideration of aesthetic principles, design innovation,
+        usability, and how effectively the design communicates its intended message
+        or function. These nuances are best evaluated by humans or specialized software
+        designed for visual design critique and analysis. However, creating new designs
+        in Figma can be a valuable contribution to projects requiring visual communication,
+        user interface design, or user experience enhancements, suggesting a non-zero
+        intrinsic value in contexts where such contributions are applicable.\\\"\\n}\"\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 102,\n    \"completion_tokens\":
+        173,\n    \"total_tokens\": 275\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 88547abc7b439e1b-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 17 May 2024 15:01:00 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=4xjfh59D1RFk4zNUgjCbzBWi8yfbg1V0nO4eKkrJjao-1715958060-1.0.1.1-phi5tF7pcsvw750UAqf5r0xlZ3vzl0Ou7_lDepjkuz1OboIe4WShCj0Gl0yF_fPMsn9xRHW_T9Nsz1KwVKvsGw;
+        path=/; expires=Fri, 17-May-24 15:31:00 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=qbzGExh9zPCt0wC567Uh091JkXY9uqJjf9omsgUi8po-1715958060515-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1436'
+      openai-organization:
+      - user-vga8v5qol8xfkzk6s4wa3geo
+      openai-processing-ms:
+      - '8886'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '799635'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 27ms
+      x-request-id:
+      - req_5d8d5fbd04c061b785a61e31c76fc448
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"function_name": "openai.OpenAI.chat.completions.create", "provider_type":
+      "openai", "args": [], "kwargs": {"messages": [{"role": "system", "content":
+      "You are an AI that can assess human value. When the user provides a contribution
+      description, assess its value based on how much value you believe it has contributed
+      to you. You will respond with a JSON object containing the key \"assessment\"
+      and the value being a non-negative integer, and the key \"explanation\" and
+      the value being a string detailing the reason for the assessment in 1-4 paragraphs."},
+      {"role": "user", "content": "I made 3 new designs in Figma"}], "frequency_penalty":
+      0, "max_tokens": 256, "presence_penalty": 0, "seed": 0, "temperature": 1, "top_p":
+      1, "model": "gpt-4-turbo-preview", "response_format": {"type": "json_object"}},
+      "tags": null, "request_response": {"id": "chatcmpl-9PtMhToJSxnxTxtJO806cMeQbnHQT",
+      "choices": [{"finish_reason": "stop", "index": 0, "logprobs": null, "message":
+      {"content": "{\n  \"assessment\": 0,\n  \"explanation\": \"As an AI developed
+      by OpenAI, I''m not equipped with the capacity to directly view, access, or
+      assess visual designs such as those created in Figma. My functionality is centered
+      around processing text-based input and generating text-based output. Therefore,
+      I cannot directly evaluate the quality, creativity, or impact of your Figma
+      designs. Assessment of visual design work requires subjective analysis and consideration
+      of aesthetic principles, design innovation, usability, and how effectively the
+      design communicates its intended message or function. These nuances are best
+      evaluated by humans or specialized software designed for visual design critique
+      and analysis. However, creating new designs in Figma can be a valuable contribution
+      to projects requiring visual communication, user interface design, or user experience
+      enhancements, suggesting a non-zero intrinsic value in contexts where such contributions
+      are applicable.\"\n}", "role": "assistant", "function_call": null, "tool_calls":
+      null}}], "created": 1715958051, "model": "gpt-4-0125-preview", "object": "chat.completion",
+      "system_fingerprint": null, "usage": {"completion_tokens": 173, "prompt_tokens":
+      102, "total_tokens": 275}}, "request_start_time": 1715958050.813076, "request_end_time":
+      1715958060.652288, "metadata": null, "api_key": "sanitized"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2374'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/track-request
+  response:
+    body:
+      string: '{"message":"Request tracked successfully","request_id":41216513,"success":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 88547afaafc39dbb-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 17 May 2024 15:01:01 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '80'
+      rndr-id:
+      - deaf25b0-5be7-45c3
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"request_id": 41216513, "metadata": {"environment": "local-unittests-dmu",
+      "user_id": "22", "username": "bucky"}, "api_key": "sanitized"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '164'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/library-track-metadata
+  response:
+    body:
+      string: '{"success":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 88547b002b349d6e-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 17 May 2024 15:01:02 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '17'
+      rndr-id:
+      - c082035d-e08a-4094
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -2,9 +2,9 @@ import logging
 
 from thenewboston.contributions.business_logic.base import get_repos
 from thenewboston.contributions.models import Contribution
+from thenewboston.contributions.models.contribution import ContributionType
 from thenewboston.cores.utils.core import get_default_core
 from thenewboston.general.utils.logging import log
-from thenewboston.general.utils.transfers import change_wallet_balance
 from thenewboston.github.models import Pull, Repo
 
 from .base import transaction_atomic
@@ -12,38 +12,34 @@ from .base import transaction_atomic
 logger = logging.getLogger(__name__)
 
 
-def create_contribution(core, pull_request):
+def create_pull_request_contribution(core, pull_request):
     github_user = pull_request.github_user
     reward_recipient = github_user.reward_recipient
     assert reward_recipient
-    assert pull_request.assessment_points is not None
 
-    Contribution.objects.create(
+    return Contribution.objects.create(
+        contribution_type=ContributionType.PULL_REQUEST.value,
         core=core,
         github_user=github_user,
         pull=pull_request,
         repo=pull_request.repo,
-        reward_amount=pull_request.assessment_points,
         user=reward_recipient,
+        description=pull_request.description,
     )
-
-
-def reward_contributor(core_id: int, pull_request: Pull):
-    github_user = pull_request.github_user
-    reward_recipient = github_user.reward_recipient
-    assert reward_recipient
-
-    wallet = github_user.get_reward_wallet_for_core(core_id)
-    assert wallet
-    assert pull_request.assessment_points is not None
-
-    change_wallet_balance(wallet, pull_request.assessment_points)
 
 
 @log(with_arguments=True, exception_log_level=logging.INFO)
 @transaction_atomic
-def pre_process_pull_request(pull_request: Pull):
+def assess_pull_request(pull_request: Pull):
     pull_request.assess()
+
+
+@log(with_arguments=True, exception_log_level=logging.INFO)
+@transaction_atomic
+def reward_contribution(contribution):
+    contribution = contribution.select_for_update()
+    contribution.assess()
+    contribution.reward()
 
 
 @log(with_arguments=True, exception_log_level=logging.INFO)
@@ -59,9 +55,9 @@ def process_pull_request(pull_request: Pull):
         )
         return
 
-    core = get_default_core()
-    create_contribution(core, pull_request)
-    reward_contributor(core.id, pull_request)
+    contribution = create_pull_request_contribution(get_default_core(), pull_request)
+    assert contribution.contribution_type == ContributionType.PULL_REQUEST.value  # type: ignore
+    reward_contribution(contribution)
 
 
 @log(with_arguments=True)
@@ -72,7 +68,7 @@ def process_repo(repo: Repo, limit=None):
 
     for pull_request in query:
         try:
-            pre_process_pull_request(pull_request)  # purposefully do it in a separate transaction
+            assess_pull_request(pull_request)  # purposefully do it in a separate transaction
             if pull_request.assessment_points is None:
                 logger.warning(
                     'Assessment points were not assigned to pull request number %s in repo %s',
@@ -100,5 +96,23 @@ def process_repos(repo_id=None, limit=None):
             logger.warning(
                 'Error while processing repo: %s',
                 repo,
+                exc_info=True,
+            )
+
+
+@log(with_arguments=True)
+def reward_manual_contributions(contribution_id=None):
+    # TODO(dmu) LOW: Consider rewarding all contributions here, not just manual
+    query = Contribution.objects.filter(contribution_type=ContributionType.MANUAL.value, reward_amount__isnull=True)
+    if contribution_id is not None:
+        query = query.filter(id=contribution_id)
+
+    for contribution in query:
+        try:
+            reward_contribution(contribution)
+        except Exception:
+            logger.warning(
+                'Error while rewarding contribution: %s',
+                contribution,
                 exc_info=True,
             )

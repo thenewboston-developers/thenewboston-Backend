@@ -39,7 +39,7 @@ class Command(CustomCommand):
             pull_requests = islice(pull_requests, limit)
 
         for pull_request in pull_requests:
-            print(pull_request)
+            print(pull_request, pull_request.body)
 
     def handle_get_pull_request_diff(self, *args, **options):
         diff = self.client().get_pull_request_diff(options['owner'], options['name'], options['number'])
