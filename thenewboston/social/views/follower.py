@@ -3,6 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectFollowerOrReadOnly
 
 from ..filters.follower import FollowerFilter
@@ -13,6 +14,7 @@ from ..serializers.follower import FollowerCreateSerializer, FollowerReadSeriali
 class FollowerViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = FollowerFilter
+    pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectFollowerOrReadOnly]
     queryset = Follower.objects.all()
 
@@ -23,6 +25,13 @@ class FollowerViewSet(viewsets.ModelViewSet):
         read_serializer = FollowerReadSerializer(follower, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        following_id = kwargs.get('pk')
+        follower = request.user
+        follower_relationship = Follower.objects.filter(follower=follower, following_id=following_id)
+        follower_relationship.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_class(self):
         if self.action == 'create':
