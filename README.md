@@ -43,7 +43,7 @@ make update            # Installs project dependencies, pre-commit and applies d
 ```bash
 make run-server       # Starts the Django development server
 make run-celery       # Starts the Celery worker for background tasks and LLM chatbot
-nake run-celery-beat  # Starts the Celery Beat
+make run-celery-beat  # Starts the Celery Beat
 ```
 
 Now you're all set! The backend is up and ready for action.
