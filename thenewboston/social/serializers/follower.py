@@ -8,11 +8,24 @@ from ..models import Follower
 class FollowerReadSerializer(serializers.ModelSerializer):
     follower = UserReadSerializer(read_only=True)
     following = UserReadSerializer(read_only=True)
+    self_following = serializers.SerializerMethodField()
 
     class Meta:
         model = Follower
-        fields = ('created_date', 'follower', 'following', 'id', 'modified_date')
+        fields = ('created_date', 'follower', 'following', 'self_following', 'id', 'modified_date')
         read_only_fields = fields
+
+    def get_self_following(self, obj):
+        """
+        Determines if the currently logged-in user is following the specified user.
+
+        This method is used when fetching followers of a user to check if the logged-in user
+        is following each follower or not.
+        """
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            return Follower.objects.filter(follower=request.user, following=obj.follower).exists()
+        return False
 
 
 class FollowerCreateSerializer(serializers.ModelSerializer):
