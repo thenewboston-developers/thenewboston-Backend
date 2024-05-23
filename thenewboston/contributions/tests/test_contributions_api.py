@@ -1,9 +1,96 @@
+from freezegun import freeze_time
 from model_bakery import baker
 from pytest_parametrize_cases import Case, parametrize_cases
+
+from thenewboston.contributions.models import Contribution
+from thenewboston.cores.tests.fixtures.core import create_core
+from thenewboston.github.tests.fixtures.github_user import create_github_user
+from thenewboston.github.tests.fixtures.repo import create_repo
 
 NO = object()
 USER = object()
 OTHER = object()
+
+
+def test_get_contributions(authenticated_api_client):
+    assert Contribution.objects.count() == 0
+
+    user = authenticated_api_client.forced_user
+    user.avatar = 'example-avatar.jpg'
+    user.save()
+
+    with freeze_time('2024-05-17T07:00:00Z'):
+        core = create_core(owner=user)
+        repo = create_repo()
+        github_user = create_github_user(reward_recipient=user)
+        contribution = baker.make(
+            'contributions.Contribution',
+            user=user,
+            core=core,
+            repo=repo,
+            contribution_type=2,
+            github_user=github_user,
+            assessment_explanation='Sample explanation',
+            reward_amount=10,
+            assessment_points=20,
+        )
+
+    response = authenticated_api_client.get(f'/api/contributions/{contribution.id}')
+
+    assert response.status_code == 200
+    expected_response_json = {
+        'id': contribution.id,
+        'contribution_type': 2,
+        'github_user': {
+            'id': github_user.id,
+            'github_id': 8547538,
+            'github_username': 'buckyroberts',
+            'created_date': '2024-05-17T07:00:00Z',
+            'modified_date': '2024-05-17T07:00:00Z',
+            'reward_recipient': {
+                'id': github_user.reward_recipient_id,
+                'avatar': 'http://testserver/media/example-avatar.jpg',
+                'username': 'bucky'
+            }
+        },
+        # TODO(dmu) MEDIUM: Improve assertions for `issue` and `pull`
+        'issue': None,
+        'pull': None,
+        'reward_amount': 10,
+        'assessment_explanation': 'Sample explanation',
+        'assessment_points': 20,
+        'description': '',
+        'created_date': '2024-05-17T07:00:00Z',
+        'modified_date': '2024-05-17T07:00:00Z',
+        'repo': {
+            'id': repo.id,
+            'created_date': '2024-05-17T07:00:00Z',
+            'modified_date': '2024-05-17T07:00:00Z',
+            'owner_name': 'thenewboston-developers',
+            'name': 'Core',
+            'contribution_branch': 'master'
+        },
+        'user': {
+            'id': user.id,
+            'avatar': 'http://testserver/media/example-avatar.jpg',
+            'username': 'bucky'
+        },
+        'core': {
+            'id': core.id,
+            'created_date': '2024-05-17T07:00:00Z',
+            'modified_date': '2024-05-17T07:00:00Z',
+            'domain': 'thenewboston.net',
+            # TODO(dmu) LOW: Improve assertion for `logo`
+            'logo': None,
+            'ticker': 'TNB',
+            'owner': core.owner_id
+        }
+    }
+    assert response.json() == expected_response_json
+
+    response = authenticated_api_client.get('/api/contributions')
+    assert response.status_code == 200
+    assert response.json() == [expected_response_json]
 
 
 @parametrize_cases(
