@@ -25,7 +25,7 @@ class TopContributorsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_contributions_queryset(self):
         queryset = super().get_queryset()
-        filter_type = self.request.query_params.get('filter-type', None)
+        filter_type = self.request.query_params.get('type', None)
         if filter_type == 'today':
             queryset = queryset.filter(created_date__date=timezone.now().date())
         elif filter_type == 'week':
