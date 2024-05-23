@@ -33,6 +33,9 @@ ABSENT = object()
 def test_create_manual_contribution(authenticated_api_client):
     api_client = authenticated_api_client
     user = api_client.forced_user
+    user.avatar = 'example-avatar.jpg'
+    user.save()
+
     assert Contribution.objects.count() == 0
     assert Wallet.objects.count() == 0
 
@@ -62,7 +65,7 @@ def test_create_manual_contribution(authenticated_api_client):
         'modified_date': '2024-05-17T07:00:00Z',
         'repo': None,
         'user': {
-            'avatar': None,
+            'avatar': 'http://testserver/media/example-avatar.jpg',
             'id': user.id,
             'username': 'bucky'
         },
