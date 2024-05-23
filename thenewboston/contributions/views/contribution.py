@@ -6,7 +6,6 @@ from ..serializers.contribution import ContributionSerializer
 
 
 class ContributionViewSet(viewsets.ReadOnlyModelViewSet):
-
     permission_classes = [IsAuthenticated]
     queryset = Contribution.objects.all()
     serializer_class = ContributionSerializer
