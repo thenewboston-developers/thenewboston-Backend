@@ -34,5 +34,5 @@ class TopContributorsViewSet(viewsets.ReadOnlyModelViewSet):
         elif filter_type not in ['none', 'all']:
             queryset = queryset.none()
         queryset = queryset.values('user_id', 'user__username', 'user__avatar',
-                                   'core__logo').annotate(total=Sum('reward_amount')).order_by('-total')[:5]
+                                   'core__logo').annotate(total=Sum('reward_amount')).order_by('-total')[:4]
         return queryset
