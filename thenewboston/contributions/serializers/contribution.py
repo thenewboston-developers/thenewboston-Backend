@@ -1,4 +1,4 @@
-from django.conf import settings
+from django.core.files.storage import FileSystemStorage, get_storage_class
 from rest_framework import serializers
 
 from thenewboston.cores.serializers.core import CoreReadSerializer
@@ -25,6 +25,7 @@ class ContributionSerializer(serializers.ModelSerializer):
 
 
 class TopContributionSerializer(serializers.ModelSerializer):
+
     user_id = serializers.IntegerField()
     user_username = serializers.CharField(source='user__username')
     user_avatar = serializers.CharField(source='user__avatar')
@@ -33,7 +34,10 @@ class TopContributionSerializer(serializers.ModelSerializer):
     total = serializers.IntegerField()
 
     def set_logo_url(self, obj):
-        return settings.MEDIA_URL + obj.get('core__logo')
+        media_storage = get_storage_class()()
+        if isinstance(media_storage, FileSystemStorage):
+            return self.context['request'].build_absolute_uri(media_storage.url(obj.get('core__logo')))
+        return media_storage.url(obj.get('core__logo'))
 
     class Meta:
         model = Contribution
