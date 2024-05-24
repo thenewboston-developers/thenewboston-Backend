@@ -24,12 +24,10 @@ class ContributionSerializer(serializers.ModelSerializer):
 
 
 class TopContributionSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField()
-    user_username = serializers.CharField(source='user__username')
-    user_avatar = serializers.CharField(source='user__avatar')
-    core_logo = serializers.CharField(source='core__logo')
-    total = serializers.IntegerField()
+
+    user = UserReadSerializer(read_only=True)
+    core = CoreReadSerializer(read_only=True)
 
     class Meta:
         model = Contribution
-        fields = ['user_id', 'user_username', 'user_avatar', 'core_logo', 'total']
+        fields = '__all__'
