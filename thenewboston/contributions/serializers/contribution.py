@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from thenewboston.cores.serializers.core import CoreReadSerializer
@@ -24,10 +25,16 @@ class ContributionSerializer(serializers.ModelSerializer):
 
 
 class TopContributionSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField()
+    user_username = serializers.CharField(source='user__username')
+    user_avatar = serializers.CharField(source='user__avatar')
+    core_logo = serializers.CharField(source='core__logo')
+    logo_url = serializers.SerializerMethodField('set_logo_url')
+    total = serializers.IntegerField()
 
-    user = UserReadSerializer(read_only=True)
-    core = CoreReadSerializer(read_only=True)
+    def set_logo_url(self, obj):
+        return settings.MEDIA_URL + obj.get('core__logo')
 
     class Meta:
         model = Contribution
-        fields = '__all__'
+        fields = ['user_id', 'user_username', 'user_avatar', 'core_logo', 'total', 'logo_url']
