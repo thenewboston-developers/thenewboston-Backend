@@ -49,7 +49,7 @@ class IsContributionWriteAllowed(BasePermission):
 
 class ContributionViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsContributionWriteAllowed]
-    queryset = Contribution.objects.all().order_by('-created_date')
+    queryset = Contribution.objects.order_by('-created_date')
     serializer_class = ContributionSerializer
     pagination_class = CustomPageNumberPagination
     filterset_class = ContributionFilterSet
