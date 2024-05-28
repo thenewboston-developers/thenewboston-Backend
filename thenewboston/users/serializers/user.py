@@ -14,7 +14,7 @@ class UserReadSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar', 'id', 'username')
+        fields = ('avatar', 'id', 'is_manual_contribution_allowed', 'username')
 
 
 class UserUpdateSerializer(BaseModelSerializer):

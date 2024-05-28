@@ -67,6 +67,7 @@ def test_create_manual_contribution(authenticated_api_client):
         'user': {
             'avatar': 'http://testserver/media/example-avatar.jpg',
             'id': user.id,
+            'is_manual_contribution_allowed': user.is_manual_contribution_allowed,
             'username': 'bucky'
         },
         'core': {
@@ -245,6 +246,7 @@ def test_can_provide_optional_fields(sample_core, authenticated_api_client):
         'id': github_user.id,
         'reward_recipient': {
             'avatar': None,
+            'is_manual_contribution_allowed': github_user.reward_recipient.is_manual_contribution_allowed,
             'id': github_user.reward_recipient_id,
             'username': 'bucky'
         },
