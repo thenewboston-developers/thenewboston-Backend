@@ -14,6 +14,7 @@ from ..serializers.block import BlockSerializer
 from ..serializers.wallet import WalletReadSerializer, WalletWriteSerializer
 from ..serializers.wire import WireSerializer
 from ..serializers.withdraw import WithdrawSerializer
+from ..utils.wallet import get_default_wallet
 
 
 class WalletViewSet(
@@ -89,6 +90,17 @@ class WalletViewSet(
         wallet.save()
         read_serializer = WalletReadSerializer(wallet, context={'request': request})
 
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='default')
+    def default_wallet(self, request):
+        user = request.user
+        default_wallet = get_default_wallet(user)
+
+        if not default_wallet:
+            return Response({'error': 'Default wallet not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        read_serializer = WalletReadSerializer(default_wallet, context={'request': request})
         return Response(read_serializer.data, status=status.HTTP_200_OK)
 
     def get_queryset(self):
