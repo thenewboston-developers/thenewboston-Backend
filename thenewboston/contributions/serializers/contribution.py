@@ -28,10 +28,18 @@ class TopContributionSerializer(serializers.ModelSerializer):
 
     user_id = serializers.IntegerField()
     user_username = serializers.CharField(source='user__username')
-    user_avatar = serializers.CharField(source='user__avatar')
     core_logo = serializers.CharField(source='core__logo')
+    user_avatar = serializers.SerializerMethodField('set_user_avatar')
     logo_url = serializers.SerializerMethodField('set_logo_url')
     total = serializers.IntegerField()
+
+    def set_user_avatar(self, obj):
+        media_storage = get_storage_class()()
+        if not obj.get('user__avatar'):
+            return None
+        elif isinstance(media_storage, FileSystemStorage):
+            return self.context['request'].build_absolute_uri(media_storage.url(obj.get('user__avatar')))
+        return media_storage.url(obj.get('user__avatar'))
 
     def set_logo_url(self, obj):
         media_storage = get_storage_class()()
