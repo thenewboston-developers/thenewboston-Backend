@@ -8,7 +8,6 @@ from pytest_parametrize_cases import Case, parametrize_cases
 from thenewboston.contributions.models import Contribution
 from thenewboston.contributions.models.contribution import ContributionType
 from thenewboston.contributions.tasks import reward_manual_contributions_task
-from thenewboston.cores.tests.fixtures.core import create_core
 from thenewboston.general.tests.vcr import assert_played, yield_cassette
 from thenewboston.github.tests.fixtures.github_user import create_github_user
 from thenewboston.github.tests.fixtures.issue import create_issue
@@ -43,14 +42,16 @@ def test_create_manual_contribution(authenticated_api_client):
         freeze_time('2024-05-17T07:00:00Z'), patch('thenewboston.contributions.tasks.reward_manual_contributions') as
         reward_manual_contributions_mock
     ):
-        core = create_core(owner=user)
-        payload = {'core': core.id, 'description': 'I made 3 new designs in Figma'}
+        payload = {'description': 'I made 3 new designs in Figma'}
         response = api_client.post('/api/contributions', payload)
 
     assert response.status_code == 201
     response_json = response.json()
     contribution_id = response_json.get('id')
     assert isinstance(contribution_id, int)
+    assert response_json['core'] is not None
+    contribution = Contribution.objects.get(id=contribution_id)
+    core = contribution.core
     assert response_json == {
         'id': contribution_id,
         'contribution_type': 2,  # ContributionType.MANUAL
@@ -164,8 +165,7 @@ def test_create_manual_contribution__daily_limit(authenticated_api_client):
         freeze_time('2024-05-17T07:00:00Z'), patch('thenewboston.contributions.tasks.reward_manual_contributions') as
         reward_manual_contributions_mock
     ):
-        core = create_core(owner=user)
-        payload = {'core': core.id, 'description': 'I made 3 new designs in Figma'}
+        payload = {'description': 'I made 3 new designs in Figma'}
         response = api_client.post('/api/contributions', payload)
 
     assert response.status_code == 201
@@ -211,17 +211,15 @@ def test_create_manual_contribution__daily_limit(authenticated_api_client):
     assert Wallet.objects.count() == 1
     wallet = Wallet.objects.get()
     assert wallet.owner == user
-    assert wallet.core == core
     assert wallet.balance == 5
     assert wallet.deposit_account_number
     assert wallet.deposit_balance == 0
     assert wallet.deposit_signing_key
 
 
-def test_can_provide_optional_fields(sample_core, authenticated_api_client):
+def test_can_provide_optional_fields(authenticated_api_client):
     api_client = authenticated_api_client
     user = api_client.forced_user
-    core = sample_core
 
     with freeze_time('2024-05-17T07:00:00Z'):
         github_user = create_github_user(user)
@@ -231,7 +229,6 @@ def test_can_provide_optional_fields(sample_core, authenticated_api_client):
 
     # github_user
     payload = {
-        'core': core.id,
         'description': 'I made 3 new designs in Figma',
         'github_user': github_user.id,
     }
@@ -264,7 +261,6 @@ def test_can_provide_optional_fields(sample_core, authenticated_api_client):
         repo = create_repo()
 
     payload = {
-        'core': core.id,
         'description': 'I made 3 new designs in Figma',
         'repo': repo.id,
     }
@@ -291,7 +287,6 @@ def test_can_provide_optional_fields(sample_core, authenticated_api_client):
         issue = create_issue(repo)
 
     payload = {
-        'core': core.id,
         'description': 'I made 3 new designs in Figma',
         'issue': issue.id,
     }
@@ -322,67 +317,57 @@ def test_can_provide_optional_fields(sample_core, authenticated_api_client):
         value=1234567,
         expected_response={'repo': ['Invalid pk "1234567" - object does not exist.']}
     ),
-    Case('2', field='core', value=ABSENT, expected_response={'core': ['This field is required.']}),
+    Case('2', field='description', value=ABSENT, expected_response={'description': ['This field is required.']}),
+    Case('3', field='description', value=None, expected_response={'description': ['This field may not be null.']}),
     Case(
-        '3',
-        field='core',
-        value=1234567,
-        expected_response={'core': ['Invalid pk "1234567" - object does not exist.']}
-    ),
-    Case('4', field='core', value=None, expected_response={'core': ['This field may not be null.']}),
-    Case('5', field='core', value='', expected_response={'core': ['This field may not be null.']}),
-    Case('6', field='description', value=ABSENT, expected_response={'description': ['This field is required.']}),
-    Case('7', field='description', value=None, expected_response={'description': ['This field may not be null.']}),
-    Case(
-        '8',
+        '4',
         field='contribution_type',
         value=1,
         expected_response={'non_field_errors': ['Fixed field(s): contribution_type']}
     ),
-    Case('9', field='id', value=10, expected_response={'non_field_errors': ['Readonly field(s): id']}),
-    Case('10', field='pull', value=10, expected_response={'non_field_errors': ['Readonly field(s): pull']}),
+    Case('5', field='id', value=10, expected_response={'non_field_errors': ['Readonly field(s): id']}),
+    Case('6', field='pull', value=10, expected_response={'non_field_errors': ['Readonly field(s): pull']}),
     Case(
-        '11',
+        '7',
         field='reward_amount',
         value=10,
         expected_response={'non_field_errors': ['Readonly field(s): reward_amount']}
     ),
     Case(
-        '12',
+        '8',
         field='assessment_explanation',
         value='Great stuff',
         expected_response={'non_field_errors': ['Readonly field(s): assessment_explanation']}
     ),
     Case(
-        '13',
+        '9',
         field='assessment_points',
         value=10,
         expected_response={'non_field_errors': ['Readonly field(s): assessment_points']}
     ),
     Case(
-        '14',
+        '10',
         field='created_date',
         value='2024-05-17T07:00:00Z',
         expected_response={'non_field_errors': ['Readonly field(s): created_date']}
     ),
     Case(
-        '15',
+        '11',
         field='modified_date',
         value='2024-05-17T07:00:00Z',
         expected_response={'non_field_errors': ['Readonly field(s): modified_date']}
     ),
-    Case('16', field='user', value=10, expected_response={'non_field_errors': ['Fixed field(s): user']}),
+    Case('12', field='user', value=10, expected_response={'non_field_errors': ['Fixed field(s): user']}),
 )
 def test_fields_optionality(sample_core, sample_repo, field, value, expected_response, authenticated_api_client):
     api_client = authenticated_api_client
 
-    core = sample_core
     repo = sample_repo
 
     assert Contribution.objects.count() == 0
     assert Wallet.objects.count() == 0
 
-    payload = {'core': core.id, 'repo': repo.id, 'description': 'I made 3 new designs in Figma'}
+    payload = {'repo': repo.id, 'description': 'I made 3 new designs in Figma'}
     if value is ABSENT:
         del payload[field]
     else:
