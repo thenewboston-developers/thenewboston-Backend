@@ -1,8 +1,5 @@
 from django.contrib.auth import get_user_model
 from rest_framework import exceptions, serializers
-from rest_framework.fields import SkipField
-
-from thenewboston.cores.utils.core import get_default_core
 
 from ..models import Core
 
@@ -40,26 +37,3 @@ class CoreWriteSerializer(serializers.ModelSerializer):
         })
 
         return core
-
-
-class CreateOnlyCoreDefault:
-    """
-    Default value class that returns a default core value only during creation,
-    raises SkipField exception during updates.
-    """
-
-    def __init__(self):
-        self.core = get_default_core()
-
-    def set_context(self, serializer_field):
-        pass
-
-    def __call__(self, serializer_field=None):
-        # Parent instance exists: means it is an update
-        if serializer_field and serializer_field.parent.instance is not None:
-            raise SkipField()
-
-        return self.core
-
-    def __repr__(self):
-        return '%s()' % self.__class__.__name__
