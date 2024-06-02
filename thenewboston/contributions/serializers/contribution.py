@@ -2,7 +2,8 @@ from django_restql.fields import NestedField
 from rest_framework.serializers import IntegerField
 
 from thenewboston.contributions.models.contribution import ContributionType
-from thenewboston.cores.serializers.core import CoreReadSerializer, CreateOnlyCoreDefault
+from thenewboston.cores.serializers.core import CoreReadSerializer
+from thenewboston.cores.utils.core import get_default_core
 from thenewboston.general.fields import FixedField
 from thenewboston.general.serializers import BaseModelSerializer, CreateOnlyCurrentUserDefault
 from thenewboston.github.serializers.github_user import GitHubUserSerializer
@@ -15,7 +16,7 @@ from ..models import Contribution
 
 
 class ContributionSerializer(BaseModelSerializer):
-    core = FixedField(CoreReadSerializer, default=CreateOnlyCoreDefault())
+    core = FixedField(CoreReadSerializer, default=get_default_core)
     # TODO(dmu) LOW: Consider adding validation for `github_user.reward_recipient == user`
     github_user = NestedField(GitHubUserSerializer, accept_pk_only=True, required=False)
     # TODO(dmu) LOW: Allow providing `issue` for manual contributions

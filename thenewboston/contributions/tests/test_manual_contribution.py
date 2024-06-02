@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import patch
 
+from django.conf import settings
 from freezegun import freeze_time
 from model_bakery import baker
 from pytest_parametrize_cases import Case, parametrize_cases
@@ -8,6 +9,8 @@ from pytest_parametrize_cases import Case, parametrize_cases
 from thenewboston.contributions.models import Contribution
 from thenewboston.contributions.models.contribution import ContributionType
 from thenewboston.contributions.tasks import reward_manual_contributions_task
+from thenewboston.cores.tests.fixtures.core import create_core
+from thenewboston.cores.utils.core import get_default_core
 from thenewboston.general.tests.vcr import assert_played, yield_cassette
 from thenewboston.github.tests.fixtures.github_user import create_github_user
 from thenewboston.github.tests.fixtures.issue import create_issue
@@ -42,6 +45,12 @@ def test_create_manual_contribution(authenticated_api_client):
         freeze_time('2024-05-17T07:00:00Z'), patch('thenewboston.contributions.tasks.reward_manual_contributions') as
         reward_manual_contributions_mock
     ):
+        core = create_core(owner=user)
+
+        assert settings.DEFAULT_CORE_TICKER == 'TNB'
+        assert core.ticker == 'TNB'
+        assert get_default_core() == core
+
         payload = {'description': 'I made 3 new designs in Figma'}
         response = api_client.post('/api/contributions', payload)
 
@@ -49,9 +58,6 @@ def test_create_manual_contribution(authenticated_api_client):
     response_json = response.json()
     contribution_id = response_json.get('id')
     assert isinstance(contribution_id, int)
-    assert response_json['core'] is not None
-    contribution = Contribution.objects.get(id=contribution_id)
-    core = contribution.core
     assert response_json == {
         'id': contribution_id,
         'contribution_type': 2,  # ContributionType.MANUAL
@@ -165,6 +171,12 @@ def test_create_manual_contribution__daily_limit(authenticated_api_client):
         freeze_time('2024-05-17T07:00:00Z'), patch('thenewboston.contributions.tasks.reward_manual_contributions') as
         reward_manual_contributions_mock
     ):
+        core = create_core(owner=user)
+
+        assert settings.DEFAULT_CORE_TICKER == 'TNB'
+        assert core.ticker == 'TNB'
+        assert get_default_core() == core
+
         payload = {'description': 'I made 3 new designs in Figma'}
         response = api_client.post('/api/contributions', payload)
 
@@ -211,13 +223,20 @@ def test_create_manual_contribution__daily_limit(authenticated_api_client):
     assert Wallet.objects.count() == 1
     wallet = Wallet.objects.get()
     assert wallet.owner == user
+    assert wallet.core == core
     assert wallet.balance == 5
     assert wallet.deposit_account_number
     assert wallet.deposit_balance == 0
     assert wallet.deposit_signing_key
 
 
-def test_can_provide_optional_fields(authenticated_api_client):
+def test_can_provide_optional_fields(sample_core, authenticated_api_client):
+    core = sample_core
+
+    assert settings.DEFAULT_CORE_TICKER == 'TNB'
+    assert core.ticker == 'TNB'
+    assert get_default_core() == core
+
     api_client = authenticated_api_client
     user = api_client.forced_user
 
@@ -358,9 +377,16 @@ def test_can_provide_optional_fields(authenticated_api_client):
         expected_response={'non_field_errors': ['Readonly field(s): modified_date']}
     ),
     Case('12', field='user', value=10, expected_response={'non_field_errors': ['Fixed field(s): user']}),
+    Case('13', field='core', value=20, expected_response={'non_field_errors': ['Fixed field(s): core']}),
 )
 def test_fields_optionality(sample_core, sample_repo, field, value, expected_response, authenticated_api_client):
     api_client = authenticated_api_client
+
+    core = sample_core
+
+    assert settings.DEFAULT_CORE_TICKER == 'TNB'
+    assert core.ticker == 'TNB'
+    assert get_default_core() == core
 
     repo = sample_repo
 

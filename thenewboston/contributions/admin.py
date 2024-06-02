@@ -6,6 +6,7 @@ from .models import Contribution
 @admin.register(Contribution)
 class ContributionAdmin(admin.ModelAdmin):
     list_display = (
+        'id',
         'user',
         'github_user_username',
         'issue_number',
