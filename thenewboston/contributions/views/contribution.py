@@ -1,14 +1,17 @@
 import django_filters
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
+from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.utils.database import apply_on_commit
 
 from ..models import Contribution
-from ..serializers.contribution import ContributionSerializer
+from ..serializers.contribution import ContributionSerializer, TopContributorSerializer
 from ..tasks import reward_manual_contributions_task
+from ..utils.contributor import get_top_contributors
 
 AUTHENTICATED_USER_VALUES = ('me', 'self')
 
@@ -59,3 +62,9 @@ class ContributionViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
         apply_on_commit(
             lambda contribution_id=serializer.instance.id: reward_manual_contributions_task.delay(contribution_id)
         )
+
+    @action(detail=False, methods=['get'])
+    def top_contributors(self, request):
+        top_contributors = get_top_contributors()
+        serializer = TopContributorSerializer(top_contributors, many=True, context={'request': request})
+        return Response(serializer.data)
