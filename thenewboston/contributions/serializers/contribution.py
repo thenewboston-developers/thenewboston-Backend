@@ -1,5 +1,5 @@
 from django_restql.fields import NestedField
-from rest_framework.serializers import FloatField, IntegerField, Serializer
+from rest_framework.serializers import DateTimeField, FloatField, IntegerField, Serializer
 
 from thenewboston.contributions.models.contribution import ContributionType
 from thenewboston.cores.serializers.core import CoreReadSerializer
@@ -65,4 +65,12 @@ class TopContributorSerializer(Serializer):
 
     class Meta:
         fields = ('user', 'core', 'total_reward_amount', 'position')
-        read_only_fields = fields
+
+
+class CumulativeContributionSerializer(Serializer):
+    created_date = DateTimeField(read_only=True)
+    reward_amount = FloatField(read_only=True)
+    total_rewards = FloatField(read_only=True)
+
+    class Meta:
+        fields = ('created_date', 'reward_amount', 'total_rewards')

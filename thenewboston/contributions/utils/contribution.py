@@ -1,10 +1,8 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from ..models.contribution import Contribution
 
-
-def get_top_contributors(days_back=7, top_n=5):
+def get_top_contributors(queryset, days_back=7, top_n=5):
     """
     Get the top contributors from the list of contributions over a specified number of days.
 
@@ -17,7 +15,7 @@ def get_top_contributors(days_back=7, top_n=5):
               user information, core information, total reward amount, and position.
     """
     start_date = datetime.now() - timedelta(days=days_back)
-    contributions = Contribution.objects.filter(created_date__gte=start_date)
+    contributions = queryset.filter(created_date__gte=start_date)
     contribution_sum_by_user = defaultdict(
         lambda: {
             'total_reward_amount': 0,
@@ -43,3 +41,28 @@ def get_top_contributors(days_back=7, top_n=5):
         contributor['position'] = index + 1
 
     return top_contributors
+
+
+def get_cumulative_contributions(queryset):
+    """
+    Computes cumulative reward amounts for a list of contributions.
+
+    Returns:
+        list: A list of dictionaries, each containing the contribution's creation date, reward amount,
+        cumulative total rewards, and core logo URL.
+
+    The contributions are sorted by their creation date, and each entry in the returned list is appended
+    with a cumulative reward total.
+    """
+    contributions = queryset.order_by('created_date')
+    cumulative_total = 0
+    result = []
+    for contribution in contributions:
+        reward_amount = contribution.reward_amount or 0
+        cumulative_total += reward_amount
+        result.append({
+            'created_date': contribution.created_date,
+            'reward_amount': reward_amount,
+            'total_rewards': cumulative_total,
+        })
+    return result

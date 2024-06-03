@@ -9,9 +9,11 @@ from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.utils.database import apply_on_commit
 
 from ..models import Contribution
-from ..serializers.contribution import ContributionSerializer, TopContributorSerializer
+from ..serializers.contribution import (
+    ContributionSerializer, CumulativeContributionSerializer, TopContributorSerializer
+)
 from ..tasks import reward_manual_contributions_task
-from ..utils.contribution import get_top_contributors
+from ..utils.contribution import get_cumulative_contributions, get_top_contributors
 
 AUTHENTICATED_USER_VALUES = ('me', 'self')
 
@@ -65,6 +67,14 @@ class ContributionViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
 
     @action(detail=False, methods=['get'])
     def top_contributors(self, request):
-        top_contributors = get_top_contributors()
+        top_contributors = get_top_contributors(self.queryset)
         serializer = TopContributorSerializer(top_contributors, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def cumulative(self, request):
+        cumulative_contributions = get_cumulative_contributions(self.queryset)
+        serializer = CumulativeContributionSerializer(
+            cumulative_contributions, many=True, context={'request': request}
+        )
         return Response(serializer.data)
