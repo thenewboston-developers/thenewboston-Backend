@@ -11,7 +11,7 @@ from thenewboston.general.utils.database import apply_on_commit
 from ..models import Contribution
 from ..serializers.contribution import ContributionSerializer, TopContributorSerializer
 from ..tasks import reward_manual_contributions_task
-from ..utils.contributor import get_top_contributors
+from ..utils.contribution import get_top_contributors
 
 AUTHENTICATED_USER_VALUES = ('me', 'self')
 
