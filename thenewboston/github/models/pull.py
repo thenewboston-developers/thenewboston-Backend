@@ -12,8 +12,9 @@ class Pull(CreatedModified):
     repo = models.ForeignKey('Repo', on_delete=models.CASCADE, related_name='pulls')
     issue_number = models.PositiveIntegerField()
     title = models.CharField(max_length=256)
+    description = models.TextField(blank=True)
     assessment_points = models.PositiveIntegerField(null=True, blank=True)
-    assessment_explanation = models.TextField(null=True, blank=True)
+    assessment_explanation = models.TextField(blank=True)
 
     # Potentially there may be pull requests without contributions (like low value PRs or similar),
     # more than one contribution per pull request (if there are more than one author of the PR,
@@ -59,3 +60,6 @@ class Pull(CreatedModified):
         self.assessment_explanation = result['explanation']
         if save:
             self.save()
+
+    def is_assessed(self):
+        return self.assessment_points is not None and self.assessment_explanation

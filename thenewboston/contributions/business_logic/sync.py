@@ -30,6 +30,7 @@ def sync_pull_request(repo: Repo, pull_request: PullRequest):
         defaults={
             'title': pull_request.title,
             'github_user': github_user,
+            'description': pull_request.body or '',
         },
     )
 
@@ -61,7 +62,7 @@ def sync_repo(repo, limit=None):
             )
 
 
-@log(with_arguments=True, exception_log_level=logging.WARNING)
+@log(with_arguments=True)
 def sync_repos(repo_id=None, limit=None):
     for repo in get_repos(repo_id):
         try:

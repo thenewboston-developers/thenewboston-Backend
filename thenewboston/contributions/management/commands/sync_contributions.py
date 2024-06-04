@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from thenewboston.contributions.tasks import sync_contributions
+from thenewboston.contributions.tasks import sync_contributions_task
 
 
 class Command(BaseCommand):
@@ -11,4 +11,4 @@ class Command(BaseCommand):
         parser.add_argument('--limit', '-l', type=int)
 
     def handle(self, *args, **options):
-        sync_contributions(repo_id=options['repo_id'], limit=options['limit'])
+        sync_contributions_task(repo_id=options['repo_id'], limit=options['limit'])

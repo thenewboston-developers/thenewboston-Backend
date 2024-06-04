@@ -3,20 +3,21 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
+from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.general.utils.image import process_image
 from thenewboston.invitations.models import Invitation, InvitationLimit
 
 User = get_user_model()
 
 
-class UserReadSerializer(serializers.ModelSerializer):
+class UserReadSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar', 'id', 'username')
+        fields = ('avatar', 'id', 'is_manual_contribution_allowed', 'username')
 
 
-class UserUpdateSerializer(serializers.ModelSerializer):
+class UserUpdateSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
@@ -35,7 +36,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class UserWriteSerializer(serializers.ModelSerializer):
+class UserWriteSerializer(BaseModelSerializer):
     invitation_code = serializers.CharField(write_only=True)
     password = serializers.CharField(validators=[validate_password], write_only=True)
 
