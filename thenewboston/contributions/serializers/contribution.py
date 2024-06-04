@@ -65,7 +65,6 @@ class TopContributorSerializer(Serializer):
 
     class Meta:
         fields = ('user', 'core', 'total_reward_amount', 'position')
-        read_only_fields = fields
 
 
 class CumulativeContributionSerializer(Serializer):
