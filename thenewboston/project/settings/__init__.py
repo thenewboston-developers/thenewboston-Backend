@@ -27,11 +27,5 @@ include(
     optional(LOCAL_SETTINGS_PATH),
     'envvars.py',
     'sentry.py',
-    'docker.py',
+    'post.py',
 )
-
-assert ACCOUNT_NUMBER  # type: ignore # noqa: F821
-assert OPENAI_API_KEY  # type: ignore # noqa: F821
-assert PROMPTLAYER_API_KEY  # type: ignore # noqa: F821
-assert SIGNING_KEY  # type: ignore # noqa: F821
-assert GITHUB_API_ACCESS_TOKEN  # type: ignore # noqa: F821

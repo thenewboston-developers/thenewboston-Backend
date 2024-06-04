@@ -38,6 +38,9 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             # TODO(dmu) LOW: Consider using status.HTTP_201_CREATED instead
             return Response(response.dict(), status=status.HTTP_200_OK)
         except Exception as e:
+            # TODO(dmu) HIGH: This is invalid behavior to return HTTP400 in case of server side error.
+            #                 It must be HTTP500. Exposing server side error details is not good due
+            #                 security reasons. Also returning HTTP400 is confusing while debugging
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @staticmethod
