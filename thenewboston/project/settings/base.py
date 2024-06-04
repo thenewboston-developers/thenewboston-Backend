@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'thenewboston.wallets.apps.WalletsConfig',
 ]
 
-MIDDLEWARE = (
+# MIDDLEWARE is list because we need insert a middleware in `post.py`
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -54,7 +55,7 @@ MIDDLEWARE = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 ROOT_URLCONF = 'thenewboston.project.urls'
 
