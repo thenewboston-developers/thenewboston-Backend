@@ -92,7 +92,9 @@ def test_get_contributions(authenticated_api_client):
 
     response = authenticated_api_client.get('/api/contributions')
     assert response.status_code == 200
-    assert response.json() == [expected_response_json]
+    response_json = response.json()
+    assert response_json['count'] == 1
+    assert response_json['results'] == [expected_response_json]
 
 
 @parametrize_cases(
@@ -126,8 +128,8 @@ def test_contribution_filter(user_id, expected_len, authenticated_api_client):
     else:
         assert response.status_code == 200
         response_json = response.json()
-        assert len(response_json) == expected_len
+        assert len(response_json['results']) == expected_len
         if user_id is not NO:
             if user_id in {'me', 'self'}:
                 user_id = user.id
-            assert all(contribution['user']['id'] == user_id for contribution in response_json)
+            assert all(contribution['user']['id'] == user_id for contribution in response_json['results'])
