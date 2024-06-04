@@ -188,3 +188,9 @@ cd ~/thenewboston-Backend && git fetch origin && git checkout origin/master
 ```bash
 make deploy
 ```
+
+4. Clean up:
+
+```bash
+make deploy-cleanup
+```

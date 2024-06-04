@@ -23,6 +23,11 @@ run-development: build
 .PHONY: deploy
 deploy: build docker-compose-down update-docker-compose-yaml run-production;
 
+.PHONY: deploy-cleanup
+deploy-cleanup:
+	docker image prune -f
+	docker builder prune -f
+
 .PHONY: install
 install:
 	poetry install
