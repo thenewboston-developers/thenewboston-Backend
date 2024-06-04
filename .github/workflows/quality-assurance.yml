@@ -1,0 +1,55 @@
+name: Quality Assurance
+
+on: [pull_request]
+
+jobs:
+  quality-assurance:
+    name: Quality Assurance
+
+    # TODO(dmu) LOW: Consider using Debian Buster (the same as docker image is based on) if it is easy to do
+    runs-on: ubuntu-latest
+    container: python:3.10.4
+
+    services:
+      # TODO(dmu) LOW: This section duplicates services already defined in `docker-compose.yml`.
+      #                Is there a way to make it DRY?
+      db:
+        image: postgres:16.2-alpine
+        env:
+          POSTGRES_DB: thenewboston
+          POSTGRES_USER: thenewboston
+          POSTGRES_PASSWORD: thenewboston
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:6.2.6-alpine
+
+    steps:
+      # TODO(dmu) LOW: Implement caching
+      - uses: actions/checkout@v4
+
+      - name: Run Poetry image
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: 1.8.3
+
+      - name: Disable "dubious ownership" errors
+        # This allows us to install pre-commit
+        run: git config --global --add safe.directory '*'
+
+      - name: Install
+        run: make install && make install-pre-commit
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+        env:
+          THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
+          THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+          THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
+          THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
