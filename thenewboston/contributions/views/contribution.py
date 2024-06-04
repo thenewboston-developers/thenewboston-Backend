@@ -3,6 +3,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.utils.database import apply_on_commit
 
 from ..models import Contribution
@@ -50,6 +51,7 @@ class ContributionViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
     permission_classes = [IsAuthenticated, IsContributionWriteAllowed]
     queryset = Contribution.objects.order_by('-created_date', '-id')
     serializer_class = ContributionSerializer
+    pagination_class = CustomPageNumberPagination
     filterset_class = ContributionFilterSet
 
     def perform_create(self, serializer):
