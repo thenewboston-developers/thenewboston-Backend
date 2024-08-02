@@ -19,6 +19,15 @@ class ResultFormat(Enum):
     JSON = 'json'
 
 
+# TODO: These enums should be somewhere else.
+# Ideally, I think we should have an app for OpenAI and put all this stuff there.
+class MessageRole(Enum):
+    SYSTEM = 'system'
+    ASSISTANT = 'assistant'
+    USER = 'user'
+    FUNCTION = 'function'
+
+
 def make_messages_from_template(template, *, variables=None):
     env = jinja2.Environment()
 

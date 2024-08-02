@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.contributions.apps.ContributionsConfig',
     'thenewboston.cores.apps.CoresConfig',
+    'thenewboston.discord.apps.DiscordConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general',
     'thenewboston.github.apps.GithubConfig',
