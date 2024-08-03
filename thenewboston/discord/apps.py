@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import threading
 
@@ -6,6 +7,8 @@ from django.apps import AppConfig
 from django.conf import settings
 
 from thenewboston.discord.utils.bot import initialize_client
+
+logger = logging.getLogger(__name__)
 
 
 class DiscordConfig(AppConfig):
@@ -33,4 +36,4 @@ class DiscordConfig(AppConfig):
             loop.create_task(initialize_client())
             loop.run_forever()
         except Exception as e:
-            print(f'Failed to start Discord bot: {e}')
+            logger.exception(f'Failed to start Discord bot: {e}')
