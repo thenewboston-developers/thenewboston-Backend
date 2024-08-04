@@ -53,7 +53,6 @@ class Pull(CreatedModified):
     def assess(self, save=True):
         # All potential exceptions must be handled by the caller of the method
 
-        input_variables = {'git_diff': self.fetch_diff()}
         metadata = {}
         tracked_user = (self.github_user or null_object).reward_recipient
 
@@ -62,7 +61,7 @@ class Pull(CreatedModified):
 
         response = promptlayer_client.run(
             prompt_name=settings.GITHUB_PR_ASSESSMENT_TEMPLATE_NAME,
-            input_variables=input_variables,
+            input_variables={'git_diff': self.fetch_diff()},
             prompt_release_label=settings.PROMPT_TEMPLATE_LABEL,
             metadata=metadata,
             tags=['github_pr_assessment']
