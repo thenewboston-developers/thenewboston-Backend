@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from promptlayer import PromptLayer
 
-from thenewboston.general.clients.openai import MessageRole, OpenAIClient, ResultFormat
+promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
 
 
 def get_ia():
@@ -10,16 +11,24 @@ def get_ia():
 
 def ask_ia(question, user=None):
     """
-    Generates a chat response to the given question using an AI client.
+    Generates a chat response to the given question using PromptLayer.
     """
-    # TODO: Do we want to maintain the conversation here?
-    chat_completion_text = OpenAIClient.get_instance().get_chat_completion(
-        settings.DISCORD_CREATE_RESPONSE_TEMPLATE_NAME,
-        extra_messages=get_messages(question, MessageRole.USER.value),
-        result_format=ResultFormat.TEXT,
-        track=True if user else False,
-        tracked_user=user,
+    input_variables = {'question': question}
+
+    metadata = {}
+    if user:
+        metadata = {'user_id': str(user.id), 'username': user.username}
+
+    response = promptlayer_client.run(
+        prompt_name=settings.DISCORD_CREATE_RESPONSE_TEMPLATE_NAME,
+        input_variables=input_variables,
+        prompt_release_label=settings.PROMPT_TEMPLATE_LABEL,
+        metadata=metadata,
+        tags=['discord_bot_response']
     )
+
+    # Extract the chat completion text from the response
+    chat_completion_text = response['raw_response'].choices[0].message.content
 
     return chat_completion_text
 
