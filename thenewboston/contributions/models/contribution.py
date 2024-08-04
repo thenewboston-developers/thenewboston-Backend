@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -86,28 +85,10 @@ class Contribution(CreatedModified):
                     },
                     tags=['manual_contribution_assessment'],
                 )
-
-                # Extract the result from the response
                 result = response['raw_response'].choices[0].message.content
-
-                try:
-                    # Assuming the result is in JSON format, parse it
-                    result_json = json.loads(result)
-                    assessment_points = result_json['assessment']
-                    assessment_explanation = result_json['explanation']
-                except json.JSONDecodeError:
-                    logger.error(f'Failed to parse JSON response: {result}')
-
-                    # Attempt to extract information using regex
-                    assessment_match = re.search(r'assessment:\s*(\d+)', result, re.IGNORECASE)
-                    explanation_match = re.search(r'explanation:\s*(.+)', result, re.IGNORECASE | re.DOTALL)
-
-                    if assessment_match and explanation_match:
-                        assessment_points = int(assessment_match.group(1))
-                        assessment_explanation = explanation_match.group(1).strip()
-                    else:
-                        raise ValueError(f'Unable to extract assessment information from the result: {result}')
-
+                result_json = json.loads(result)
+                assessment_points = result_json['assessment']
+                assessment_explanation = result_json['explanation']
             case _:
                 raise NotImplementedError('Unsupported contribution type')
 
