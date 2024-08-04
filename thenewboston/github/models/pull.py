@@ -1,10 +1,14 @@
+import json
+
 from django.conf import settings
 from django.db import models
+from promptlayer import PromptLayer
 
-from thenewboston.general.clients.openai import OpenAIClient, ResultFormat
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.misc import null_object
 from thenewboston.github.client import GitHubClient
+
+promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
 
 
 class Pull(CreatedModified):
@@ -49,15 +53,26 @@ class Pull(CreatedModified):
     def assess(self, save=True):
         # All potential exceptions must be handled by the caller of the method
 
-        result = OpenAIClient.get_instance().get_chat_completion(
-            settings.GITHUB_PR_ASSESSMENT_TEMPLATE_NAME,
-            input_variables={'git_diff': self.fetch_diff()},
-            result_format=ResultFormat.JSON,
-            track=True,
-            tracked_user=(self.github_user or null_object).reward_recipient,
+        input_variables = {'git_diff': self.fetch_diff()}
+        metadata = {}
+        tracked_user = (self.github_user or null_object).reward_recipient
+
+        if tracked_user:
+            metadata = {'user_id': str(tracked_user.id), 'username': tracked_user.username}
+
+        response = promptlayer_client.run(
+            prompt_name=settings.GITHUB_PR_ASSESSMENT_TEMPLATE_NAME,
+            input_variables=input_variables,
+            prompt_release_label=settings.PROMPT_TEMPLATE_LABEL,
+            metadata=metadata,
+            tags=['github_pr_assessment']
         )
-        self.assessment_points = result['assessment']
-        self.assessment_explanation = result['explanation']
+
+        result = response['raw_response'].choices[0].message.content
+        result_json = json.loads(result)
+        self.assessment_points = result_json['assessment']
+        self.assessment_explanation = result_json['explanation']
+
         if save:
             self.save()
 
