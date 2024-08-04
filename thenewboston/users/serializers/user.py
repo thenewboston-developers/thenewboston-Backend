@@ -14,22 +14,34 @@ class UserReadSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar', 'id', 'is_manual_contribution_allowed', 'username')
+        fields = ('avatar', 'discord_username', 'id', 'is_manual_contribution_allowed', 'username')
 
 
 class UserUpdateSerializer(BaseModelSerializer):
 
+    is_avatar_cleared = serializers.BooleanField(
+        default=False,
+        write_only=True,
+        required=False,
+        help_text='A boolean flag indicating whether the existing avatar should be cleared.'
+    )
+
     class Meta:
         model = User
-        fields = ('avatar',)
+        fields = (
+            'avatar',
+            'discord_username',
+            'is_avatar_cleared',
+        )
 
     def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar')
+        avatar = validated_data.pop('avatar', None)
+        instance = super().update(instance, validated_data)
 
         if avatar:
             file = process_image(avatar)
             instance.avatar = file
-        else:
+        elif validated_data.get('is_avatar_cleared'):
             instance.avatar = ''
 
         instance.save()
