@@ -1,5 +1,4 @@
 import json
-import logging
 from datetime import timedelta
 
 from django.conf import settings
@@ -10,7 +9,6 @@ from promptlayer import PromptLayer
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.transfers import change_wallet_balance
 
-logger = logging.getLogger(__name__)
 promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
 
 
