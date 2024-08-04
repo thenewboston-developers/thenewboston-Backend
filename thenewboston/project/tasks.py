@@ -17,11 +17,9 @@ promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
 def generate_ias_response(conversation_id):
     conversation = Conversation.objects.get(id=conversation_id)
 
-    input_variables = {'conversation_history': get_non_system_messages(conversation_id)}
-
     response = promptlayer_client.run(
         prompt_name=settings.CREATE_MESSAGE_TEMPLATE_NAME,
-        input_variables=input_variables,
+        input_variables={'messages': get_non_system_messages(conversation_id)},
         prompt_release_label=settings.PROMPT_TEMPLATE_LABEL,
         metadata={
             'environment': settings.ENV_NAME,
@@ -48,8 +46,8 @@ def get_non_system_messages(conversation_id):
 
     for message in messages:
         if message.sender_type == SenderType.IA:
-            results.append({'role': 'assistant', 'content': message.text})
+            results.append({'role': 'assistant', 'content': [{'type': 'text', 'text': message.text}]})
         elif message.sender_type == SenderType.USER:
-            results.append({'role': 'user', 'content': message.text})
+            results.append({'role': 'user', 'content': [{'type': 'text', 'text': message.text}]})
 
     return results
