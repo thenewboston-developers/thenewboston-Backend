@@ -1,10 +1,9 @@
-import promptlayer
 from django.conf import settings
+from promptlayer import PromptLayer
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.general.clients.openai import OpenAIClient
 from thenewboston.general.constants import OPENAI_IMAGE_CREATION_FEE
 from thenewboston.general.enums import MessageType
 from thenewboston.wallets.consumers.wallet import WalletConsumer
@@ -13,8 +12,9 @@ from thenewboston.wallets.utils.wallet import get_default_wallet
 
 from ..serializers.openai_image import OpenAIImageSerializer
 
-promptlayer.api_key = settings.PROMPTLAYER_API_KEY
-OpenAI = promptlayer.openai.OpenAI
+promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
+OpenAI = promptlayer_client.openai.OpenAI
+client = OpenAI()
 
 
 class OpenAIImageViewSet(viewsets.ViewSet):
@@ -28,9 +28,12 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             description = serializer.validated_data['description']
             quantity = serializer.validated_data['quantity']
 
-            response = OpenAIClient.get_instance().generate_image(
+            response = client.images.generate(
+                model=settings.OPENAI_IMAGE_GENERATION_MODEL,
+                n=quantity,
                 prompt=description,
-                quantity=quantity,
+                quality=settings.OPENAI_IMAGE_GENERATION_DEFAULT_QUALITY,
+                size=settings.OPENAI_IMAGE_GENERATION_DEFAULT_SIZE,
             )
 
             self.charge_image_creation_fee(request.user, quantity)

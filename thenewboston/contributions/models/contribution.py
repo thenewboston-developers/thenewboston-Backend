@@ -1,12 +1,15 @@
+import json
 from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from promptlayer import PromptLayer
 
-from thenewboston.general.clients.openai import OpenAIClient, ResultFormat
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.transfers import change_wallet_balance
+
+promptlayer_client = PromptLayer(api_key=settings.PROMPTLAYER_API_KEY)
 
 
 class ContributionType(models.IntegerChoices):
@@ -69,15 +72,21 @@ class Contribution(CreatedModified):
                 assessment_points = pull.assessment_points
                 assessment_explanation = pull.assessment_explanation
             case ContributionType.MANUAL.value:
-                result = OpenAIClient.get_instance().get_chat_completion(
-                    settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_TEMPLATE_NAME,
+                response = promptlayer_client.run(
+                    prompt_name=settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_TEMPLATE_NAME,
                     input_variables={'description': self.description},
-                    result_format=ResultFormat.JSON,
-                    track=True,
-                    tracked_user=self.user,
+                    prompt_release_label=settings.PROMPT_TEMPLATE_LABEL,
+                    metadata={
+                        'environment': settings.ENV_NAME,
+                        'user_id': str(self.user.id),
+                        'username': self.user.username
+                    },
+                    tags=['manual_contribution_assessment'],
                 )
-                assessment_points = result['assessment']
-                assessment_explanation = result['explanation']
+                result = response['raw_response'].choices[0].message.content
+                result_json = json.loads(result)
+                assessment_points = result_json['assessment']
+                assessment_explanation = result_json['explanation']
             case _:
                 raise NotImplementedError('Unsupported contribution type')
 
