@@ -28,15 +28,3 @@ def ask_ia(question, user=None):
     )
     chat_completion_text = response['raw_response'].choices[0].message.content
     return chat_completion_text
-
-
-def get_messages(current_message, role, messages=None):
-    """
-    Appends the current message to the list of messages.
-    """
-
-    if messages is None:
-        messages = []
-
-    messages.append({'role': role, 'content': current_message})
-    return messages

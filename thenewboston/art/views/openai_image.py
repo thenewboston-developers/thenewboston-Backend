@@ -28,7 +28,13 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             description = serializer.validated_data['description']
             quantity = serializer.validated_data['quantity']
 
-            response = client.images.generate(model='dall-e-3', prompt=description, n=quantity, size='1024x1024')
+            response = client.images.generate(
+                model=settings.OPENAI_IMAGE_GENERATION_MODEL,
+                n=quantity,
+                prompt=description,
+                quality=settings.OPENAI_IMAGE_GENERATION_DEFAULT_QUALITY,
+                size=settings.OPENAI_IMAGE_GENERATION_DEFAULT_SIZE,
+            )
 
             self.charge_image_creation_fee(request.user, quantity)
 
