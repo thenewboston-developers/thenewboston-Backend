@@ -10,7 +10,7 @@
 1. Install Poetry
 
 ```bash
-export PIP_REQUIRED_VERSION=24.0
+export PIP_REQUIRED_VERSION=24.2
 pip install pip==${PIP_REQUIRED_VERSION} && \
 pip install virtualenvwrapper && \
 pip install poetry==1.8.3 && \

@@ -1,5 +1,21 @@
 # Deploy production
 
+## Discord Bot creation
+
+1. Open "[Applications](https://discord.com/developers/applications)" at Discord Developer Portal
+2. Click "New Application" button
+3. Type application name and "Create" button
+4. Click "Bot" on the left panel of the created application
+5. Click "Reset Token" button and then confirm by clicking "Yes, do it!" button
+6. Re-enter your Discord password and click "Submit" button
+7. Copy and save the generated bot token
+8. Check "MESSAGE CONTENT INTENT" and click "Save Changes" button
+9. Click "OAuth2" on the left panel
+10. In "OAuth2 URL Generator" -> "SCOPES" section check "bot"
+11. In "OAuth2 URL Generator" -> "BOT PERMISSIONS" section check "Send Messages"
+12. Set "OAuth2 URL Generator" -> "INTEGRATION TYPE" = Guild Install
+13. Copy "OAuth2 URL Generator" -> "GENERATED URL", open it in your browser and authorize the bot to a server
+
 ## Initial deployment
 
 Initial deployment is done once. [Update](#Update) section is executed for redeployment
