@@ -8,7 +8,7 @@ VCR_DEFAULT_KWARGS = {
     'record_mode': 'none',
     'allow_playback_repeats': True,
     'decode_compressed_response': True,
-    # TODO(dmu) HIGH: promptplayer also inserts API key into request bodies. Automate the sanitization
+    # TODO(dmu) HIGH: promptlayer also inserts API key into request bodies. Automate the sanitization
     'filter_headers': [('Authorization', 'sanitized'), ('X-API-KEY', 'sanitized')]
 }
 

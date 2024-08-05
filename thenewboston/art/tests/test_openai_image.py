@@ -11,27 +11,27 @@ def test_create_openai_images(api_client_bucky, sample_core, sample_wallet):
     with (
         override_settings(OPENAI_IMAGE_GENERATION_DEFAULT_SIZE='256x256'),
         yield_cassette('create_openai_image.yaml') as cassette,
-        assert_played(cassette, count=2),
+        assert_played(cassette),
     ):
         response = api_client_bucky.post('/api/openai_images', payload)
 
     assert response.status_code == 200
     assert response.json() == {
         'created':
-            1712242615,
+            1722953410,
         'data': [{
             'b64_json':
                 None,
             'revised_prompt':
                 None,
             'url': (
-                'https://oaidalleapiprodscus.blob.core.windows.net/'
-                'private/org-eQnfyttwsLTbvwJtDWRGilzo/user-vGa8V5qOL8XFkzK6S4wA3Geo/'
-                'img-gPfLBQY2J1mBxhd81nLYuOHz.png?st=2024-04-04T13%3A56%3A55Z&se=2024-04-04T15%3A56%3A55Z&sp=r&'
-                'sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&'
-                'skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&'
-                'skt=2024-04-03T20%3A15%3A27Z&ske=2024-04-04T20%3A15%3A27Z&sks=b&skv=2021-08-06&'
-                'sig=KtLaFr26odFV%2BeJlINYQN0t5utSfCpRYhpToZqhcWW0%3D'
+                'https://oaidalleapiprodscus.blob.core.windows.net/private/'
+                'org-eQnfyttwsLTbvwJtDWRGilzo/user-vGa8V5qOL8XFkzK6S4wA3Geo/'
+                'img-bY1bAO8t1NOd3M9w3HE6TSW6.png?st=2024-08-06T13%3A10%3A10Z&'
+                'se=2024-08-06T15%3A10%3A10Z&sp=r&sv=2023-11-03&sr=b&rscd=inline&'
+                'rsct=image/png&skoid=d505667d-d6c1-4a0a-bac7-5c84a87759f8&'
+                'sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-08-06T01%3A30%3A12Z&'
+                'ske=2024-08-07T01%3A30%3A12Z&sks=b&skv=2023-11-03&sig=9BK9xQF5a6CWqDV6QVNy4Ktmh19jrYOOlWiZys6qVrM%3D'
             )
         }]
     }

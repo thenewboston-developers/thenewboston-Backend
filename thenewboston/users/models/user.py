@@ -12,6 +12,12 @@ class User(AbstractUser):
     # TODO(dmu) MEDIUM: If we have more permissions consider using Django built-in permission system
     is_manual_contribution_allowed = models.BooleanField(default=False)
 
+    # `discord_user_id` and `discord_username` are implemented according to
+    #  https://discord.com/developers/docs/resources/user
+    discord_user_id = models.PositiveBigIntegerField(blank=True, null=True, unique=True)
+    # `discord_username` is not used in logic and designed for representation purposes only (displaying to user)
+    discord_username = models.CharField(max_length=32, blank=True, null=True)
+
     objects = UserManager()
 
     def get_reward_wallet_for_core(self, core_id, with_for_update=True):
