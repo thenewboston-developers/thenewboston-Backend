@@ -25,7 +25,7 @@ async def test_ai_command__basic_reply(bucky, discord_context):
 
     get_chat_completion_mock.assert_called_once_with(
         'create-response',
-        input_variables={'question': 'give me the shortest reply possible'},
+        input_variables={'text': 'give me the shortest reply possible'},
         tracked_user=bucky,
         tags=['discord_bot_response']
     )

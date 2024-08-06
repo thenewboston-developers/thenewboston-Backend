@@ -38,8 +38,7 @@ async def ia_command(ctx, *, text):
         # TODO(dmu) HIGH: Interact with OpenAI in async way
         response = OpenAIClient.get_instance().get_chat_completion(
             settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME,
-            # TODO(dmu) LOW: Rename `question` to `text`, since the text provided is not necessarily a question
-            input_variables={'question': text},
+            input_variables={'text': text},
             tracked_user=user,
             tags=['discord_bot_response']
         )
