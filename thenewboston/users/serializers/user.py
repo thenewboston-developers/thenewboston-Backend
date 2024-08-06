@@ -41,12 +41,12 @@ class UserWriteSerializer(BaseModelSerializer):
         model = User
         fields = ('password', 'username')
 
-    # def create(self, validated_data):
-    #     password = validated_data.pop('password')
-    #     username = validated_data.get('username')
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        username = validated_data.get('username')
 
-    #     user = User.objects.create_user(username=username, password=password)
-    #     return user
+        user = User.objects.create_user(username=username, password=password)
+        return user
 
     @staticmethod
     def validate_username(value):
