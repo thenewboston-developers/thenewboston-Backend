@@ -35,10 +35,15 @@ async def ia_command(ctx, *, text):
             await ctx.reply('Please, register at https://thenewboston.com')
             return
 
+        historical_messages = await get_historical_messages(ctx)
+
         # TODO(dmu) HIGH: Interact with OpenAI in async way
         response = OpenAIClient.get_instance().get_chat_completion(
             settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME,
-            input_variables={'text': text},
+            input_variables={
+                'messages': historical_messages,
+                'text': text
+            },
             tracked_user=user,
             tags=['discord_bot_response']
         )
@@ -46,6 +51,23 @@ async def ia_command(ctx, *, text):
     except Exception:
         logger.exception('An error occurred while processing "%s" command', ia_command.name)
         await ctx.reply('Oops.. Looks like something went wrong. Our team has been notified.')
+
+
+async def get_historical_messages(ctx):
+    results = []
+
+    async for message in ctx.channel.history(limit=10):
+        if '_ia' in str(message.author):
+            results.append({'role': 'assistant', 'content': [{'type': 'text', 'text': message.content}]})
+        else:
+            content = message.content
+
+            if content.startswith('/ia'):
+                content = content[3:].strip()
+
+            results.append({'role': 'user', 'content': [{'type': 'text', 'text': content}]})
+
+    return results[::-1]
 
 
 if __name__ == '__main__':
