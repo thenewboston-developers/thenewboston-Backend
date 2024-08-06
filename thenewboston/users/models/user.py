@@ -11,6 +11,7 @@ class User(AbstractUser):
     manual_contribution_reward_daily_limit = models.PositiveBigIntegerField(default=0)
     # TODO(dmu) MEDIUM: If we have more permissions consider using Django built-in permission system
     is_manual_contribution_allowed = models.BooleanField(default=False)
+    discord_username = models.CharField(max_length=50, blank=True, null=True)
 
     objects = UserManager()
 
