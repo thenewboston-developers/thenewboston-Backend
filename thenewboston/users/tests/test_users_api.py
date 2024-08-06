@@ -4,7 +4,6 @@ import pytest
 @pytest.mark.django_db
 def test_create_manual_contribution_allowed_users(api_client):
     payload = {
-        'invitation_code': 'fake',
         'username': 'fake',
         'password': 'FaKe1$jso3#@',
         'manual_contribution_reward_daily_limit': 100,

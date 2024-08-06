@@ -2,10 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
 from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.general.utils.image import process_image
-from thenewboston.invitations.models import Invitation, InvitationLimit
 
 User = get_user_model()
 
@@ -37,36 +35,18 @@ class UserUpdateSerializer(BaseModelSerializer):
 
 
 class UserWriteSerializer(BaseModelSerializer):
-    invitation_code = serializers.CharField(write_only=True)
     password = serializers.CharField(validators=[validate_password], write_only=True)
 
     class Meta:
         model = User
-        fields = ('invitation_code', 'password', 'username')
+        fields = ('password', 'username')
 
-    def create(self, validated_data):
-        invitation_code = validated_data.pop('invitation_code')
-        password = validated_data.pop('password')
-        username = validated_data.get('username')
+    # def create(self, validated_data):
+    #     password = validated_data.pop('password')
+    #     username = validated_data.get('username')
 
-        invitation = Invitation.objects.filter(code=invitation_code, recipient__isnull=True).first()
-
-        if not invitation:
-            raise serializers.ValidationError('Invalid or used invitation code')
-
-        user = User.objects.create_user(username=username, password=password)
-        invitation.recipient = user
-        invitation.save()
-        inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
-
-        if inviter_limit:
-            recipient_limit = max(inviter_limit.amount - 1, 0)
-        else:
-            recipient_limit = DEFAULT_INVITATION_LIMIT - 1
-
-        InvitationLimit.objects.create(owner=user, amount=recipient_limit)
-
-        return user
+    #     user = User.objects.create_user(username=username, password=password)
+    #     return user
 
     @staticmethod
     def validate_username(value):
