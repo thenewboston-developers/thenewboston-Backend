@@ -18,16 +18,14 @@ from thenewboston.github.tests.fixtures.repo import create_repo
 from thenewboston.wallets.models import Wallet
 
 ASSESSMENT_EXPLANATION = (
-    "As an AI developed by OpenAI, I'm not equipped with the capacity to directly view, access, or "
-    'assess visual designs such as those created in Figma. My functionality is centered around processing '
-    'text-based input and generating text-based output. Therefore, I cannot directly evaluate the quality, '
-    'creativity, or impact of your Figma designs. Assessment of visual design work requires subjective '
-    'analysis and consideration of aesthetic principles, design innovation, usability, and how effectively '
-    'the design communicates its intended message or function. These nuances are best evaluated by humans or '
-    'specialized software designed for visual design critique and analysis. However, creating new designs in '
-    'Figma can be a valuable contribution to projects requiring visual communication, user interface design, '
-    'or user experience enhancements, suggesting a non-zero intrinsic value in contexts where such '
-    'contributions are applicable.'
+    'The creation of 3 new designs in Figma can be a valuable contribution, particularly if these designs are '
+    "intended to improve the user interface and user experience of our project's software components. "
+    'Given that visual and interaction design can significantly impact the usability and appeal of our tools '
+    "and platforms, your contribution is recognized as enhancing the project's appeal and potentially its "
+    'functionality. However, without specific details on how these designs align with our milestones—such '
+    'as improving your ability to submit PRs, interact with other AIs, or contribute more effectively to '
+    'the project—the value assessment must be conservative. Further information on how these designs directly '
+    'support our milestones or your development would likely increase the assessed value of this contribution.'
 )
 ABSENT = object()
 
@@ -112,7 +110,7 @@ def test_create_manual_contribution(authenticated_api_client):
     with (
         freeze_time('2024-05-17T07:10:00Z'),
         yield_cassette('reward_manual_contributions.yaml') as cassette,
-        assert_played(cassette, count=4),
+        assert_played(cassette, count=3),
     ):
         reward_manual_contributions_task(contribution_id=contribution_id)
 
@@ -129,17 +127,17 @@ def test_create_manual_contribution(authenticated_api_client):
 
     # Assert assessed and rewarded
     assert contribution.is_assessed()
-    assert contribution.assessment_points == 9
+    assert contribution.assessment_points == 500
     assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
     assert contribution.is_rewarded()
     assert contribution.rewarded_at == datetime.fromisoformat('2024-05-17T07:10:00+00:00')
-    assert contribution.reward_amount == 9
+    assert contribution.reward_amount == 500
 
     assert Wallet.objects.count() == 1
     wallet = Wallet.objects.get()
     assert wallet.owner == user
     assert wallet.core == core
-    assert wallet.balance == 9
+    assert wallet.balance == 500
     assert wallet.deposit_account_number
     assert wallet.deposit_balance == 0
     assert wallet.deposit_signing_key
@@ -208,13 +206,13 @@ def test_create_manual_contribution__daily_limit(authenticated_api_client):
     with (
         freeze_time('2024-05-17T07:10:00Z'),
         yield_cassette('reward_manual_contributions.yaml') as cassette,
-        assert_played(cassette, count=4),
+        assert_played(cassette, count=3),
     ):
         reward_manual_contributions_task(contribution_id=contribution_id)
 
     contribution = Contribution.objects.get(id=contribution_id)
     assert contribution.is_assessed()
-    assert contribution.assessment_points == 9
+    assert contribution.assessment_points == 500
     assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
     assert contribution.is_rewarded()
     assert contribution.rewarded_at == datetime.fromisoformat('2024-05-17T07:10:00+00:00')

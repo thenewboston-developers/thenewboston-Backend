@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from thenewboston.general.clients.openai import OpenAIClient, ResultFormat
+from thenewboston.general.clients.openai import OpenAIClient
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.transfers import change_wallet_balance
 
@@ -70,11 +70,10 @@ class Contribution(CreatedModified):
                 assessment_explanation = pull.assessment_explanation
             case ContributionType.MANUAL.value:
                 result = OpenAIClient.get_instance().get_chat_completion(
-                    settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_TEMPLATE_NAME,
+                    settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_PROMPT_NAME,
                     input_variables={'description': self.description},
-                    result_format=ResultFormat.JSON,
-                    track=True,
                     tracked_user=self.user,
+                    tags=['manual_contribution_assessment'],
                 )
                 assessment_points = result['assessment']
                 assessment_explanation = result['explanation']

@@ -1,11 +1,11 @@
 import json
 import logging
-from enum import Enum
+import os
 from typing import TYPE_CHECKING, Optional  # noqa: I101
 
-import jinja2
-import promptlayer
 from django.conf import settings
+from openai import OpenAI
+from promptlayer import PromptLayer
 
 if TYPE_CHECKING:
     from thenewboston.users.models import User
@@ -13,44 +13,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ResultFormat(Enum):
-    RAW = 'raw'
-    TEXT = 'text'
-    JSON = 'json'
-
-
-def make_messages_from_template(template, *, variables=None):
-    env = jinja2.Environment()
-
-    messages = []
-    for template_message in template['prompt_template']['messages']:
-        template_content_text = template_message['content'][0]['text']
-
-        if input_variables_set := set(template_message['input_variables']) and variables:
-            context_variables = {key: value for key, value in variables.items() if key in input_variables_set}
-            template_format = template_message['template_format']
-            match template_format:
-                case 'jinja2':
-                    content = env.from_string(template_content_text).render(**context_variables)
-                case '':
-                    content = template_content_text.format(**context_variables)
-                case _:
-                    # TODO(dmu) MEDIUM: Should we raise an exception instead
-                    logger.warning('Unsupported template format: %s', template_format)
-                    content = template_content_text
-        else:
-            content = template_content_text
-
-        messages.append({'role': template_message['role'], 'content': content})
-
-    return messages
-
-
-def extract_chat_completion_content(response):
-    return response.choices[0].message.content
-
-
 class OpenAIClient:
+    # TODO(dmu) MEDIUM: Maybe we should rename it to LLMClient once we start supporting other AI providers
+    """
+    This class encapsulates Promptlayer and OpenAI integration logic, so the code that uses it is cleaner
+    """
     _instance = None
 
     def __init__(self, openai_api_key, promptlayer_api_key):
@@ -67,76 +34,61 @@ class OpenAIClient:
 
         return instance
 
-    def client(self):
-        # TODO(dmu) LOW: Using global variables is a bad idea. Change `promptlayer.api_key = promptlayer_api_key`
-        #                once PromptLayer fix it.
-        promptlayer.api_key = self.promptlayer_api_key
+    @property
+    def promptlayer_client(self):
         # TODO(dmu) MEDIUM: Consider using async OpenAI client
-        return promptlayer.openai.OpenAI(api_key=self.openai_api_key)
+        # Since we are using PromptLayer.run() method there is no explicit way to provide OpenAI API key, so
+        # we have to update environment variable to make it read from there
+        os.environ['OPENAI_API_KEY'] = self.openai_api_key
+        return PromptLayer(api_key=self.promptlayer_api_key)
+
+    @property
+    def openai_client(self):
+        # TODO(dmu) MEDIUM: Consider using async OpenAI client
+        return OpenAI(api_key=self.openai_api_key)
 
     def get_chat_completion(
         self,
-        template,
+        prompt_name,
         *,
-        extra_messages=(),
         input_variables=None,
         label=settings.PROMPT_TEMPLATE_LABEL,
-        result_format: ResultFormat = ResultFormat.RAW,
-        track=False,
         tracked_user: Optional['User'] = None,
+        tags=None,
+        format_result=True,
     ):
-        # TODO(dmu) LOW: Once PromptPlayer improve software design and get rid of global object move getting client
-        #                closer to the first usage
-        client = self.client()
-        template = promptlayer.templates.get(template, {'label': label})
+        metadata = {'environment': settings.ENV_NAME}
+        if tracked_user:
+            metadata['user_id'] = str(tracked_user.id)
+            metadata['username'] = tracked_user.username
 
-        template_model = template['metadata']['model']
-        kwargs = template_model['parameters'].copy()
-        kwargs['model'] = settings.OPENAI_CHAT_COMPLETION_MODEL_OVERRIDE or template_model['name']
-        if result_format == ResultFormat.JSON:
-            kwargs['response_format'] = {'type': 'json_object'}
+        kwargs = {'metadata': metadata}
 
-        messages = make_messages_from_template(template, variables=input_variables)
-        messages.extend(extra_messages)
+        if tags:
+            kwargs['tags'] = tags
 
-        compound_result = client.chat.completions.create(
-            messages=messages,
-            return_pl_id=track,
+        promptlayer_result = self.promptlayer_client.run(
+            prompt_name=prompt_name,
+            prompt_release_label=label,
+            input_variables=input_variables,
             **kwargs,
         )
-
-        if track:
-            result, pl_request_id = compound_result
-            metadata = {'environment': settings.ENV_NAME}
-            if tracked_user:
-                metadata['user_id'] = str(tracked_user.id)
-                metadata['username'] = tracked_user.username
-
-            promptlayer.track.metadata(request_id=pl_request_id, metadata=metadata)
-        else:
-            result = compound_result
-
-        match result_format:
-            case ResultFormat.TEXT:
-                result = extract_chat_completion_content(result)
-            case ResultFormat.JSON:
-                result = extract_chat_completion_content(result)
+        if format_result:
+            result = promptlayer_result['raw_response'].choices[0].message.content
+            prompt_blueprint = promptlayer_result['prompt_blueprint']
+            if ((model := prompt_blueprint.get('metadata', {}).get('model', {})) and
+                model.get('parameters', {}).get('response_format', {}).get('type') == 'json_object'):  # noqa: E129
                 try:
                     result = json.loads(result)
                 except Exception:
                     result = None
+        else:
+            result = promptlayer_result
 
         return result
 
-    def generate_image(
-        self,
-        prompt: str,
-        quantity: int = 1,
-        model=None,
-        size=None,
-        quality=None,
-    ):
+    def generate_image(self, prompt: str, quantity: int = 1, model=None, size=None, quality=None):
         model = model or settings.OPENAI_IMAGE_GENERATION_MODEL
         size = size or settings.OPENAI_IMAGE_GENERATION_DEFAULT_SIZE
         quality = quality or settings.OPENAI_IMAGE_GENERATION_DEFAULT_QUALITY
-        return self.client().images.generate(model=model, prompt=prompt, n=quantity, quality=quality, size=size)
+        return self.openai_client.images.generate(model=model, prompt=prompt, n=quantity, quality=quality, size=size)

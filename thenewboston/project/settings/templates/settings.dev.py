@@ -16,5 +16,6 @@ SIGNING_KEY = '756eb20e5569a0c906ccb813263aa27159aeafa07d7208f860ae290c03066c51'
 OPENAI_API_KEY = 'abc123'  # replace with actual value
 PROMPTLAYER_API_KEY = 'abc123'  # replace with actual value
 GITHUB_API_ACCESS_TOKEN = 'abc123'  # replace with actual value
+DISCORD_BOT_TOKEN = 'abc123'  # replace with actual value
 
 ENV_NAME = 'local-development'

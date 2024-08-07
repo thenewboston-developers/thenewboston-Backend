@@ -111,8 +111,4 @@ def reward_manual_contributions(contribution_id=None):
         try:
             reward_contribution(contribution)
         except Exception:
-            logger.warning(
-                'Error while rewarding contribution: %s',
-                contribution,
-                exc_info=True,
-            )
+            logger.warning('Error while rewarding contribution: %s', contribution, exc_info=True)

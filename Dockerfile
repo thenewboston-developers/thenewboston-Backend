@@ -9,6 +9,7 @@ ENV THENEWBOSTON_SETTING_IN_DOCKER true
 
 EXPOSE 8000
 
+# TODO(dmu) HIGH: Use the same pip version as suggested in README.md
 RUN set -xe \
     && apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
@@ -29,5 +30,8 @@ RUN chmod a+x ./run-celery.sh
 
 COPY scripts/run-celery-beat.sh ./
 RUN chmod a+x ./run-celery-beat.sh
+
+COPY scripts/run-discord-bot.sh ./
+RUN chmod a+x ./run-discord-bot.sh
 
 COPY thenewboston thenewboston

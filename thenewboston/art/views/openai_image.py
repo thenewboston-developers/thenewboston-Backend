@@ -1,5 +1,3 @@
-import promptlayer
-from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,9 +11,6 @@ from thenewboston.wallets.utils.wallet import get_default_wallet
 
 from ..serializers.openai_image import OpenAIImageSerializer
 
-promptlayer.api_key = settings.PROMPTLAYER_API_KEY
-OpenAI = promptlayer.openai.OpenAI
-
 
 class OpenAIImageViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -28,10 +23,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             description = serializer.validated_data['description']
             quantity = serializer.validated_data['quantity']
 
-            response = OpenAIClient.get_instance().generate_image(
-                prompt=description,
-                quantity=quantity,
-            )
+            response = OpenAIClient.get_instance().generate_image(prompt=description, quantity=quantity)
 
             self.charge_image_creation_fee(request.user, quantity)
 

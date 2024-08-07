@@ -34,6 +34,10 @@ services:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
     <<: *service-override
 
+  discord-bot:
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    <<: *service-override
+
   celery:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
     <<: *service-override

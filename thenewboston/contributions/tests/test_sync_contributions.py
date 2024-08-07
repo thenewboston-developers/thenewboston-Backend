@@ -7,18 +7,19 @@ from thenewboston.github.models import Pull
 from thenewboston.wallets.models import Wallet
 
 ASSESSMENT_EXPLANATION = (
-    "This change introduces comprehensive examples for a blockchain service's API in the documentation, "
-    "which significantly enhances the project's usability and accessibility for developers. By providing clear, "
-    'working examples of how to interact with the API, including both HTTP and WebSocket interactions, '
-    'it substantially lowers the barrier to entry for developers looking to integrate with or build upon '
-    'this service. The examples cover not only the request format but also the expected responses, '
-    'facilitating a smoother development process and reducing the scope for misunderstandings. '
-    "Furthermore, the inclusion of 'payload' with a casual message in the examples subtly encourages "
-    'experimentation, making the documentation not only useful but also engaging. '
-    'This sort of documentation is invaluable for open-source projects, as it directly impacts '
-    'the developer experience, potentially increasing adoption and contribution rates. Given the detailed '
-    'nature of these examples and their potential to significantly assist developers, '
-    'this change is assessed as highly valuable.'
+    "This commit introduces substantial documentation improvements to the project's README file, "
+    'significantly enhancing its usability and ease of understanding for both current and potential '
+    'users and developers. By providing explicit HTTP request and Websocket interaction examples, '
+    'the commit directly facilitates a more accessible and user-friendly guide for interacting with '
+    "the application's API endpoints. Documentation like this is essential for effectively showcasing "
+    "the application's capabilities, and supporting developers in integrating or contributing to the project. "
+    'The detailed request and response examples reduce the learning curve for new users and developers, '
+    'potentially speeding up development and debugging processes. This type of contribution is invaluable in '
+    'open-source projects and in team-based development environments where clear communication and documentation '
+    'can greatly accelerate progress and ease onboarding processes. Moreover, well-documented features are more '
+    'likely to be used correctly and efficiently by end-users, boosting the software’s utility and reducing user '
+    'frustration. This commit thus delivers significant value, not only in improving the project documentation '
+    'but also in enhancing user experience and developer productivity.'
 )
 
 
@@ -29,7 +30,7 @@ def test_sync_contributions(sample_repo, sample_github_user, sample_core):
 
     with (
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=8),
+        assert_played(cassette, count=7),
     ):
         sync_contributions_task(limit=1)
 
@@ -38,7 +39,7 @@ def test_sync_contributions(sample_repo, sample_github_user, sample_core):
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
-    assert pull.description == 'Closes x'
+    assert pull.description == 'Some README updates'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -52,7 +53,7 @@ def test_sync_contributions(sample_repo, sample_github_user, sample_core):
     assert contribution.pull == pull
     assert contribution.repo == sample_repo
     assert contribution.user == sample_github_user.reward_recipient
-    assert contribution.description == 'Closes x'
+    assert contribution.description == 'Some README updates'
     assert contribution.is_assessed()
     assert contribution.assessment_points == 750
     assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -96,7 +97,7 @@ def test_sync_contributions__reward_recipient_not_set(sample_repo, sample_github
 
     with (
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=8),
+        assert_played(cassette, count=7),
     ):
         sync_contributions_task(limit=1)
 
@@ -105,7 +106,7 @@ def test_sync_contributions__reward_recipient_not_set(sample_repo, sample_github
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
-    assert pull.description == 'Closes x'
+    assert pull.description == 'Some README updates'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -121,7 +122,7 @@ def test_sync_contributions__no_core(sample_repo, sample_github_user):
 
     with (
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=8),
+        assert_played(cassette, count=7),
     ):
         sync_contributions_task(limit=1)
 
@@ -130,7 +131,7 @@ def test_sync_contributions__no_core(sample_repo, sample_github_user):
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
-    assert pull.description == 'Closes x'
+    assert pull.description == 'Some README updates'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -150,7 +151,7 @@ def test_sync_contributions__wallet_already_exists(sample_repo, sample_github_us
 
     with (
         yield_cassette('sync_contributions.yaml') as cassette,
-        assert_played(cassette, count=8),
+        assert_played(cassette, count=7),
     ):
         sync_contributions_task(limit=1)
 
@@ -159,7 +160,7 @@ def test_sync_contributions__wallet_already_exists(sample_repo, sample_github_us
     assert pull.repo == sample_repo
     assert pull.issue_number == 6
     assert pull.title == 'README updates'
-    assert pull.description == 'Closes x'
+    assert pull.description == 'Some README updates'
     assert pull.github_user == sample_github_user
     assert pull.assessment_points == 750
     assert pull.assessment_explanation == ASSESSMENT_EXPLANATION
@@ -173,7 +174,7 @@ def test_sync_contributions__wallet_already_exists(sample_repo, sample_github_us
     assert contribution.pull == pull
     assert contribution.repo == sample_repo
     assert contribution.user == sample_github_user.reward_recipient
-    assert contribution.description == 'Closes x'
+    assert contribution.description == 'Some README updates'
     assert contribution.is_assessed()
     assert contribution.assessment_points == 750
     assert contribution.assessment_explanation == ASSESSMENT_EXPLANATION
