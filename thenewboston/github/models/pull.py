@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from thenewboston.general.clients.openai import OpenAIClient
+from thenewboston.general.clients.llm import LLMClient, make_prompt_kwargs
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.misc import null_object
 from thenewboston.github.client import GitHubClient
@@ -49,11 +49,11 @@ class Pull(CreatedModified):
     def assess(self, save=True):
         # All potential exceptions must be handled by the caller of the method
 
-        result = OpenAIClient.get_instance().get_chat_completion(
-            settings.GITHUB_PR_ASSESSMENT_PROMPT_NAME,
+        result = LLMClient.get_instance().get_chat_completion(
             input_variables={'git_diff': self.fetch_diff()},
             tracked_user=(self.github_user or null_object).reward_recipient,
             tags=['github_pr_assessment'],
+            **make_prompt_kwargs(settings.GITHUB_PR_ASSESSMENT_PROMPT_NAME),
         )
         self.assessment_points = result['assessment']
         self.assessment_explanation = result['explanation']

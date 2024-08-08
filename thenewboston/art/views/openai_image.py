@@ -2,7 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.general.clients.openai import OpenAIClient
+from thenewboston.general.clients.llm import LLMClient
 from thenewboston.general.constants import OPENAI_IMAGE_CREATION_FEE
 from thenewboston.general.enums import MessageType
 from thenewboston.wallets.consumers.wallet import WalletConsumer
@@ -23,7 +23,7 @@ class OpenAIImageViewSet(viewsets.ViewSet):
             description = serializer.validated_data['description']
             quantity = serializer.validated_data['quantity']
 
-            response = OpenAIClient.get_instance().generate_image(prompt=description, quantity=quantity)
+            response = LLMClient.get_instance().generate_image(prompt=description, quantity=quantity)
 
             self.charge_image_creation_fee(request.user, quantity)
 

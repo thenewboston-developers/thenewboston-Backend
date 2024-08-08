@@ -11,7 +11,7 @@ init_django()  # we have to init Django before doing anything else
 from django.conf import settings  # noqa: E402
 from django.contrib.auth import get_user_model  # noqa: E402
 
-from thenewboston.general.clients.openai import OpenAIClient  # noqa: E402
+from thenewboston.general.clients.llm import LLMClient, make_prompt_kwargs  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,49 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot('/', intents=intents)
+
+# TODO(dmu) HIGH: Cover bot logic with unittests: it is already complex enough
+
+
+def is_ia(author):
+    return author.id == settings.IA_DISCORD_USER_ID
+
+
+def map_author_plaintext(author):
+    return 'ia' if is_ia(author) else author.name
+
+
+def map_author_structured(author):
+    return 'assistant' if is_ia(author) else 'user'
+
+
+def messages_to_plaintext(messages):
+    return '\n'.join(f'{map_author_plaintext(message.author)}: {message.content}' for message in messages)
+
+
+def messages_to_structured(messages):
+    structured_messages = []
+
+    prev_role = None
+    for message in messages:
+        content = message.content
+
+        if (role := map_author_structured(message.author)) == prev_role:
+            # We need to merge messages to prevent the following error from Anthropic
+            # messages: roles must alternate between "user" and "assistant", but found multiple "user" roles in a row
+            assert structured_messages
+            structured_messages[-1]['content'][0]['text'] += f'\n{content}'
+        else:
+            structured_messages.append({'role': role, 'content': [{'type': 'text', 'text': content}]})
+
+        prev_role = role
+
+    return structured_messages
+
+
+async def get_historical_messages(channel):
+    # TODO(dmu) MEDIUM: Filter out only author's and IA's messages from the channel?
+    return [message async for message in channel.history(limit=settings.DISCORD_MESSAGE_HISTORY_LIMIT)]
 
 
 @bot.event
@@ -32,28 +75,25 @@ async def on_message_implementation(message):
         await message.reply('Please, register at https://thenewboston.com')
         return
 
-    # TODO(dmu) MEDIUM: Request message history just once and convert it to necessary format before LLM call
-    plain_text_message_history = await get_plain_text_message_history(message.channel)
+    messages = (await get_historical_messages(message.channel))[::-1]
 
     # TODO(dmu) HIGH: Consider making just one LLM call that will return required response if necessary
-    answer = OpenAIClient.get_instance().get_chat_completion(
-        settings.DISCORD_IS_RESPONSE_WARRANTED_PROMPT_NAME,
-        input_variables={'plain_text_message_history': plain_text_message_history},
-        tracked_user=user
+    answer = LLMClient.get_instance().get_chat_completion(
+        input_variables={'plain_text_message_history': messages_to_plaintext(messages)},
+        tracked_user=user,
+        **make_prompt_kwargs(settings.DISCORD_IS_RESPONSE_WARRANTED_PROMPT_NAME),
     )
 
     # TODO(dmu) LOW: Rename requiresResponse -> requires_response
     if answer.get('requiresResponse'):
-        historical_messages = await get_historical_messages(message.channel)
-
-        ias_response = OpenAIClient.get_instance().get_chat_completion(
-            settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME,
+        ias_response = LLMClient.get_instance().get_chat_completion(
             input_variables={
-                'messages': historical_messages,
+                'messages': messages_to_structured(messages),
                 'text': message.content
             },
             tracked_user=user,
-            tags=['discord_bot_response']
+            tags=['discord_bot_response'],
+            **make_prompt_kwargs(settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME)
         )
         await message.reply(ias_response)
 
@@ -70,34 +110,6 @@ async def on_message(message):
     except Exception:
         logger.exception('An error occurred while processing the message')
         await message.reply('Oops.. Looks like something went wrong. Our team has been notified.')
-
-
-async def get_historical_messages(channel):
-    # TODO(dmu) LOW: Make `get_historical_messages()` DRY with `get_plain_text_message_history()`
-    results = []
-
-    async for message in channel.history(limit=settings.DISCORD_MESSAGE_HISTORY_LIMIT):
-        # TODO(dmu) LOW: If `_ia` supposed to be a suffix then use .endswith(). Also put `_ia` in a named
-        #                constant or (better) custom setting
-        if '_ia' in str(message.author):
-            results.append({'role': 'assistant', 'content': [{'type': 'text', 'text': message.content}]})
-        else:
-            results.append({'role': 'user', 'content': [{'type': 'text', 'text': message.content}]})
-
-    return results[::-1]
-
-
-async def get_plain_text_message_history(channel):
-    # TODO(dmu) LOW: Make `get_plain_text_message_history()` DRY with `get_historical_messages()`
-    messages = []
-
-    async for message in channel.history(limit=settings.DISCORD_MESSAGE_HISTORY_LIMIT):
-        # TODO(dmu) LOW: If `_ia` supposed to be a suffix then use .endswith(). Also put `_ia` in a named
-        #                constant or (better) custom setting
-        author_name = 'ia' if '_ia' in str(message.author) else message.author.name
-        messages.append(f'{author_name}: {message.content}')
-
-    return '\n'.join(messages[::-1])
 
 
 if __name__ == '__main__':

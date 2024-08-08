@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from thenewboston.general.clients.openai import OpenAIClient
+from thenewboston.general.clients.llm import LLMClient, make_prompt_kwargs
 from thenewboston.general.models import CreatedModified
 from thenewboston.general.utils.transfers import change_wallet_balance
 
@@ -69,11 +69,11 @@ class Contribution(CreatedModified):
                 assessment_points = pull.assessment_points
                 assessment_explanation = pull.assessment_explanation
             case ContributionType.MANUAL.value:
-                result = OpenAIClient.get_instance().get_chat_completion(
-                    settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_PROMPT_NAME,
+                result = LLMClient.get_instance().get_chat_completion(
                     input_variables={'description': self.description},
                     tracked_user=self.user,
                     tags=['manual_contribution_assessment'],
+                    **make_prompt_kwargs(settings.GITHUB_MANUAL_CONTRIBUTION_ASSESSMENT_PROMPT_NAME),
                 )
                 assessment_points = result['assessment']
                 assessment_explanation = result['explanation']

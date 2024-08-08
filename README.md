@@ -7,7 +7,10 @@
 
 # Initial Project Setup
 
-1. Install Poetry
+1. Install Python version 3.10.13 and make sure it is being used in the following steps and later during development
+   (it is recommended to use [pyenv](https://github.com/pyenv/pyenv) for Python versions management)
+
+2. Install Poetry
 
 ```bash
 export PIP_REQUIRED_VERSION=24.2
@@ -18,13 +21,13 @@ poetry config virtualenvs.path ${HOME}/.virtualenvs && \
 poetry run pip install pip==${PIP_REQUIRED_VERSION}
 ```
 
-2. Clone the Repository
+3. Clone the Repository
 
 ```bash
 git clone https://github.com/thenewboston-developers/thenewboston-Backend.git
 ```
 
-3. Copy the settings templates into a new local directory:
+4. Copy the settings templates into a new local directory:
 
 ```bash
 mkdir -p local
@@ -32,7 +35,7 @@ cp thenewboston/project/settings/templates/settings.dev.py ./local/settings.dev.
 cp thenewboston/project/settings/templates/settings.unittests.py ./local/settings.unittests.py
 ```
 
-4. Install / upgrade docker as described at https://docs.docker.com/engine/install/
+5. Install / upgrade docker as described at https://docs.docker.com/engine/install/
 ```bash
 # Known working versions described in the comments below 
 
@@ -42,14 +45,14 @@ docker --version # Docker version 26.0.1, build d260a54
 docker compose version # Docker Compose version v2.26.1
 ```
 
-5. Commands for setting up local environment. Run the following commands:
+6. Commands for setting up local environment. Run the following commands:
 
 ```bash
 make run-dependencies  # Sets up the necessary Docker containers for Redis and PostgreSQL
 make update            # Installs project dependencies, pre-commit and applies database migrations
 ```
 
-6. Fire Up the Server 🚀
+7. Fire Up the Server 🚀
 
 ```bash
 make run-server       # Starts the Django development server
