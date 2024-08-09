@@ -16,38 +16,38 @@ async def test_on_ready():
         await on_ready()
 
 
-@override_settings(IA_DISCORD_USER_ID=1234)
+@override_settings(IA_DISCORD_USER_ID=1)
 def test_messages_to_structured():
-    assert messages_to_structured([Message(author=Author(id=1234), content='hello')]) == [{
-        'role': 'assistant',
+    assert messages_to_structured([Message(author=Author(id=2), content='hello')]) == [{
+        'role': 'user',
         'content': [{
             'type': 'text',
             'text': 'hello'
         }]
     }]
     assert messages_to_structured([
-        Message(author=Author(id=1234), content='hello'),
-        Message(author=Author(id=1234), content='world')
+        Message(author=Author(id=2), content='hello'),
+        Message(author=Author(id=2), content='world')
     ]) == [{
-        'role': 'assistant',
+        'role': 'user',
         'content': [{
             'type': 'text',
             'text': 'hello\nworld'
         }]
     }]
     assert messages_to_structured([
-        Message(author=Author(id=1234), content='hello'),
-        Message(author=Author(id=10), content='world')
+        Message(author=Author(id=2), content='hello'),
+        Message(author=Author(id=1), content='world')
     ]) == [
         {
-            'role': 'assistant',
+            'role': 'user',
             'content': [{
                 'type': 'text',
                 'text': 'hello'
             }]
         },
         {
-            'role': 'user',
+            'role': 'assistant',
             'content': [{
                 'type': 'text',
                 'text': 'world'
@@ -55,26 +55,26 @@ def test_messages_to_structured():
         },
     ]
     assert messages_to_structured([
-        Message(author=Author(id=1234), content='hello'),
-        Message(author=Author(id=10), content='world'),
-        Message(author=Author(id=1234), content='bye')
+        Message(author=Author(id=2), content='hello'),
+        Message(author=Author(id=1), content='world'),
+        Message(author=Author(id=2), content='bye')
     ]) == [
         {
-            'role': 'assistant',
+            'role': 'user',
             'content': [{
                 'type': 'text',
                 'text': 'hello'
             }]
         },
         {
-            'role': 'user',
+            'role': 'assistant',
             'content': [{
                 'type': 'text',
                 'text': 'world'
             }]
         },
         {
-            'role': 'assistant',
+            'role': 'user',
             'content': [{
                 'type': 'text',
                 'text': 'bye'
@@ -82,30 +82,41 @@ def test_messages_to_structured():
         },
     ]
     assert messages_to_structured([
-        Message(author=Author(id=1234), content='hello'),
-        Message(author=Author(id=10), content='world'),
-        Message(author=Author(id=10), content='mine'),
-        Message(author=Author(id=1234), content='bye')
+        Message(author=Author(id=2), content='hello'),
+        Message(author=Author(id=1), content='world'),
+        Message(author=Author(id=2), content='mine'),
+        Message(author=Author(id=2), content='bye')
     ]) == [
         {
-            'role': 'assistant',
+            'role': 'user',
             'content': [{
                 'type': 'text',
                 'text': 'hello'
             }]
         },
         {
-            'role': 'user',
-            'content': [{
-                'type': 'text',
-                'text': 'world\nmine'
-            }]
-        },
-        {
             'role': 'assistant',
             'content': [{
                 'type': 'text',
-                'text': 'bye'
+                'text': 'world'
+            }]
+        },
+        {
+            'role': 'user',
+            'content': [{
+                'type': 'text',
+                'text': 'mine\nbye'
             }]
         },
     ]
+
+    assert messages_to_structured([
+        Message(author=Author(id=1), content='hello'),
+        Message(author=Author(id=2), content='world')
+    ]) == [{
+        'role': 'user',
+        'content': [{
+            'type': 'text',
+            'text': 'world'
+        }]
+    }]
