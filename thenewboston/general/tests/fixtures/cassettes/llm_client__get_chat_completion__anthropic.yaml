@@ -1,0 +1,211 @@
+interactions:
+- request:
+    body: '{"api_key": "pl_sanitized", "label": "dev", "input_variables":
+      {"message": "what is your name? return JSON"}, "metadata_filters": {"environment":
+      "local-unittests-dmu"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '192'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+      X-API-KEY:
+      - sanitized
+    method: POST
+    uri: https://api.promptlayer.com/prompt-templates/testing-dmu
+  response:
+    body:
+      string: '{"commit_message":"Initial","id":27629,"llm_kwargs":{"max_tokens":256,"messages":[{"content":[{"text":"what
+        is your name? return JSON","type":"text"}],"role":"user"}],"model":"claude-3-5-sonnet-20240620","system":"Give
+        the shortest reply possible: 3 words at most","temperature":1,"top_k":0,"top_p":0},"metadata":{"model":{"name":"claude-3-5-sonnet-20240620","parameters":{"max_tokens":256,"temperature":1,"top_k":0,"top_p":0},"provider":"anthropic"}},"prompt_name":"testing-dmu","prompt_template":{"function_call":"none","functions":[],"input_variables":["message"],"messages":[{"content":[{"text":"Give
+        the shortest reply possible: 3 words at most","type":"text"}],"input_variables":[],"name":null,"raw_request_display_role":"","role":"system","template_format":"f-string"},{"content":[{"text":"{message}","type":"text"}],"input_variables":["message"],"name":null,"raw_request_display_role":"","role":"user","template_format":"f-string"}],"tool_choice":null,"tools":null,"type":"chat"},"provider_base_url":null,"snippets":[],"tags":[],"version":1,"workspace_id":8353}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 8afd55afe8bf9d9a-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 08 Aug 2024 06:08:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1070'
+      rndr-id:
+      - 89e922ed-088e-4bed
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens": 256, "messages": [{"content": [{"text": "what is your name?
+      return JSON", "type": "text"}], "role": "user"}], "model": "claude-3-5-sonnet-20240620",
+      "stream": false, "system": "Give the shortest reply possible: 3 words at most",
+      "temperature": 1, "top_k": 0, "top_p": 0}'
+    headers:
+      X-API-KEY:
+      - sanitized
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '285'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - Anthropic/Python 0.32.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.32.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.13
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"id":"msg_01AzbQ7d6oSQs9ny858MaaKV","type":"message","role":"assistant","model":"claude-3-5-sonnet-20240620","content":[{"type":"text","text":"{\"name\":\"Claude\"}"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":26,"output_tokens":8}}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8afd55b57cda9d9a-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 08 Aug 2024 06:08:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2024-08-08T06:09:25Z'
+      anthropic-ratelimit-tokens-limit:
+      - '40000'
+      anthropic-ratelimit-tokens-remaining:
+      - '40000'
+      anthropic-ratelimit-tokens-reset:
+      - '2024-08-08T06:08:57Z'
+      content-length:
+      - '261'
+      request-id:
+      - req_01Hci3jNDccLF4wd1MX7NZJT
+      via:
+      - 1.1 google
+      x-cloud-trace-context:
+      - b34832edf7c817216d343f7127a09239
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"function_name": "anthropic.messages.create", "provider_type": "anthropic",
+      "args": [], "kwargs": {"max_tokens": 256, "messages": [{"content": [{"text":
+      "what is your name? return JSON", "type": "text"}], "role": "user"}], "model":
+      "claude-3-5-sonnet-20240620", "system": "Give the shortest reply possible: 3
+      words at most", "temperature": 1, "top_k": 0, "top_p": 0, "stream": false},
+      "tags": null, "request_start_time": 1723097336.643463, "request_end_time": 1723097338.207317,
+      "api_key": "pl_sanitized", "metadata": {"environment":
+      "local-unittests-dmu"}, "prompt_id": 27629, "prompt_version": 1, "prompt_input_variables":
+      {"message": "what is your name? return JSON"}, "group_id": null, "return_prompt_blueprint":
+      true, "request_response": {"id": "msg_01AzbQ7d6oSQs9ny858MaaKV", "content":
+      [{"text": "{\"name\":\"Claude\"}", "type": "text"}], "model": "claude-3-5-sonnet-20240620",
+      "role": "assistant", "stop_reason": "end_turn", "stop_sequence": null, "type":
+      "message", "usage": {"input_tokens": 26, "output_tokens": 8}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1050'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.promptlayer.com/track-request
+  response:
+    body:
+      string: '{"prompt_blueprint":{"commit_message":null,"metadata":{"model":{"name":"claude-3-5-sonnet-20240620","parameters":{"max_tokens":256,"stream":false,"system":"Give
+        the shortest reply possible: 3 words at most","temperature":1,"top_k":0,"top_p":0},"provider":"anthropic"}},"prompt_template":{"function_call":null,"functions":null,"input_variables":["\"name\""],"messages":[{"content":[{"text":"Give
+        the shortest reply possible: 3 words at most","type":"text"}],"input_variables":[],"name":null,"raw_request_display_role":"","role":"system","template_format":"f-string"},{"content":[{"text":"what
+        is your name? return JSON","type":"text"}],"input_variables":[],"name":null,"raw_request_display_role":"user","role":"user","template_format":"f-string"},{"content":[{"text":"{\"name\":\"Claude\"}","type":"text"}],"function_call":null,"input_variables":["\"name\""],"name":null,"raw_request_display_role":"assistant","role":"assistant","template_format":"f-string","tool_calls":null}],"tool_choice":null,"tools":[],"type":"chat"},"provider_base_url_name":null,"report_id":null},"request_id":72305093,"success":true,"success_metadata":true}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 8afd55be4fb89db9-DME
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 08 Aug 2024 06:08:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1132'
+      rndr-id:
+      - c536449b-c5ad-4d27
+      x-render-origin-server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+version: 1

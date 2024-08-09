@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.conf import settings
 
-from thenewboston.general.clients.openai import OpenAIClient
+from thenewboston.general.clients.llm import LLMClient, make_prompt_kwargs
 from thenewboston.general.enums import MessageType
 from thenewboston.ia.consumers.message import MessageConsumer
 from thenewboston.ia.models import Message
@@ -15,10 +15,10 @@ from thenewboston.ia.utils.ia import get_ia
 def generate_ias_response(conversation_id):
     conversation = Conversation.objects.get(id=conversation_id)
 
-    chat_completion_text = OpenAIClient.get_instance().get_chat_completion(
-        settings.CREATE_MESSAGE_PROMPT_NAME,
+    chat_completion_text = LLMClient.get_instance().get_chat_completion(
         input_variables={'messages': get_non_system_messages(conversation_id)},
         tracked_user=conversation.owner,
+        **make_prompt_kwargs(settings.CREATE_MESSAGE_PROMPT_NAME),
     )
 
     message = Message.objects.create(
