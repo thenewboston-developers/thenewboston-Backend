@@ -1,12 +1,13 @@
-FROM python:3.10.13-buster
+FROM python:3.10.13-bookworm
 
 WORKDIR /opt/project
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH .
-ENV THENEWBOSTON_SETTING_IN_DOCKER true
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=.
+ENV THENEWBOSTON_SETTING_IN_DOCKER=true
 
+# TODO(dmu) LOW: Reconsider having `EXPOSE 8000` since only Django needs, but not Celery or Discord bot
 EXPOSE 8000
 
 # TODO(dmu) HIGH: Use the same pip version as suggested in README.md
