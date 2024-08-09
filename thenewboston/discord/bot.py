@@ -13,6 +13,9 @@ from django.contrib.auth import get_user_model  # noqa: E402
 
 from thenewboston.general.clients.llm import LLMClient, make_prompt_kwargs  # noqa: E402
 
+USER_ROLE = 'user'
+ASSISTANT_ROLE = 'assistant'
+
 logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
@@ -32,7 +35,7 @@ def map_author_plaintext(author):
 
 
 def map_author_structured(author):
-    return 'assistant' if is_ia(author) else 'user'
+    return ASSISTANT_ROLE if is_ia(author) else USER_ROLE
 
 
 def messages_to_plaintext(messages):
@@ -55,6 +58,9 @@ def messages_to_structured(messages):
             structured_messages.append({'role': role, 'content': [{'type': 'text', 'text': content}]})
 
         prev_role = role
+
+    if structured_messages and structured_messages[0]['role'] != USER_ROLE:
+        structured_messages.pop(0)
 
     return structured_messages
 
