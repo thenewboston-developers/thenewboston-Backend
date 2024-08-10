@@ -84,7 +84,6 @@ def get_perplexity_response(query):
 
 async def on_message_implementation(message):
     if not (user := await sync_to_async(get_user_model().objects.get_or_none)(discord_user_id=message.author.id)):
-        await message.reply('Please, register at https://thenewboston.com')
         return
 
     discord_messages = (await get_historical_discord_messages(message.channel))[::-1]
