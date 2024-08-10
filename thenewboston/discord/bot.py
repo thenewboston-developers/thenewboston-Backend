@@ -79,7 +79,7 @@ def get_perplexity_response(query):
 
     response = client.chat.completions.create(model='llama-3.1-sonar-large-128k-online', messages=messages)
 
-    return json.dumps({'query': query, 'response': response.choices[0].message.content})
+    return response.choices[0].message.content
 
 
 async def on_message_implementation(message):
@@ -109,58 +109,50 @@ async def on_message_implementation(message):
         tags=['discord_bot_response'],
         **make_prompt_kwargs(settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME)
     )
-    raw_response = first_response['raw_response']
-    response_message = raw_response.choices[0].message
-    first_response_content = response_message.content
-    tool_calls = response_message.tool_calls
+    first_response_prompt_blueprint = first_response['prompt_blueprint']
+    first_response_prompt_template = first_response_prompt_blueprint['prompt_template']
+    first_response_messages = first_response_prompt_template['messages']
+    latest_llm_message = first_response_messages[-1]
 
-    print('first_response')
-    print(first_response)
-    print()
+    if latest_llm_message['content'][0]['text']:
+        await message.reply(latest_llm_message['content'][0]['text'])
 
-    if first_response_content:
-        await message.reply(first_response_content)
-
-    if tool_calls:
+    if latest_llm_message['tool_calls']:
         available_functions = {
             'get_perplexity_response': get_perplexity_response,
         }
-        structured_messages.append(response_message)
+        new_messages = first_response_messages
 
-        print('SMS1')
-        for message in structured_messages:
-            print()
-            print(message)
-        print()
-
-        for tool_call in tool_calls:
-            function_name = tool_call.function.name
+        for tool_call in latest_llm_message['tool_calls']:
+            function_name = tool_call['function']['name']
             function_to_call = available_functions[function_name]
-            function_args = json.loads(tool_call.function.arguments)
+            function_args = json.loads(tool_call['function']['arguments'])
             function_response = function_to_call(query=function_args.get('query'))
-            structured_messages.append({
-                'tool_call_id': tool_call.id,
+            new_messages.append({
+                'tool_call_id': tool_call['id'],
                 'role': 'tool',
                 'name': function_name,
-                'content': function_response,
+                'content': [{
+                    'type': 'text',
+                    'text': function_response
+                }],
             })
-
-        print('\nSMS2')
-        for message in structured_messages:
-            print()
-            print(message)
-        print()
 
         second_response = LLMClient.get_instance().get_chat_completion(
             format_result=False,
             input_variables={
-                'messages': structured_messages,
+                'messages': new_messages,
             },
             tracked_user=user,
             tags=['discord_bot_response'],
             **make_prompt_kwargs(settings.DISCORD_CREATE_RESPONSE_PROMPT_NAME)
         )
-        await message.reply(second_response.choices[0].message.content)
+        second_response_prompt_blueprint = second_response['prompt_blueprint']
+        second_response_prompt_template = second_response_prompt_blueprint['prompt_template']
+        second_response_messages = second_response_prompt_template['messages']
+        final_llm_message = second_response_messages[-1]
+
+        await message.reply(final_llm_message['content'][0]['text'])
 
 
 @bot.event
