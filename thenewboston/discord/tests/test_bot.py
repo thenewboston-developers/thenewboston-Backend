@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from django.test import override_settings
 
-from thenewboston.discord.bot import messages_to_structured, on_ready
+from thenewboston.discord.bot import discord_messages_to_structured, on_ready
 
 Author = namedtuple('Author', ['id'])
 Message = namedtuple('Message', ['author', 'content'])
@@ -18,14 +18,14 @@ async def test_on_ready():
 
 @override_settings(IA_DISCORD_USER_ID=1)
 def test_messages_to_structured():
-    assert messages_to_structured([Message(author=Author(id=2), content='hello')]) == [{
+    assert discord_messages_to_structured([Message(author=Author(id=2), content='hello')]) == [{
         'role': 'user',
         'content': [{
             'type': 'text',
             'text': 'hello'
         }]
     }]
-    assert messages_to_structured([
+    assert discord_messages_to_structured([
         Message(author=Author(id=2), content='hello'),
         Message(author=Author(id=2), content='world')
     ]) == [{
@@ -35,7 +35,7 @@ def test_messages_to_structured():
             'text': 'hello\nworld'
         }]
     }]
-    assert messages_to_structured([
+    assert discord_messages_to_structured([
         Message(author=Author(id=2), content='hello'),
         Message(author=Author(id=1), content='world')
     ]) == [
@@ -54,7 +54,7 @@ def test_messages_to_structured():
             }]
         },
     ]
-    assert messages_to_structured([
+    assert discord_messages_to_structured([
         Message(author=Author(id=2), content='hello'),
         Message(author=Author(id=1), content='world'),
         Message(author=Author(id=2), content='bye')
@@ -81,7 +81,7 @@ def test_messages_to_structured():
             }]
         },
     ]
-    assert messages_to_structured([
+    assert discord_messages_to_structured([
         Message(author=Author(id=2), content='hello'),
         Message(author=Author(id=1), content='world'),
         Message(author=Author(id=2), content='mine'),
@@ -110,7 +110,7 @@ def test_messages_to_structured():
         },
     ]
 
-    assert messages_to_structured([
+    assert discord_messages_to_structured([
         Message(author=Author(id=1), content='hello'),
         Message(author=Author(id=2), content='world')
     ]) == [{
