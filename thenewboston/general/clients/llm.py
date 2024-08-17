@@ -53,7 +53,7 @@ class LLMClient:
         if anthropic_api_key := self.anthropic_api_key:
             os.environ['ANTHROPIC_API_KEY'] = anthropic_api_key
 
-        return PromptLayer(api_key=self.promptlayer_api_key)
+        return PromptLayer(api_key=self.promptlayer_api_key, enable_tracing=True, workspace_id=8353)
 
     @property
     def openai_client(self):
