@@ -1,3 +1,4 @@
+from django.db.models import OuterRef, Subquery
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -8,7 +9,7 @@ from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..filters.post import PostFilter
-from ..models import Post
+from ..models import Post, PostReaction
 from ..serializers.post import PostReadSerializer, PostWriteSerializer
 
 
@@ -33,6 +34,20 @@ class PostViewSet(viewsets.ModelViewSet):
             return PostWriteSerializer
 
         return PostReadSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action in ['retrieve', 'list']:
+            print('YES: ', self.action)
+
+            queryset = queryset.annotate(
+                user_reaction=Subquery(
+                    PostReaction.objects.filter(user=self.request.user, post=OuterRef('pk')
+                                                ).values_list('reaction', flat=True)[:1]
+                )
+            ).prefetch_related('user_reactions', 'owner')
+
+        return queryset
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
