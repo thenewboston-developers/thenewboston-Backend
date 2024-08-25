@@ -68,8 +68,4 @@ def sync_repos(repo_id=None, limit=None):
         try:
             sync_repo(repo, limit=limit)
         except Exception:
-            logger.warning(
-                'Error while syncing repo: %s',
-                repo,
-                exc_info=True,
-            )
+            logger.warning('Error while syncing repo: %s', repo, exc_info=True)

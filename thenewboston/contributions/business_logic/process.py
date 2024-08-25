@@ -93,11 +93,7 @@ def process_repos(repo_id=None, limit=None):
         try:
             process_repo(repo, limit=limit)
         except Exception:
-            logger.warning(
-                'Error while processing repo: %s',
-                repo,
-                exc_info=True,
-            )
+            logger.warning('Error while processing repo: %s', repo, exc_info=True)
 
 
 @log(with_arguments=True)
