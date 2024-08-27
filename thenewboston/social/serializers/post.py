@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from thenewboston.general.utils.image import process_image
+from thenewboston.social.serializers.post_reaction import PostReactionsReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Post
@@ -10,17 +11,14 @@ from ..serializers.comment import CommentReadSerializer
 class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
+    user_reaction = serializers.CharField()
+    user_reactions = PostReactionsReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
         fields = (
-            'comments',
-            'content',
-            'created_date',
-            'id',
-            'image',
-            'modified_date',
-            'owner',
+            'comments', 'content', 'created_date', 'id', 'image', 'modified_date', 'owner', 'user_reaction',
+            'user_reactions'
         )
         read_only_fields = (
             'comments',
