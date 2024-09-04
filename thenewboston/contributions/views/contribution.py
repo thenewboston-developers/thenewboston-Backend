@@ -67,7 +67,9 @@ class ContributionViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
 
     @action(detail=False, methods=['get'])
     def top_contributors(self, request):
-        top_contributors = get_top_contributors(self.queryset)
+        days_back = request.GET.get('daysBack')
+
+        top_contributors = get_top_contributors(self.queryset, days_back=days_back)
         serializer = TopContributorSerializer(top_contributors, many=True, context={'request': request})
         return Response(serializer.data)
 

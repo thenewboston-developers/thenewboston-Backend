@@ -12,8 +12,12 @@ def get_top_contributors(queryset, days_back=7, top_n=5):
         list: A list of dictionaries representing the top contributors, each with
               user information, core information, total reward amount, and position.
     """
-    start_date = datetime.now() - timedelta(days=days_back)
-    contributions = queryset.filter(created_date__gte=start_date)
+    contributions = queryset
+
+    if days_back is not None:
+        start_date = datetime.today() - timedelta(days=int(days_back))
+        contributions = contributions.filter(created_date__date__gte=start_date)
+
     contribution_sum_by_user = defaultdict(
         lambda: {
             'total_reward_amount': 0,
