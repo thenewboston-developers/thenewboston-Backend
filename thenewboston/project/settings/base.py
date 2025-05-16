@@ -28,9 +28,7 @@ INSTALLED_APPS = [
     'storages',
 
     # Apps
-    'thenewboston.art.apps.ArtConfig',
     'thenewboston.authentication.apps.AuthenticationConfig',
-    'thenewboston.contributions.apps.ContributionsConfig',
     'thenewboston.cores.apps.CoresConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general',
@@ -38,7 +36,6 @@ INSTALLED_APPS = [
     'thenewboston.ia.apps.IaConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
-    'thenewboston.shop.apps.ShopConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.university.apps.UniversityConfig',
     'thenewboston.users.apps.UsersConfig',
