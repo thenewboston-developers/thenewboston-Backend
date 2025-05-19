@@ -33,11 +33,9 @@ INSTALLED_APPS = [
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general',
     'thenewboston.github.apps.GithubConfig',
-    'thenewboston.ia.apps.IaConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
     'thenewboston.social.apps.SocialConfig',
-    'thenewboston.university.apps.UniversityConfig',
     'thenewboston.users.apps.UsersConfig',
     'thenewboston.wallets.apps.WalletsConfig',
 ]

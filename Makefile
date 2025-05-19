@@ -70,9 +70,7 @@ run-daphne:
 	poetry run python -m thenewboston.manage collectstatic --no-input
 	poetry run daphne thenewboston.project.asgi:application -p 8000 -b 127.0.0.1
 
-.PHONY: run-discord-bot
-run-discord-bot:
-	poetry run python -m thenewboston.discord.bot
+
 
 .PHONY: shell
 shell:
