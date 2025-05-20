@@ -11,7 +11,7 @@ from ..serializers.comment import CommentReadSerializer
 class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
-    user_reaction = serializers.CharField()
+    user_reaction = serializers.SerializerMethodField()
     user_reactions = PostReactionsReadSerializer(many=True, read_only=True)
 
     class Meta:
@@ -29,6 +29,9 @@ class PostReadSerializer(serializers.ModelSerializer):
             'modified_date',
             'owner',
         )
+
+    def get_user_reaction(self, obj):
+        return getattr(obj, 'user_reaction', None)
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
