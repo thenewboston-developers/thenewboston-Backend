@@ -11,7 +11,7 @@ packages = [{include = "thenewboston"}]
 boto3 = "^1.26.155"
 channels = {extras = ["daphne"], version = "^4.0.0"}
 zope-interface = "^6.2.0"
-django = "^4.2.2"
+django = "5.2.1"
 django-cors-headers = "^4.1.0"
 django-filter = "^23.2"
 django-split-settings = "^1.2.0"
