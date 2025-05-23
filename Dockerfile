@@ -1,4 +1,4 @@
-FROM python:3.10.13-bookworm
+FROM python:3.13.3-bookworm
 
 WORKDIR /opt/project
 
@@ -21,7 +21,8 @@ RUN set -xe \
 COPY ["README.md", "Makefile", "./"]
 
 COPY ["poetry.lock", "pyproject.toml", "./"]
-RUN poetry install --no-root
+RUN poetry lock --no-update && \
+    poetry install --no-root
 
 COPY scripts/run-django.sh ./
 RUN chmod a+x ./run-django.sh
