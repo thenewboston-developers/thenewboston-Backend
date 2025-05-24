@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'thenewboston.wallets.apps.WalletsConfig',
 ]
 
-# MIDDLEWARE is list because we need insert a middleware in `post.py`
+# MIDDLEWARE is list because we need to insert a middleware in `post.py`
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

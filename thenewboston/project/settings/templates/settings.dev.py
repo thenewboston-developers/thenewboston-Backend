@@ -13,8 +13,4 @@ LOGGING['handlers']['console']['formatter'] = 'colored'  # type: ignore
 ACCOUNT_NUMBER = '074463d2996f2942d8c724304fafe121f76c376ec2c35c8a2b35ebd08f226cd9'
 SIGNING_KEY = '756eb20e5569a0c906ccb813263aa27159aeafa07d7208f860ae290c03066c51'
 
-OPENAI_API_KEY = 'abc123'  # replace with actual value
-PROMPTLAYER_API_KEY = 'abc123'  # replace with actual value
-GITHUB_API_ACCESS_TOKEN = 'abc123'  # replace with actual value
-
 ENV_NAME = 'local-development'
