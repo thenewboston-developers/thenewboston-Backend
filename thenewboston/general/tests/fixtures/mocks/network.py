@@ -39,10 +39,6 @@ def get_dependencies_domain_names():
             for hostname, _ in value['CONFIG']['hosts']:
                 domain_names.add(hostname)
 
-    for redis_url in (settings.CELERY_RESULT_BACKEND, settings.CELERY_BROKER_URL):
-        if redis_url and (redis_hostname := get_redis_hostname(redis_url)):
-            domain_names.add(redis_hostname)
-
     return domain_names
 
 
