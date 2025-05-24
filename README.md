@@ -58,6 +58,19 @@ make update            # Installs project dependencies, pre-commit and applies d
 make run-server       # Starts the Django development server
 ```
 
+8. Create a superuser and configure the initial data
+
+```bash
+make superuser        # Creates a Django superuser account
+```
+
+After creating the superuser, you need to set up some initial data:
+
+1. Go to Django admin at http://localhost:8000/admin/
+2. Log in with your superuser credentials
+3. Navigate to **Cores** and manually add a core with the ticker **TNB**
+4. Navigate to **Invitation limits** and manually set an invitation limit for your superuser
+
 Now you're all set! The backend is up and ready for action.
 
 
