@@ -26,12 +26,6 @@ RUN poetry install --no-root
 COPY scripts/run-django.sh ./
 RUN chmod a+x ./run-django.sh
 
-COPY scripts/run-celery.sh ./
-RUN chmod a+x ./run-celery.sh
-
-COPY scripts/run-celery-beat.sh ./
-RUN chmod a+x ./run-celery-beat.sh
-
 COPY scripts/run-discord-bot.sh ./
 RUN chmod a+x ./run-discord-bot.sh
 

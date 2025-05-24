@@ -38,8 +38,6 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action in ['retrieve', 'list']:
-            print('YES: ', self.action)
-
             queryset = queryset.annotate(
                 user_reaction=Subquery(
                     PostReaction.objects.filter(user=self.request.user, post=OuterRef('pk')

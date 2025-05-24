@@ -26,7 +26,6 @@ python = "^3.10"
 pyyaml = "^6.0"
 requests = "^2.31.0"
 whitenoise = "^6.5.0"
-celery = {extras = ["redis"], version = "^5.3.6"}
 channels-redis = "^4.2.0"
 sentry-sdk = {extras = ["django"], version = "^1.45.0"}
 django-restql = "^0.15.4"
@@ -57,7 +56,6 @@ testpaths = ["thenewboston"]
 filterwarnings = "ignore::DeprecationWarning:^(?!node\\.).*:"
 env = [
     "PYTEST_RUNNING = true",
-    "THENEWBOSTON_SETTING_CELERY_TASK_ALWAYS_EAGER = true",  # TODO(dmu) LOW: Covered by `unittest_settings` fixture?
     "THENEWBOSTON_SETTING_SECRET_KEY = dummy",
 ]
 

@@ -10,8 +10,6 @@ x-service: &service
         required: false
     environment:
       THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
-      THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
-      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0
 
 services:
 
@@ -33,14 +31,6 @@ services:
   discord-bot:
     <<: *service
     command: ./run-discord-bot.sh
-
-  celery:
-    <<: *service
-    command: ./run-celery.sh
-
-  celery-beat:
-    <<: *service
-    command: ./run-celery-beat.sh
 
 volumes:
   redis-data:
