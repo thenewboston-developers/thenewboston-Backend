@@ -28,10 +28,6 @@ services:
     ports:
       - 127.0.0.1:8000:8000
 
-  discord-bot:
-    <<: *service
-    command: ./run-discord-bot.sh
-
 volumes:
   redis-data:
     driver: local

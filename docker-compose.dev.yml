@@ -34,10 +34,6 @@ services:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
     <<: *service-override
 
-  discord-bot:
-    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
-    <<: *service-override
-
 volumes:
   postgresql-data:
     driver: local
