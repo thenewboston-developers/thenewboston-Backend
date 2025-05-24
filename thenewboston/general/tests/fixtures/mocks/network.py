@@ -56,13 +56,11 @@ def patched_connect(*args, **kwargs):
     raise NetworkUsageException
 
 
-if not settings.IS_CASSETTE_RECORDING:
+@pytest.fixture(autouse=True)
+def autouse_disable_network():
+    # This disables network for all unittests to avoid accidental
+    # creation or deletion of outside resources
 
-    @pytest.fixture(autouse=True)
-    def autouse_disable_network():
-        # This disables network for all unittests to avoid accidental
-        # creation or deletion of outside resources
-
-        socket.socket.connect = patched_connect
-        yield
-        socket.socket.connect = _original_connect
+    socket.socket.connect = patched_connect
+    yield
+    socket.socket.connect = _original_connect

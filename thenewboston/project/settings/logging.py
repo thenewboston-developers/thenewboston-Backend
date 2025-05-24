@@ -25,7 +25,6 @@ LOGGING = {
             'django.db.backends',
             'django.template',
             'thenewboston',
-            'vcr.cassette',
         )
     },
     'root': {
