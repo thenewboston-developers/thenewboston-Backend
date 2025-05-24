@@ -7,9 +7,5 @@ from .models import User
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_display = UserAdmin.list_display
-    fieldsets = UserAdmin.fieldsets + (
-        ('Misc', {
-            'fields': ('manual_contribution_reward_daily_limit', 'is_manual_contribution_allowed')
-        }),
-    )
-    list_filter = ('is_manual_contribution_allowed',) + UserAdmin.list_filter
+    fieldsets = UserAdmin.fieldsets
+    list_filter = UserAdmin.list_filter

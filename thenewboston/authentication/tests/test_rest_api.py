@@ -17,6 +17,5 @@ def test_login(api_client, bucky):
     assert response.data['user'] == {
         'avatar': None,
         'id': bucky.id,
-        'is_manual_contribution_allowed': bucky.is_manual_contribution_allowed,
         'username': bucky.username,
     }

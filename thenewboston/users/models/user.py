@@ -8,9 +8,6 @@ from ..managers.user import UserManager
 
 class User(AbstractUser):
     avatar = models.ImageField(upload_to='images/', blank=True)
-    manual_contribution_reward_daily_limit = models.PositiveBigIntegerField(default=0)
-    # TODO(dmu) MEDIUM: If we have more permissions consider using Django built-in permission system
-    is_manual_contribution_allowed = models.BooleanField(default=False)
 
     objects = UserManager()
 
