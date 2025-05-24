@@ -48,14 +48,6 @@ migrate:
 migrations:
 	poetry run python -m thenewboston.manage makemigrations
 
-.PHONY: run-celery
-run-celery:
-	poetry run celery -A thenewboston.project worker -l INFO
-
-.PHONY: run-celery-beat
-run-celery-beat:
-	poetry run celery -A thenewboston.project beat -l INFO
-
 .PHONY: run-dependencies
 run-dependencies:
 	# docker-compose.yml is inherited and overridden by docker-compose.dev.yml
@@ -69,8 +61,6 @@ run-server:
 run-daphne:
 	poetry run python -m thenewboston.manage collectstatic --no-input
 	poetry run daphne thenewboston.project.asgi:application -p 8000 -b 127.0.0.1
-
-
 
 .PHONY: shell
 shell:

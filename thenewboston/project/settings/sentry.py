@@ -11,8 +11,6 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
         event_level=SENTRY_EVENT_LEVEL,  # type: ignore # noqa: F821
     )
     # TODO(dmu) LOW: Do we need to add AsyncioIntegration() explicitly or it added automatically?
-
-    # Celery integration is detected and added automatically
     integrations = [logging_integration, DjangoIntegration(), AsyncioIntegration()]
 
     sentry_sdk.init(

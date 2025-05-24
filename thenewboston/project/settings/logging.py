@@ -25,13 +25,7 @@ LOGGING = {
             'django.db.backends',
             'django.template',
             'thenewboston',
-            'vcr.cassette',
         )
-    } | {
-        'discord': {
-            'level': 'INFO',
-            'propagate': True
-        },
     },
     'root': {
         'level': 'DEBUG',

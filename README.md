@@ -56,9 +56,20 @@ make update            # Installs project dependencies, pre-commit and applies d
 
 ```bash
 make run-server       # Starts the Django development server
-make run-celery       # Starts the Celery worker for background tasks and LLM chatbot
-make run-celery-beat  # Starts the Celery Beat
 ```
+
+8. Create a superuser and configure the initial data
+
+```bash
+make superuser        # Creates a Django superuser account
+```
+
+After creating the superuser, you need to set up some initial data:
+
+1. Go to Django admin at http://localhost:8000/admin/
+2. Log in with your superuser credentials
+3. Navigate to **Cores** and manually add a core with the ticker **TNB**
+4. Navigate to **Invitation limits** and manually set an invitation limit for your superuser
 
 Now you're all set! The backend is up and ready for action.
 

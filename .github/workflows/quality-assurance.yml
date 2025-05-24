@@ -51,5 +51,3 @@ jobs:
         env:
           THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
           THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
-          THENEWBOSTON_SETTING_CELERY_RESULT_BACKEND: redis://redis:6379/0
-          THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379/0

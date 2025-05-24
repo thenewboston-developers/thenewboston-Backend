@@ -34,18 +34,6 @@ services:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
     <<: *service-override
 
-  discord-bot:
-    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
-    <<: *service-override
-
-  celery:
-    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
-    <<: *service-override
-
-  celery-beat:
-    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
-    <<: *service-override
-
 volumes:
   postgresql-data:
     driver: local
