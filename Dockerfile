@@ -14,7 +14,7 @@ EXPOSE 8000
 RUN set -xe \
     && apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
-    && pip install virtualenvwrapper poetry==1.8.3 \
+    && pip install virtualenvwrapper poetry==2.1.3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
