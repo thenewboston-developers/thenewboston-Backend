@@ -29,7 +29,7 @@ INSTALLED_APPS = [
 
     # Apps
     'thenewboston.authentication.apps.AuthenticationConfig',
-    'thenewboston.cores.apps.CoresConfig',
+    'thenewboston.currencies.apps.CurrenciesConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general',
     'thenewboston.invitations.apps.InvitationsConfig',

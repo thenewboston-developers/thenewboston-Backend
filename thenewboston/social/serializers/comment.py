@@ -21,7 +21,7 @@ class CommentReadSerializer(serializers.ModelSerializer):
             'owner',
             'post',
             'price_amount',
-            'price_core',
+            'price_currency',
         )
         read_only_fields = (
             'content',
@@ -31,7 +31,7 @@ class CommentReadSerializer(serializers.ModelSerializer):
             'owner',
             'post',
             'price_amount',
-            'price_core',
+            'price_currency',
         )
 
 
@@ -46,23 +46,23 @@ class CommentWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ('content', 'post', 'price_amount', 'price_core')
+        fields = ('content', 'post', 'price_amount', 'price_currency')
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
         post = validated_data.get('post')
         price_amount = validated_data.get('price_amount')
-        price_core = validated_data.get('price_core')
+        price_currency = validated_data.get('price_currency')
 
-        if price_amount is not None and price_core is not None:
-            commenter_wallet = Wallet.objects.select_for_update().get(owner=request.user, core=price_core)
+        if price_amount is not None and price_currency is not None:
+            commenter_wallet = Wallet.objects.select_for_update().get(owner=request.user, currency=price_currency)
 
             if commenter_wallet.balance < price_amount:
                 raise serializers.ValidationError('Insufficient funds')
 
             poster_wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                owner=post.owner, core=price_core, defaults={'balance': 0}
+                owner=post.owner, currency=price_currency, defaults={'balance': 0}
             )
 
             transfer_coins(
@@ -81,20 +81,20 @@ class CommentWriteSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = self.context['request'].user
         price_amount = data.get('price_amount')
-        price_core = data.get('price_core')
+        price_currency = data.get('price_currency')
 
-        if price_amount is not None and price_core is None:
-            raise serializers.ValidationError('If price_amount is given, price_core must also be provided.')
+        if price_amount is not None and price_currency is None:
+            raise serializers.ValidationError('If price_amount is given, price_currency must also be provided.')
 
-        if price_core is not None and price_amount is None:
-            raise serializers.ValidationError('If price_core is given, price_amount must also be provided.')
+        if price_currency is not None and price_amount is None:
+            raise serializers.ValidationError('If price_currency is given, price_amount must also be provided.')
 
-        if price_amount is not None and price_core is not None:
+        if price_amount is not None and price_currency is not None:
             try:
-                Wallet.objects.get(owner=user, core=price_core)
+                Wallet.objects.get(owner=user, currency=price_currency)
             except Wallet.DoesNotExist:
                 raise serializers.ValidationError(
-                    f'No wallet found for {price_core.ticker} for the authenticated user.'
+                    f'No wallet found for {price_currency.ticker} for the authenticated user.'
                 )
 
         return data

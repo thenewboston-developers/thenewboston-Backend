@@ -1,22 +1,22 @@
 from django.contrib.auth import get_user_model
 from rest_framework import exceptions, serializers
 
-from ..models import Core
+from ..models import Currency
 
 User = get_user_model()
 
 
-class CoreReadSerializer(serializers.ModelSerializer):
+class CurrencyReadSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Core
+        model = Currency
         fields = '__all__'
 
 
-class CoreWriteSerializer(serializers.ModelSerializer):
+class CurrencyWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Core
+        model = Currency
         fields = '__all__'
         read_only_fields = (
             'created_date',
@@ -29,11 +29,11 @@ class CoreWriteSerializer(serializers.ModelSerializer):
 
         if not request.user.is_staff:
             # TODO(dmu) MEDIUM: Use `permission_classes` for checking permissions
-            raise exceptions.PermissionDenied('You do not have permission to create a Core.')
+            raise exceptions.PermissionDenied('You do not have permission to create a Currency.')
 
-        core = super().create({
+        currency = super().create({
             **validated_data,
             'owner': request.user,
         })
 
-        return core
+        return currency

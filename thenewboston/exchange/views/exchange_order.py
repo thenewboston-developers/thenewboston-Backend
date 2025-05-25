@@ -69,7 +69,7 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
                 refund_amount = unfilled_quantity
                 refund_currency = instance.primary_currency
 
-            wallet = Wallet.objects.get(owner=instance.owner, core=refund_currency)
+            wallet = Wallet.objects.get(owner=instance.owner, currency=refund_currency)
             wallet.balance += refund_amount
             wallet.save()
             wallet_data = WalletReadSerializer(wallet).data
@@ -80,10 +80,10 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
     @staticmethod
     def update_wallet_balance(order):
         if order.order_type == ExchangeOrderType.BUY:
-            wallet = Wallet.objects.filter(owner=order.owner, core=order.secondary_currency).first()
+            wallet = Wallet.objects.filter(owner=order.owner, currency=order.secondary_currency).first()
             wallet.balance -= order.quantity * order.price
         else:
-            wallet = Wallet.objects.filter(owner=order.owner, core=order.primary_currency).first()
+            wallet = Wallet.objects.filter(owner=order.owner, currency=order.primary_currency).first()
             wallet.balance -= order.quantity
 
         wallet.save()

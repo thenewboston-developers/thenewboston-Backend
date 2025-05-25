@@ -34,7 +34,7 @@ class Wallet(CreatedModified):
     objects = WalletManager()
 
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
-    core = models.ForeignKey('cores.Core', on_delete=models.CASCADE)
+    currency = models.ForeignKey('currencies.Currency', on_delete=models.CASCADE)
     balance = models.PositiveBigIntegerField(default=0)
     deposit_account_number = models.CharField(
         max_length=ACCOUNT_NUMBER_LENGTH, validators=(HexStringValidator(ACCOUNT_NUMBER_LENGTH),)
@@ -45,12 +45,12 @@ class Wallet(CreatedModified):
     )
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['owner', 'core'], name='unique_owner_core')]
+        constraints = [models.UniqueConstraint(fields=['owner', 'currency'], name='unique_owner_currency')]
 
     def __str__(self):
         return (
             f'Wallet ID: {self.pk} | '
             f'Owner: {self.owner.username} | '
-            f'Core: {self.core.ticker} | '
+            f'Currency: {self.currency.ticker} | '
             f'Balance: {self.balance}'
         )

@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import thenewboston.authentication.urls
-import thenewboston.cores.urls
+import thenewboston.currencies.urls
 import thenewboston.exchange.urls
 import thenewboston.invitations.urls
 import thenewboston.notifications.urls
@@ -17,7 +17,7 @@ API_PREFIX = 'api/'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(API_PREFIX, include(thenewboston.authentication.urls)),
-    path(API_PREFIX, include(thenewboston.cores.urls)),
+    path(API_PREFIX, include(thenewboston.currencies.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.invitations.urls)),
     path(API_PREFIX, include(thenewboston.notifications.urls)),

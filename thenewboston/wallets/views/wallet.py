@@ -42,7 +42,7 @@ class WalletViewSet(
 
         block = wire_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
-            domain=wallet.core.domain,
+            domain=wallet.currency.domain,
             recipient_account_number_str=settings.ACCOUNT_NUMBER,
             sender_signing_key_str=wallet.deposit_signing_key,
         )
@@ -51,7 +51,7 @@ class WalletViewSet(
         if block_serializer.is_valid(raise_exception=True):
             wire = Wire.objects.create(
                 **block_serializer.validated_data,
-                core=wallet.core,
+                currency=wallet.currency,
                 owner=wallet.owner,
                 wire_type=WireType.DEPOSIT,
             )
@@ -61,7 +61,9 @@ class WalletViewSet(
             return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
+            deposit_balance = fetch_balance(
+                account_number=wallet.deposit_account_number, domain=wallet.currency.domain
+            )
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -82,7 +84,9 @@ class WalletViewSet(
         wallet = self.get_object()
 
         try:
-            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.core.domain)
+            deposit_balance = fetch_balance(
+                account_number=wallet.deposit_account_number, domain=wallet.currency.domain
+            )
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -124,7 +128,7 @@ class WalletViewSet(
 
         block = wire_funds(
             amount=amount - TRANSACTION_FEE,
-            domain=wallet.core.domain,
+            domain=wallet.currency.domain,
             recipient_account_number_str=account_number,
             sender_signing_key_str=settings.SIGNING_KEY,
         )
@@ -133,7 +137,7 @@ class WalletViewSet(
         if block_serializer.is_valid(raise_exception=True):
             wire = Wire.objects.create(
                 **block_serializer.validated_data,
-                core=wallet.core,
+                currency=wallet.currency,
                 owner=wallet.owner,
                 wire_type=WireType.WITHDRAW,
             )

@@ -10,7 +10,7 @@ class WireType(models.TextChoices):
 
 
 class Wire(Block):
-    core = models.ForeignKey('cores.Core', on_delete=models.CASCADE)
+    currency = models.ForeignKey('currencies.Currency', on_delete=models.CASCADE)
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     created_date = models.DateTimeField(auto_now_add=True)
     wire_type = models.CharField(choices=WireType.choices, max_length=8)
@@ -19,6 +19,6 @@ class Wire(Block):
         return (
             f'Wire ID: {self.pk} | '
             f'Owner: {self.owner.username} | '
-            f'Core: {self.core.ticker} | '
+            f'Currency: {self.currency.ticker} | '
             f'Amount: {self.amount}'
         )

@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cores', '0002_initial'),
+        ('currencies', '0002_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('social', '0001_initial'),
     ]
@@ -56,9 +56,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='comment',
-            name='price_core',
+            name='price_currency',
             field=models.ForeignKey(
-                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='cores.core'
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='currencies.currency'
             ),
         ),
         migrations.AddConstraint(
