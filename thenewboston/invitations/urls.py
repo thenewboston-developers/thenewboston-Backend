@@ -5,6 +5,6 @@ from .views.invitation_limit import InvitationLimitViewSet
 
 router = SimpleRouter(trailing_slash=False)
 router.register('invitations', InvitationViewSet)
-router.register('invitation_limits', InvitationLimitViewSet)
+router.register('invitation-limits', InvitationLimitViewSet)
 
 urlpatterns = router.urls

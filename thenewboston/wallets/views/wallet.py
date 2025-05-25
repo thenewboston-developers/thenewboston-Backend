@@ -79,7 +79,7 @@ class WalletViewSet(
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], url_path='deposit-balance')
     def deposit_balance(self, request, pk=None):
         wallet = self.get_object()
 
