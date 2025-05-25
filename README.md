@@ -16,7 +16,7 @@
 export PIP_REQUIRED_VERSION=24.2
 pip install pip==${PIP_REQUIRED_VERSION} && \
 pip install virtualenvwrapper && \
-pip install poetry==1.8.3 && \
+pip install poetry==2.1.3 && \
 poetry config virtualenvs.path ${HOME}/.virtualenvs && \
 poetry run pip install pip==${PIP_REQUIRED_VERSION}
 ```
