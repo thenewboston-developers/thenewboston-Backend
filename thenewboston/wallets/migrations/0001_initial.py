@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cores', '0001_initial'),
+        ('currencies', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -67,7 +67,7 @@ class Migration(migrations.Migration):
                         max_length=64, validators=[thenewboston.general.validators.HexStringValidator(64)]
                     )
                 ),
-                ('core', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cores.core')),
+                ('currency', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='currencies.currency')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                     'wire_type',
                     models.CharField(choices=[('DEPOSIT', 'Deposit'), ('WITHDRAW', 'Withdraw')], max_length=8)
                 ),
-                ('core', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cores.core')),
+                ('currency', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='currencies.currency')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -100,6 +100,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='wallet',
-            constraint=models.UniqueConstraint(fields=('owner', 'core'), name='unique_owner_core'),
+            constraint=models.UniqueConstraint(fields=('owner', 'currency'), name='unique_owner_currency'),
         ),
     ]

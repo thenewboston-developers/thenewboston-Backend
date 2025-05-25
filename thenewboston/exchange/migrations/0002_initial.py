@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cores', '0002_initial'),
+        ('currencies', '0002_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('exchange', '0001_initial'),
     ]
@@ -25,28 +25,32 @@ class Migration(migrations.Migration):
             model_name='exchangeorder',
             name='primary_currency',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name='primary_orders', to='cores.core'
+                on_delete=django.db.models.deletion.CASCADE, related_name='primary_orders', to='currencies.currency'
             ),
         ),
         migrations.AddField(
             model_name='exchangeorder',
             name='secondary_currency',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name='secondary_orders', to='cores.core'
+                on_delete=django.db.models.deletion.CASCADE, related_name='secondary_orders', to='currencies.currency'
             ),
         ),
         migrations.AddField(
             model_name='assetpair',
             name='primary_currency',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name='primary_asset_pairs', to='cores.core'
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='primary_asset_pairs',
+                to='currencies.currency'
             ),
         ),
         migrations.AddField(
             model_name='assetpair',
             name='secondary_currency',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name='secondary_asset_pairs', to='cores.core'
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='secondary_asset_pairs',
+                to='currencies.currency'
             ),
         ),
         migrations.AddConstraint(

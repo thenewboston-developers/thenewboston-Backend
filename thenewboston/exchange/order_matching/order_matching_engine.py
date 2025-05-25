@@ -71,20 +71,20 @@ class OrderMatchingEngine:
             # Update the wallets of the order and matching order's owners
             OrderMatchingEngine.update_wallet(
                 owner=order.owner,
-                core=primary_currency if is_buy_order else secondary_currency,
+                currency=primary_currency if is_buy_order else secondary_currency,
                 amount=fill_quantity if is_buy_order else total_trade_price,
             )
 
             OrderMatchingEngine.update_wallet(
                 owner=matching_order.owner,
-                core=secondary_currency if is_buy_order else primary_currency,
+                currency=secondary_currency if is_buy_order else primary_currency,
                 amount=total_trade_price if is_buy_order else fill_quantity,
             )
 
             if overpayment_amount:
                 OrderMatchingEngine.update_wallet(
                     owner=order.owner if is_buy_order else matching_order.owner,
-                    core=secondary_currency,
+                    currency=secondary_currency,
                     amount=overpayment_amount,
                 )
 
@@ -111,12 +111,12 @@ class OrderMatchingEngine:
             order.fill_status = FillStatus.PARTIALLY_FILLED
 
     @staticmethod
-    def update_wallet(owner, core, amount):
+    def update_wallet(owner, currency, amount):
         key_pair = generate_key_pair()
 
         wallet, created = Wallet.objects.get_or_create(
             owner=owner,
-            core=core,
+            currency=currency,
             defaults={
                 'balance': amount,
                 'deposit_account_number': key_pair.public,

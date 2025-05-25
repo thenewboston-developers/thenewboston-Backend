@@ -1,8 +1,8 @@
 from rest_framework.routers import SimpleRouter
 
-from .views.core import CoreViewSet
+from .views.currency import CurrencyViewSet
 
 router = SimpleRouter(trailing_slash=False)
-router.register('cores', CoreViewSet)
+router.register('currencies', CurrencyViewSet)
 
 urlpatterns = router.urls

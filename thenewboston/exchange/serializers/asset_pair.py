@@ -1,13 +1,13 @@
 from rest_framework import serializers
 
-from thenewboston.cores.serializers.core import CoreReadSerializer
+from thenewboston.currencies.serializers.currency import CurrencyReadSerializer
 
 from ..models import AssetPair
 
 
 class AssetPairSerializer(serializers.ModelSerializer):
-    primary_currency = CoreReadSerializer(read_only=True)
-    secondary_currency = CoreReadSerializer(read_only=True)
+    primary_currency = CurrencyReadSerializer(read_only=True)
+    secondary_currency = CurrencyReadSerializer(read_only=True)
 
     class Meta:
         model = AssetPair

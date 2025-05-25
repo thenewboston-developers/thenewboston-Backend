@@ -1,20 +1,20 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from thenewboston.cores.serializers.core import CoreReadSerializer
+from thenewboston.currencies.serializers.currency import CurrencyReadSerializer
 from thenewboston.general.utils.cryptography import generate_key_pair
 
 from ..models import Wallet
 
 
 class WalletReadSerializer(serializers.ModelSerializer):
-    core = CoreReadSerializer(read_only=True)
+    currency = CurrencyReadSerializer(read_only=True)
 
     class Meta:
         model = Wallet
         fields = (
             'balance',
-            'core',
+            'currency',
             'created_date',
             'deposit_account_number',
             'deposit_balance',
@@ -28,7 +28,7 @@ class WalletWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ('id', 'core', 'balance')
+        fields = ('id', 'currency', 'balance')
         read_only_fields = ('balance',)
 
     def create(self, validated_data):
@@ -47,9 +47,9 @@ class WalletWriteSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         owner = request.user
-        core = data['core']
+        currency = data['currency']
 
-        if Wallet.objects.filter(owner=owner, core=core).exists():
-            raise ValidationError('A wallet with this owner and core already exists.')
+        if Wallet.objects.filter(owner=owner, currency=currency).exists():
+            raise ValidationError('A wallet with this owner and currency already exists.')
 
         return data

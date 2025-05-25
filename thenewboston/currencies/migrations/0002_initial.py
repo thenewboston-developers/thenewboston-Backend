@@ -10,13 +10,13 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cores', '0001_initial'),
+        ('currencies', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='core',
+            model_name='currency',
             name='owner',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
         ),

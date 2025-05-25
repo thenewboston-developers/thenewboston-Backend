@@ -2,14 +2,14 @@ import pytest
 from model_bakery import baker
 
 
-def create_core(
+def create_currency(
     *,
     owner,
     domain='thenewboston.net',
     ticker='TNB',
 ):
     return baker.make(
-        'cores.Core',
+        'currencies.Currency',
         domain=domain,
         owner=owner,
         ticker=ticker,
@@ -17,8 +17,8 @@ def create_core(
 
 
 @pytest.fixture
-def sample_core(db, bucky):
-    return create_core(
+def sample_currency(db, bucky):
+    return create_currency(
         domain='thenewboston.net',
         owner=bucky,
         ticker='TNB',

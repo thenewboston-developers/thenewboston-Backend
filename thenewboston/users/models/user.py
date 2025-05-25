@@ -11,10 +11,10 @@ class User(AbstractUser):
 
     objects = UserManager()
 
-    def get_reward_wallet_for_core(self, core_id, with_for_update=True):
+    def get_reward_wallet_for_currency(self, currency_id, with_for_update=True):
         query = Wallet.objects
         if with_for_update:
             query = query.select_for_update()
 
-        wallet, _ = query.get_or_create(core_id=core_id, owner=self)
+        wallet, _ = query.get_or_create(currency_id=currency_id, owner=self)
         return wallet

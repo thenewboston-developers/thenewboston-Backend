@@ -2,9 +2,11 @@ from django.db import models
 
 
 class AssetPair(models.Model):
-    primary_currency = models.ForeignKey('cores.Core', on_delete=models.CASCADE, related_name='primary_asset_pairs')
+    primary_currency = models.ForeignKey(
+        'currencies.Currency', on_delete=models.CASCADE, related_name='primary_asset_pairs'
+    )
     secondary_currency = models.ForeignKey(
-        'cores.Core', on_delete=models.CASCADE, related_name='secondary_asset_pairs'
+        'currencies.Currency', on_delete=models.CASCADE, related_name='secondary_asset_pairs'
     )
 
     class Meta:

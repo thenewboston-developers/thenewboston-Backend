@@ -75,7 +75,7 @@ class ExchangeOrderWriteSerializer(serializers.ModelSerializer):
     def validate_buy_order(self, data):
         request = self.context.get('request')
         secondary_currency = data.get('secondary_currency')
-        wallet = Wallet.objects.filter(owner=request.user, core=secondary_currency).first()
+        wallet = Wallet.objects.filter(owner=request.user, currency=secondary_currency).first()
 
         if not wallet:
             raise serializers.ValidationError('Wallet does not exist.')
@@ -90,7 +90,7 @@ class ExchangeOrderWriteSerializer(serializers.ModelSerializer):
     def validate_sell_order(self, data):
         request = self.context.get('request')
         primary_currency = data.get('primary_currency')
-        wallet = Wallet.objects.filter(owner=request.user, core=primary_currency).first()
+        wallet = Wallet.objects.filter(owner=request.user, currency=primary_currency).first()
 
         if not wallet:
             raise serializers.ValidationError('Wallet does not exist.')
