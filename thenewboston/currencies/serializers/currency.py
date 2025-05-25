@@ -29,10 +29,11 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
+        domain = validated_data.get('domain')
 
-        if not request.user.is_staff:
-            # TODO(dmu) MEDIUM: Use `permission_classes` for checking permissions
-            raise exceptions.PermissionDenied('You do not have permission to create a Currency.')
+        # Only staff can create external currencies (with domains)
+        if domain and not request.user.is_staff:
+            raise exceptions.PermissionDenied('Only staff users can create external currencies.')
 
         logo = validated_data.get('logo')
         if logo:
