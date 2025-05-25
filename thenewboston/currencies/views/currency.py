@@ -7,10 +7,9 @@ from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Currency
 from ..serializers.currency import CurrencyReadSerializer, CurrencyWriteSerializer
-from .mint import MintMixin
 
 
-class CurrencyViewSet(MintMixin, viewsets.ModelViewSet):
+class CurrencyViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Currency.objects.all()

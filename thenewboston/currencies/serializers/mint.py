@@ -6,20 +6,27 @@ from thenewboston.general.constants import MAX_MINT_AMOUNT
 from thenewboston.general.utils.transfers import change_wallet_balance
 from thenewboston.wallets.models import Wallet
 
-from ..models import Mint
+from ..models import Currency, Mint
 
 
-class MintSerializer(serializers.ModelSerializer):
+class MintReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mint
-        fields = ('id', 'currency', 'amount', 'created_date', 'modified_date')
-        read_only_fields = ('id', 'currency', 'created_date', 'modified_date')
+        fields = '__all__'
+
+
+class MintWriteSerializer(serializers.ModelSerializer):
+    currency = serializers.PrimaryKeyRelatedField(queryset=Currency.objects.all())
+
+    class Meta:
+        model = Mint
+        fields = ('currency', 'amount')
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
-        currency = self.context.get('currency')
+        currency = validated_data.get('currency')
         amount = validated_data.get('amount')
 
         # Check if user owns the currency
@@ -42,7 +49,6 @@ class MintSerializer(serializers.ModelSerializer):
         # Create mint record
         mint = super().create({
             **validated_data,
-            'currency': currency,
             'owner': request.user,
         })
 
