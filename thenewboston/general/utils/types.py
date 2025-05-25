@@ -1,3 +1,5 @@
-from pydantic import constr
+from typing import Annotated
 
-hexstr = constr(regex=r'^[0-9a-f]+$', strict=True)
+from pydantic import StringConstraints
+
+hexstr = Annotated[str, StringConstraints(pattern=r'^[0-9a-f]+$', strict=True)]

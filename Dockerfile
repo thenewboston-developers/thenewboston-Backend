@@ -1,4 +1,4 @@
-FROM python:3.10.13-bookworm
+FROM python:3.13-bookworm
 
 WORKDIR /opt/project
 
