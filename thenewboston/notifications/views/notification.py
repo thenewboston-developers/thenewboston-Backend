@@ -32,7 +32,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
         return Response(read_serializer.data)
 
-    @action(detail=False, methods=['patch'])
+    @action(detail=False, methods=['patch'], url_path='mark-all-as-read')
     def mark_all_as_read(self, request):
         notifications = self.get_queryset().filter(is_read=False)
         notifications.update(is_read=True)

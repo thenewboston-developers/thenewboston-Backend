@@ -13,5 +13,5 @@ router.register('posts', PostViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('post_reaction/', PostReactionCreateUpdateView.as_view(), name='post-reaction-create-update'),
+    path('post-reaction/', PostReactionCreateUpdateView.as_view(), name='post-reaction-create-update'),
 ]
