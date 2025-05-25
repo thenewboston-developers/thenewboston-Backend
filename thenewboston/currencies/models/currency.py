@@ -9,5 +9,8 @@ class Currency(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     ticker = models.CharField(max_length=5, unique=True)
 
+    class Meta:
+        verbose_name_plural = 'Currencies'
+
     def __str__(self):
         return self.domain
