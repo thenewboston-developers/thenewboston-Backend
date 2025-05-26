@@ -24,27 +24,9 @@ class CommentViewSet(viewsets.ModelViewSet):
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         if comment.post.owner != comment.owner:
-            self.notify_post_owner(comment=comment)
+            self.notify_post_owner(comment=comment, request=request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
-
-    def notify_post_owner(self, comment):
-        post = comment.post
-        notification = Notification.objects.create(
-            owner=post.owner,
-            payload={
-                'post_id': post.id,
-                'commenter': UserReadSerializer(comment.owner).data,
-                'comment': comment.content,
-                'notification_type': 'POST_COMMENT',
-            }
-        )
-
-        notification_data = NotificationReadSerializer(notification).data
-
-        NotificationConsumer.stream_notification(
-            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
-        )
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -54,6 +36,27 @@ class CommentViewSet(viewsets.ModelViewSet):
             return CommentUpdateSerializer
 
         return CommentReadSerializer
+
+    @staticmethod
+    def notify_post_owner(comment, request):
+        post = comment.post
+        notification = Notification.objects.create(
+            owner=post.owner,
+            payload={
+                'post_id': post.id,
+                'commenter': UserReadSerializer(comment.owner, context={
+                    'request': request
+                }).data,
+                'comment': comment.content,
+                'notification_type': 'POST_COMMENT',
+            }
+        )
+
+        notification_data = NotificationReadSerializer(notification, context={'request': request}).data
+
+        NotificationConsumer.stream_notification(
+            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
+        )
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
