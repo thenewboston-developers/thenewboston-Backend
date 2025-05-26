@@ -114,7 +114,7 @@ class OrderMatchingEngine:
             order.fill_status = FillStatus.PARTIALLY_FILLED
 
     @staticmethod
-    def update_wallet(owner, currency, amount, request=None):
+    def update_wallet(owner, currency, amount, request):
         key_pair = generate_key_pair()
 
         wallet, created = Wallet.objects.get_or_create(
@@ -130,6 +130,5 @@ class OrderMatchingEngine:
         if not created:
             wallet.balance += amount
             wallet.save()
-            context = {'request': request} if request else {}
-            wallet_data = WalletReadSerializer(wallet, context=context).data
+            wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
             WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)

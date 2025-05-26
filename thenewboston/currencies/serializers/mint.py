@@ -52,7 +52,7 @@ class MintWriteSerializer(serializers.ModelSerializer):
             owner=request.user, currency=currency, defaults={'balance': 0}
         )
 
-        change_wallet_balance(wallet, amount, request=request)
+        change_wallet_balance(wallet, amount, request)
 
         return mint
 
