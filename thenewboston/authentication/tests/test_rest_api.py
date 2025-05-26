@@ -18,4 +18,5 @@ def test_login(api_client, bucky):
         'avatar': None,
         'id': bucky.id,
         'username': bucky.username,
+        'is_staff': False,
     }

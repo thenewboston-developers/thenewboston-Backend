@@ -22,3 +22,9 @@ class Wire(Block):
             f'Currency: {self.currency.ticker} | '
             f'Amount: {self.amount}'
         )
+
+    def clean(self):
+        super().clean()
+        if self.currency and not self.currency.domain:
+            from django.core.exceptions import ValidationError
+            raise ValidationError('Wires are not supported for internal currencies.')

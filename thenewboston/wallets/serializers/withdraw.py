@@ -20,4 +20,7 @@ class WithdrawSerializer(serializers.Serializer):
         if data['amount'] > wallet.balance:
             raise serializers.ValidationError('Insufficient funds in the wallet.')
 
+        if not wallet.currency.domain:
+            raise serializers.ValidationError('Withdrawals are not supported for internal currencies.')
+
         return data
