@@ -15,14 +15,14 @@ from ..serializers.exchange_order import ExchangeOrderReadSerializer
 class OrderMatchingEngine:
 
     @transaction.atomic
-    def process_new_order(self, new_order):
+    def process_new_order(self, new_order, request):
         if new_order.order_type == ExchangeOrderType.BUY:
-            self.process_order(new_order, is_buy_order=True)
+            self.process_order(new_order, is_buy_order=True, request=request)
         else:
-            self.process_order(new_order, is_buy_order=False)
+            self.process_order(new_order, is_buy_order=False, request=request)
 
     @staticmethod
-    def process_order(order, is_buy_order):
+    def process_order(order, is_buy_order, request):
         primary_currency = order.primary_currency
         secondary_currency = order.secondary_currency
 
@@ -73,12 +73,14 @@ class OrderMatchingEngine:
                 owner=order.owner,
                 currency=primary_currency if is_buy_order else secondary_currency,
                 amount=fill_quantity if is_buy_order else total_trade_price,
+                request=request,
             )
 
             OrderMatchingEngine.update_wallet(
                 owner=matching_order.owner,
                 currency=secondary_currency if is_buy_order else primary_currency,
                 amount=total_trade_price if is_buy_order else fill_quantity,
+                request=request,
             )
 
             if overpayment_amount:
@@ -86,6 +88,7 @@ class OrderMatchingEngine:
                     owner=order.owner if is_buy_order else matching_order.owner,
                     currency=secondary_currency,
                     amount=overpayment_amount,
+                    request=request,
                 )
 
             order.save()
@@ -111,7 +114,7 @@ class OrderMatchingEngine:
             order.fill_status = FillStatus.PARTIALLY_FILLED
 
     @staticmethod
-    def update_wallet(owner, currency, amount):
+    def update_wallet(owner, currency, amount, request):
         key_pair = generate_key_pair()
 
         wallet, created = Wallet.objects.get_or_create(
@@ -127,5 +130,5 @@ class OrderMatchingEngine:
         if not created:
             wallet.balance += amount
             wallet.save()
-            wallet_data = WalletReadSerializer(wallet).data
+            wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
             WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)

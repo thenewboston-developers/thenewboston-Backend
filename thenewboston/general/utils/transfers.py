@@ -7,14 +7,16 @@ from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 
-def stream_wallet_update(wallet):
+def stream_wallet_update(wallet, request):
     WalletConsumer.stream_wallet(
         message_type=MessageType.UPDATE_WALLET,
-        wallet_data=WalletReadSerializer(wallet).data,
+        wallet_data=WalletReadSerializer(wallet, context={
+            'request': request
+        }).data,
     )
 
 
-def change_wallet_balance(wallet, amount, allow_outside_atomic_block=False):
+def change_wallet_balance(wallet, amount, request, allow_outside_atomic_block=False):
     is_in_atomic_block = transaction.get_connection().in_atomic_block
     if not is_in_atomic_block and not allow_outside_atomic_block:
         raise ProgrammingError('Not allowed to run outside atomic block')
@@ -23,13 +25,13 @@ def change_wallet_balance(wallet, amount, allow_outside_atomic_block=False):
     wallet.save()
 
     if is_in_atomic_block:
-        apply_on_commit(lambda: stream_wallet_update(wallet))
+        apply_on_commit(lambda: stream_wallet_update(wallet, request))
     else:
-        stream_wallet_update(wallet)
+        stream_wallet_update(wallet, request)
 
 
-def transfer_coins(*, sender_wallet, recipient_wallet, amount):
+def transfer_coins(*, sender_wallet, recipient_wallet, amount, request):
     assert transaction.get_connection().in_atomic_block
 
-    change_wallet_balance(sender_wallet, -amount)
-    change_wallet_balance(recipient_wallet, amount)
+    change_wallet_balance(sender_wallet, -amount, request)
+    change_wallet_balance(recipient_wallet, amount, request)
