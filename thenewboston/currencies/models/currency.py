@@ -13,4 +13,4 @@ class Currency(CreatedModified):
         verbose_name_plural = 'Currencies'
 
     def __str__(self):
-        return self.domain
+        return self.ticker
