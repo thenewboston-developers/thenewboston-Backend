@@ -74,6 +74,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 sender_wallet=sender_wallet,
                 recipient_wallet=recipient_wallet,
                 amount=price_amount,
+                request=request,
             )
 
         post = super().create({

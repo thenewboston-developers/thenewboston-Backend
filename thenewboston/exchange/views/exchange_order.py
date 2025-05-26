@@ -25,7 +25,7 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        self.update_wallet_balance(order)
+        self.update_wallet_balance(order, request)
         order_data = ExchangeOrderReadSerializer(order).data
         ExchangeOrderConsumer.stream_exchange_order(
             message_type=MessageType.CREATE_EXCHANGE_ORDER, order_data=order_data
@@ -33,7 +33,7 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         read_serializer = ExchangeOrderReadSerializer(order)
 
         order_matching_engine = OrderMatchingEngine()
-        order_matching_engine.process_new_order(order)
+        order_matching_engine.process_new_order(order, request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -72,13 +72,13 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
             wallet = Wallet.objects.get(owner=instance.owner, currency=refund_currency)
             wallet.balance += refund_amount
             wallet.save()
-            wallet_data = WalletReadSerializer(wallet).data
+            wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
             WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
 
         return Response(read_serializer.data)
 
     @staticmethod
-    def update_wallet_balance(order):
+    def update_wallet_balance(order, request):
         if order.order_type == ExchangeOrderType.BUY:
             wallet = Wallet.objects.filter(owner=order.owner, currency=order.secondary_currency).first()
             wallet.balance -= order.quantity * order.price
@@ -87,5 +87,5 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
             wallet.balance -= order.quantity
 
         wallet.save()
-        wallet_data = WalletReadSerializer(wallet).data
+        wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
         WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
