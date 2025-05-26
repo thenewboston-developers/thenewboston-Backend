@@ -1,9 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import serializers
 
+from thenewboston.exchange.models import AssetPair
 from thenewboston.general.utils.image import process_image, validate_image_dimensions
 
 from ..models import Currency
+from ..utils.currency import get_default_currency
 
 User = get_user_model()
 
@@ -33,10 +36,13 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         if logo := validated_data.get('logo'):
             validated_data['logo'] = process_image(logo)
 
-        currency = super().create({
-            **validated_data,
-            'owner': request.user,
-        })
+        with transaction.atomic():
+            currency = super().create({
+                **validated_data,
+                'owner': request.user,
+            })
+            default_currency = get_default_currency()
+            AssetPair.objects.create(primary_currency=currency, secondary_currency=default_currency)
 
         return currency
 
