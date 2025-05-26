@@ -37,7 +37,8 @@ class PostReadSerializer(serializers.ModelSerializer):
             'recipient',
         )
 
-    def get_user_reaction(self, obj):
+    @staticmethod
+    def get_user_reaction(obj):
         return getattr(obj, 'user_reaction', None)
 
 
@@ -59,7 +60,6 @@ class PostWriteSerializer(serializers.ModelSerializer):
             file = process_image(image)
             validated_data['image'] = file
 
-        # Handle coin transfer if price fields are provided
         if price_amount is not None and price_currency is not None and recipient is not None:
             sender_wallet = Wallet.objects.select_for_update().get(owner=request.user, currency=price_currency)
 
@@ -82,6 +82,35 @@ class PostWriteSerializer(serializers.ModelSerializer):
         })
         return post
 
+    def update(self, instance, validated_data):
+        """
+        Update the Post instance.
+
+        This method updates the content and image of a Post instance.
+        - If 'image' is not in the request, no changes are made to the image
+        - If a new image is provided, it replaces the existing image
+        - If None/null is provided for image, it clears the image
+
+        Note: Transfer-related fields (recipient, price_amount, price_currency) cannot be updated.
+        """
+        validated_data.pop('recipient', None)
+        validated_data.pop('price_amount', None)
+        validated_data.pop('price_currency', None)
+
+        instance.content = validated_data.get('content', instance.content)
+
+        if 'image' in validated_data:
+            image = validated_data.get('image')
+
+            if image is None:
+                instance.image = None
+            else:
+                file = process_image(image)
+                instance.image = file
+
+        instance.save()
+        return instance
+
     def validate(self, data):
         # Only validate transfer fields on create
         if not self.instance:
@@ -90,18 +119,15 @@ class PostWriteSerializer(serializers.ModelSerializer):
             price_amount = data.get('price_amount')
             price_currency = data.get('price_currency')
 
-            # Check if all three fields are provided together or none
             fields_provided = [recipient is not None, price_amount is not None, price_currency is not None]
             if any(fields_provided) and not all(fields_provided):
                 raise serializers.ValidationError(
                     'If any of recipient, price_amount, or price_currency is provided, all three must be provided.'
                 )
 
-            # Prevent users from sending coins to themselves
             if recipient and recipient == user:
                 raise serializers.ValidationError('You cannot send coins to yourself.')
 
-            # Check if user has a wallet for the specified currency
             if price_amount is not None and price_currency is not None:
                 try:
                     Wallet.objects.get(owner=user, currency=price_currency)
@@ -117,37 +143,3 @@ class PostWriteSerializer(serializers.ModelSerializer):
         if value is not None and value == 0:
             raise serializers.ValidationError('price_amount must be greater than 0.')
         return value
-
-    def update(self, instance, validated_data):
-        """
-        Update the Post instance.
-
-        This method updates the content and image of a Post instance.
-        - If 'image' is not in the request, no changes are made to the image
-        - If a new image is provided, it replaces the existing image
-        - If None/null is provided for image, it clears the image
-
-        Note: Transfer-related fields (recipient, price_amount, price_currency) cannot be updated.
-        """
-        # Remove transfer-related fields from validated_data to prevent updates
-        validated_data.pop('recipient', None)
-        validated_data.pop('price_amount', None)
-        validated_data.pop('price_currency', None)
-
-        # Update content if provided
-        instance.content = validated_data.get('content', instance.content)
-
-        # Handle image updates
-        if 'image' in validated_data:
-            image = validated_data.get('image')
-            if image is None:
-                # If None/null is provided, clear the image
-                instance.image = None
-            else:
-                # If a new image is provided, process and update it
-                file = process_image(image)
-                instance.image = file
-        # If 'image' key is not in validated_data, keep the existing image
-
-        instance.save()
-        return instance
