@@ -5,6 +5,7 @@ from django.urls import include, path
 
 import thenewboston.authentication.urls
 import thenewboston.cores.urls
+import thenewboston.currencies.urls
 import thenewboston.exchange.urls
 import thenewboston.invitations.urls
 import thenewboston.notifications.urls
@@ -24,6 +25,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.social.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
+    path(API_PREFIX, include(thenewboston.currencies.urls)),
 ]
 
 if settings.DEBUG:
