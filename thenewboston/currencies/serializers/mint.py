@@ -29,15 +29,12 @@ class MintWriteSerializer(serializers.ModelSerializer):
         currency = validated_data.get('currency')
         amount = validated_data.get('amount')
 
-        # Check if user owns the currency
         if currency.owner != request.user:
             raise serializers.ValidationError('You do not own this currency.')
 
-        # Check if currency is internal
         if currency.domain:
             raise serializers.ValidationError('Cannot mint external currencies.')
 
-        # Check total minted amount
         total_minted = Mint.objects.filter(currency=currency).aggregate(total=Sum('amount'))['total'] or 0
 
         if total_minted + amount > MAX_MINT_AMOUNT:
@@ -46,13 +43,11 @@ class MintWriteSerializer(serializers.ModelSerializer):
                 f'Current total: {total_minted:,}'
             )
 
-        # Create mint record
         mint = super().create({
             **validated_data,
             'owner': request.user,
         })
 
-        # Get or create wallet and add minted coins
         wallet, _ = Wallet.objects.select_for_update().get_or_create(
             owner=request.user, currency=currency, defaults={'balance': 0}
         )
@@ -61,7 +56,8 @@ class MintWriteSerializer(serializers.ModelSerializer):
 
         return mint
 
-    def validate_amount(self, value):
+    @staticmethod
+    def validate_amount(value):
         if value <= 0:
             raise serializers.ValidationError('Amount must be greater than 0.')
 

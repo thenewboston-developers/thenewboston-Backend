@@ -8,4 +8,4 @@ class MintFilter(django_filters.FilterSet):
 
     class Meta:
         model = Mint
-        fields = ['currency']
+        fields = ('currency',)

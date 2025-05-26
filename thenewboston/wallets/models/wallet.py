@@ -14,7 +14,7 @@ class WalletQuerySet(CustomQuerySet):
         defaults = defaults.copy() if defaults else {}
 
         # Check if currency is provided to determine if we need deposit keys
-        currency = kwargs.get('currency') or (defaults or {}).get('currency')
+        currency = kwargs.get('currency') or defaults.get('currency')
 
         if currency and currency.domain:
             # External currency - generate deposit keys if not provided

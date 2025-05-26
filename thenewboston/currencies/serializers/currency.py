@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from rest_framework import exceptions, serializers
+from rest_framework import serializers
 
 from thenewboston.general.utils.image import process_image, validate_image_dimensions
 
@@ -29,14 +29,8 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
-        domain = validated_data.get('domain')
 
-        # Only staff can create external currencies (with domains)
-        if domain and not request.user.is_staff:
-            raise exceptions.PermissionDenied('Only staff users can create external currencies.')
-
-        logo = validated_data.get('logo')
-        if logo:
+        if logo := validated_data.get('logo'):
             validated_data['logo'] = process_image(logo)
 
         currency = super().create({
@@ -47,13 +41,21 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         return currency
 
     def update(self, instance, validated_data):
-        logo = validated_data.get('logo')
-        if logo:
+        if logo := validated_data.get('logo'):
             validated_data['logo'] = process_image(logo)
 
         return super().update(instance, validated_data)
 
-    def validate_logo(self, value):
+    def validate_domain(self, value):
+        request = self.context.get('request')
+
+        if value and not request.user.is_staff:
+            raise serializers.ValidationError('Only staff users can create external currencies (with domains).')
+
+        return value
+
+    @staticmethod
+    def validate_logo(value):
         is_valid, error_message = validate_image_dimensions(value, 512, 512)
         if not is_valid:
             raise serializers.ValidationError(error_message)
