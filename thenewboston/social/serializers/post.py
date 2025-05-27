@@ -43,14 +43,16 @@ class PostReadSerializer(serializers.ModelSerializer):
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
+    clear_image = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = Post
-        fields = ('content', 'image', 'recipient', 'price_amount', 'price_currency')
+        fields = ('content', 'image', 'recipient', 'price_amount', 'price_currency', 'clear_image')
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
+        validated_data.pop('clear_image', None)  # Remove clear_image if present (only for updates)
         image = validated_data.get('image')
         recipient = validated_data.get('recipient')
         price_amount = validated_data.get('price_amount')
@@ -88,6 +90,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         Update the Post instance.
 
         This method updates the content and image of a Post instance.
+        - If 'clear_image' is True, the image is removed
         - If 'image' is not in the request, no changes are made to the image
         - If a new image is provided, it replaces the existing image
         - If None/null is provided for image, it clears the image
@@ -97,10 +100,13 @@ class PostWriteSerializer(serializers.ModelSerializer):
         validated_data.pop('recipient', None)
         validated_data.pop('price_amount', None)
         validated_data.pop('price_currency', None)
+        clear_image = validated_data.pop('clear_image', False)
 
         instance.content = validated_data.get('content', instance.content)
 
-        if 'image' in validated_data:
+        if clear_image:
+            instance.image = None
+        elif 'image' in validated_data:
             image = validated_data.get('image')
 
             if image is None:
