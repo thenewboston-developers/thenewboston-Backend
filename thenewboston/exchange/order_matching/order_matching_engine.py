@@ -2,14 +2,17 @@ from django.db import transaction
 
 from thenewboston.general.enums import MessageType
 from thenewboston.general.utils.cryptography import generate_key_pair
+from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 from ..consumers.exchange_order import ExchangeOrderConsumer
+from ..consumers.trade import TradeConsumer
 from ..models import Trade
 from ..models.exchange_order import ExchangeOrder, ExchangeOrderType, FillStatus
 from ..serializers.exchange_order import ExchangeOrderReadSerializer
+from ..serializers.trade import TradeSerializer
 
 
 class OrderMatchingEngine:
@@ -60,12 +63,20 @@ class OrderMatchingEngine:
             overpayment_amount = abs(order.price - matching_order.price) * fill_quantity
 
             # Create a trade object
-            Trade.objects.create(
+            trade = Trade.objects.create(
                 buy_order=order if is_buy_order else matching_order,
                 sell_order=matching_order if is_buy_order else order,
                 fill_quantity=fill_quantity,
                 trade_price=trade_price,
                 overpayment_amount=overpayment_amount,
+            )
+
+            # Broadcast the trade event
+            trade_data = TradeSerializer(trade).data
+            ticker = primary_currency.ticker
+            apply_on_commit(
+                lambda td=trade_data, t=ticker: TradeConsumer.
+                stream_trade(message_type=MessageType.CREATE_TRADE, trade_data=td, ticker=t)
             )
 
             # Update the wallets of the order and matching order's owners
