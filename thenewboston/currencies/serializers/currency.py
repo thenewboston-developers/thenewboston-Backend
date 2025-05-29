@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from thenewboston.exchange.models import AssetPair
 from thenewboston.general.utils.image import process_image, validate_image_dimensions
+from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Currency
 from ..utils.currency import get_default_currency
@@ -12,6 +13,14 @@ User = get_user_model()
 
 
 class CurrencyReadSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Currency
+        fields = '__all__'
+
+
+class CurrencyReadDetailSerializer(serializers.ModelSerializer):
+    owner = UserReadSerializer(read_only=True)
 
     class Meta:
         model = Currency
