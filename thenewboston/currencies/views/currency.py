@@ -1,4 +1,6 @@
+from django.conf import settings
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -27,6 +29,12 @@ class CurrencyViewSet(viewsets.ModelViewSet):
             return CurrencyWriteSerializer
 
         return CurrencyReadSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.ticker == settings.DEFAULT_CURRENCY_TICKER:
+            raise ValidationError({'detail': 'The default currency cannot be deleted.'})
+        return super().destroy(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
