@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.transfers import transfer_coins
-from thenewboston.social.serializers.post_reaction import PostReactionsReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
 
@@ -15,14 +14,12 @@ class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
-    user_reaction = serializers.SerializerMethodField()
-    user_reactions = PostReactionsReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
         fields = (
             'comments', 'content', 'created_date', 'id', 'image', 'modified_date', 'owner', 'price_amount',
-            'price_currency', 'recipient', 'user_reaction', 'user_reactions'
+            'price_currency', 'recipient'
         )
         read_only_fields = (
             'comments',
@@ -36,10 +33,6 @@ class PostReadSerializer(serializers.ModelSerializer):
             'price_currency',
             'recipient',
         )
-
-    @staticmethod
-    def get_user_reaction(obj):
-        return getattr(obj, 'user_reaction', None)
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
