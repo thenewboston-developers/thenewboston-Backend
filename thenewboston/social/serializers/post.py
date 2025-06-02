@@ -6,7 +6,7 @@ from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
 
-from ..models import Post
+from ..models import Post, PostLike
 from ..serializers.comment import CommentReadSerializer
 
 
@@ -14,12 +14,14 @@ class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
+    like_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = (
             'comments', 'content', 'created_date', 'id', 'image', 'modified_date', 'owner', 'price_amount',
-            'price_currency', 'recipient'
+            'price_currency', 'recipient', 'like_count', 'is_liked'
         )
         read_only_fields = (
             'comments',
@@ -32,7 +34,19 @@ class PostReadSerializer(serializers.ModelSerializer):
             'price_amount',
             'price_currency',
             'recipient',
+            'like_count',
+            'is_liked',
         )
+
+    @staticmethod
+    def get_like_count(obj):
+        return obj.likes.count()
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return PostLike.objects.filter(post=obj, user=request.user).exists()
+        return False
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
