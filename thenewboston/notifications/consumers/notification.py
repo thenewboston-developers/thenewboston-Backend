@@ -2,6 +2,8 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 from channels.layers import get_channel_layer
 
+from ..models import Notification
+
 
 class NotificationConsumer(JsonWebsocketConsumer):
 
@@ -20,9 +22,12 @@ class NotificationConsumer(JsonWebsocketConsumer):
         Send notification creation details to the client. The event is expected to contain the 'payload' with
         notification details and 'type' indicating the action.
         """
+        total_unread_count = Notification.objects.filter(owner_id=self.user_id, is_read=False).count()
+
         self.send_json({
             'notification': event['payload'],
             'type': event['type'],
+            'total_unread_count': total_unread_count,
         })
 
     def disconnect(self, close_code):
