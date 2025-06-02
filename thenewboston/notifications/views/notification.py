@@ -24,6 +24,20 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
         return NotificationReadSerializer
 
+    def list(self, request, *args, **kwargs):  # noqa: A003
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            unread_count = self.get_queryset().filter(is_read=False).count()
+            response.data['unread_count'] = unread_count
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -38,4 +52,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def mark_all_as_read(self, request):
         notifications = self.get_queryset().filter(is_read=False)
         notifications.update(is_read=True)
-        return Response({'detail': 'All notifications marked as read'})
+        return Response({'success': True, 'unread_count': 0})
+
+    @action(detail=False, methods=['get'], url_path='unread-count')
+    def unread_count(self, request):
+        unread_count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': unread_count})
