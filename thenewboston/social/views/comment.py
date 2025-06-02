@@ -2,7 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.general.enums import MessageType
+from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.notifications.consumers.notification import NotificationConsumer
 from thenewboston.notifications.models.notification import Notification
@@ -48,7 +48,7 @@ class CommentViewSet(viewsets.ModelViewSet):
                     'request': request
                 }).data,
                 'comment': comment.content,
-                'notification_type': 'POST_COMMENT',
+                'notification_type': NotificationType.POST_COMMENT.value,
             }
         )
 

@@ -7,3 +7,8 @@ class MessageType(Enum):
     CREATE_TRADE = 'create.trade'
     UPDATE_EXCHANGE_ORDER = 'update.exchange_order'
     UPDATE_WALLET = 'update.wallet'
+
+
+class NotificationType(Enum):
+    POST_COMMENT = 'POST_COMMENT'
+    POST_LIKE = 'POST_LIKE'
