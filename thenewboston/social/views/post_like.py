@@ -1,20 +1,32 @@
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from thenewboston.general.enums import MessageType, NotificationType
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.notifications.consumers.notification import NotificationConsumer
 from thenewboston.notifications.models import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 
+from ..filters.post_like import PostLikeFilter
 from ..models import Post, PostLike
 from ..serializers.post_like import PostLikeReadSerializer
 
 
-class PostLikeViewSet(GenericViewSet):
+class PostLikeViewSet(viewsets.ReadOnlyModelViewSet):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PostLikeFilter
+    pagination_class = CustomPageNumberPagination
+    permission_classes = [IsAuthenticated]
+    queryset = PostLike.objects.select_related('user').order_by('-created_date')
+    serializer_class = PostLikeReadSerializer
+
+
+class PostActionViewSet(GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = PostLikeReadSerializer
     queryset = Post.objects.all()
