@@ -62,6 +62,10 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         return currency
 
     def update(self, instance, validated_data):
+        # Only allow updating description and logo
+        allowed_fields = {'description', 'logo'}
+        validated_data = {k: v for k, v in validated_data.items() if k in allowed_fields}
+
         if logo := validated_data.get('logo'):
             validated_data['logo'] = process_image(logo)
 

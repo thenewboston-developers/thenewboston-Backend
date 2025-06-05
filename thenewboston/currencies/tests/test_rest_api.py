@@ -14,6 +14,7 @@ def test_read_currencies_as_bucky(api_client_bucky):
         'id': currency.id,
         'created_date': currency.created_date.replace(tzinfo=None).isoformat() + 'Z',
         'modified_date': currency.modified_date.replace(tzinfo=None).isoformat() + 'Z',
+        'description': currency.description,
         'domain': currency.domain,
         'logo': None,
         'ticker': currency.ticker,
