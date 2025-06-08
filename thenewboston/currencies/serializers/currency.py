@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Sum
 from rest_framework import serializers
 
 from thenewboston.exchange.models import AssetPair
@@ -14,23 +13,11 @@ User = get_user_model()
 
 
 class CurrencyReadSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Currency
-        fields = '__all__'
-
-
-class CurrencyReadDetailSerializer(serializers.ModelSerializer):
     owner = UserReadSerializer(read_only=True)
-    total_amount_minted = serializers.SerializerMethodField()
 
     class Meta:
         model = Currency
         fields = '__all__'
-
-    @staticmethod
-    def get_total_amount_minted(obj):
-        return obj.mints.aggregate(total=Sum('amount'))['total'] or 0
 
 
 class CurrencyWriteSerializer(serializers.ModelSerializer):

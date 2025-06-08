@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Currency
-from ..serializers.currency import CurrencyReadDetailSerializer, CurrencyReadSerializer, CurrencyWriteSerializer
+from ..serializers.currency import CurrencyReadSerializer, CurrencyWriteSerializer
 
 
 class CurrencyViewSet(viewsets.ModelViewSet):
@@ -27,8 +27,6 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:
             return CurrencyWriteSerializer
-        elif self.action == 'retrieve':
-            return CurrencyReadDetailSerializer
 
         return CurrencyReadSerializer
 
