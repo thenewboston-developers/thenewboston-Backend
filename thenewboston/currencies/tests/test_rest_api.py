@@ -18,7 +18,12 @@ def test_read_currencies_as_bucky(api_client_bucky):
         'domain': currency.domain,
         'logo': None,
         'ticker': currency.ticker,
-        'owner': currency.owner.id,
+        'owner': {
+            'id': currency.owner.id,
+            'username': currency.owner.username,
+            'avatar': None,
+            'is_staff': currency.owner.is_staff,
+        },
     } for currency in currencies]
     response = api_client_bucky.get(url)
     assert response.status_code == 200
