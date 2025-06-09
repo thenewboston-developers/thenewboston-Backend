@@ -7,6 +7,8 @@ from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.general.utils.image import process_image
 from thenewboston.invitations.models import Invitation, InvitationLimit
 
+from ..validators import username_validator
+
 User = get_user_model()
 
 
@@ -70,7 +72,9 @@ class UserWriteSerializer(BaseModelSerializer):
 
     @staticmethod
     def validate_username(value):
-        if not value.isalnum():
-            raise serializers.ValidationError('Usernames can only contain alphanumeric characters.')
+        username_validator(value)
+
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('A user with this username already exists.')
 
         return value
