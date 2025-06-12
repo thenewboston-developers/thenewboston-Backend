@@ -21,9 +21,9 @@ class ChartDataView(generics.GenericAPIView):
             '1d': 5,  # 5 minute intervals
             '1w': 60,  # 1 hour intervals
             '1m': 360,  # 6 hour intervals
-            '3m': 1440,  # 1 day intervals
-            '1y': 1440,  # 1 day intervals
-            'all': 10080,  # 1 week intervals
+            '3m': 360,  # 1 day intervals
+            '1y': 360,  # 1 day intervals
+            'all': 360,  # 1 week intervals
         }
         return intervals.get(time_range, 60)  # Default to 1 hour
 
