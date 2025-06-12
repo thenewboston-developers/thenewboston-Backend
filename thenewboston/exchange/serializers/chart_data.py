@@ -16,3 +16,5 @@ class ChartDataResponseSerializer(serializers.Serializer):
     interval_minutes = serializers.IntegerField()
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()
+    primary_currency = serializers.IntegerField()
+    secondary_currency = serializers.IntegerField()

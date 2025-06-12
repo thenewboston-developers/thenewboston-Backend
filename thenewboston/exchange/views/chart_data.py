@@ -168,7 +168,9 @@ class ChartDataView(generics.GenericAPIView):
             'data': data_points,
             'interval_minutes': interval_minutes,
             'start_time': start_time,
-            'end_time': now
+            'end_time': now,
+            'primary_currency': asset_pair.primary_currency_id,
+            'secondary_currency': asset_pair.secondary_currency_id
         }
 
         serializer = self.get_serializer(data=response_data)
