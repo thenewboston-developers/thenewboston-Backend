@@ -2,8 +2,9 @@ from rest_framework import serializers
 
 
 class ChartDataPointSerializer(serializers.Serializer):
-    timestamp = serializers.DateTimeField()
-    price = serializers.IntegerField()
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField()
+    close = serializers.IntegerField()
     volume = serializers.IntegerField()
     open = serializers.IntegerField()  # noqa: A003
     high = serializers.IntegerField()
@@ -13,6 +14,5 @@ class ChartDataPointSerializer(serializers.Serializer):
 class ChartDataResponseSerializer(serializers.Serializer):
     data = ChartDataPointSerializer(many=True)
     interval_minutes = serializers.IntegerField()
-    total_points = serializers.IntegerField()
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()

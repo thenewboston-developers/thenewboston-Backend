@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.db.models import Max, Min, Sum
 from django.utils import timezone
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
@@ -16,15 +15,43 @@ class ChartDataView(generics.GenericAPIView):
     filterset_class = ChartDataFilter
     serializer_class = ChartDataResponseSerializer
 
-    def get_interval_minutes(self, start_time, end_time):
-        """Calculate interval minutes based on time range."""
-        # Calculate total minutes in the time range
-        total_minutes = int((end_time - start_time).total_seconds() / 60)
+    def get_interval_minutes(self, time_range):
+        """Get fixed interval minutes based on time range."""
+        intervals = {
+            '1d': 5,  # 5 minute intervals
+            '1w': 60,  # 1 hour intervals
+            '1m': 360,  # 6 hour intervals
+            '3m': 1440,  # 1 day intervals
+            '1y': 1440,  # 1 day intervals
+            'all': 10080,  # 1 week intervals
+        }
+        return intervals.get(time_range, 60)  # Default to 1 hour
 
-        # Divide by 100 to get approximately 100 data points
-        interval_minutes = max(1, total_minutes // 100)
+    def round_time_to_interval(self, dt, interval_minutes):
+        """Round datetime down to the nearest interval."""
+        # For intervals of 1 day or more, round to start of day
+        if interval_minutes >= 1440:  # 1440 minutes = 1 day
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        return interval_minutes
+        # For weekly intervals, round to start of week (Monday)
+        if interval_minutes == 10080:  # 10080 minutes = 1 week
+            days_since_monday = dt.weekday()
+            start_of_week = dt - timedelta(days=days_since_monday)
+            return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # For intervals less than a day
+        # Convert to minutes since midnight
+        minutes_since_midnight = dt.hour * 60 + dt.minute
+
+        # Round down to nearest interval
+        rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
+
+        # Calculate hours and minutes
+        hours = rounded_minutes // 60
+        minutes = rounded_minutes % 60
+
+        # Return datetime with rounded time
+        return dt.replace(hour=hours, minute=minutes, second=0, microsecond=0)
 
     def get_start_time(self, time_range, now):
         """Get the start time based on the time range."""
@@ -36,24 +63,29 @@ class ChartDataView(generics.GenericAPIView):
             return now - timedelta(days=30)
         elif time_range == '3m':
             return now - timedelta(days=90)
+        elif time_range == '1y':
+            return now - timedelta(days=365)
         else:  # 'all'
             return None  # Will be set to first trade date
 
     def aggregate_interval_data(self, interval_trades):
         """Aggregate OHLC data for an interval."""
-        first_trade = interval_trades.first()
-        last_trade = interval_trades.last()
+        if not interval_trades:
+            return None
 
-        aggregated = interval_trades.aggregate(
-            high=Max('trade_price'), low=Min('trade_price'), volume=Sum('fill_quantity')
-        )
+        first_trade = interval_trades[0]
+        last_trade = interval_trades[-1]
+
+        high = max(trade.trade_price for trade in interval_trades)
+        low = min(trade.trade_price for trade in interval_trades)
+        volume = sum(trade.fill_quantity for trade in interval_trades)
 
         return {
             'open': first_trade.trade_price,
-            'high': aggregated['high'],
-            'low': aggregated['low'],
-            'price': last_trade.trade_price,  # closing price
-            'volume': aggregated['volume'] or 0
+            'high': high,
+            'low': low,
+            'close': last_trade.trade_price,  # closing price
+            'volume': volume
         }
 
     def get(self, request, *args, **kwargs):
@@ -79,7 +111,6 @@ class ChartDataView(generics.GenericAPIView):
             return Response({
                 'data': [],
                 'interval_minutes': 0,
-                'total_points': 0,
                 'start_time': timezone.now(),
                 'end_time': timezone.now()
             })
@@ -92,36 +123,41 @@ class ChartDataView(generics.GenericAPIView):
         if start_time is None or first_trade.created_date > start_time:
             start_time = first_trade.created_date
 
-        interval_minutes = self.get_interval_minutes(start_time, now)
+        interval_minutes = self.get_interval_minutes(time_range)
 
-        # Filter trades within the time range
-        trades = trades.filter(created_date__gte=start_time)
+        # Round start time down to nearest interval
+        start_time = self.round_time_to_interval(start_time, interval_minutes)
+
+        # Filter trades within the time range and convert to list for efficiency
+        trades = list(trades.filter(created_date__gte=start_time))
 
         # Generate intervals and aggregate data
         data_points = []
         current_time = start_time
         interval_delta = timedelta(minutes=interval_minutes)
 
-        while current_time < now and len(data_points) < 100:
+        while current_time < now:
             interval_end = current_time + interval_delta
 
             # Get trades in this interval
-            interval_trades = trades.filter(created_date__gte=current_time, created_date__lt=interval_end)
+            interval_trades = [trade for trade in trades if current_time <= trade.created_date < interval_end]
 
-            if interval_trades.exists():
+            if interval_trades:
                 # Calculate OHLC data
                 ohlc_data = self.aggregate_interval_data(interval_trades)
-                ohlc_data['timestamp'] = interval_end
+                ohlc_data['start'] = current_time
+                ohlc_data['end'] = interval_end
                 data_points.append(ohlc_data)
             elif data_points:
                 # Carry forward the previous closing price for empty intervals
                 last_point = data_points[-1]
                 data_points.append({
-                    'timestamp': interval_end,
-                    'open': last_point['price'],
-                    'high': last_point['price'],
-                    'low': last_point['price'],
-                    'price': last_point['price'],
+                    'start': current_time,
+                    'end': interval_end,
+                    'open': last_point['close'],
+                    'high': last_point['close'],
+                    'low': last_point['close'],
+                    'close': last_point['close'],
                     'volume': 0
                 })
 
@@ -131,7 +167,6 @@ class ChartDataView(generics.GenericAPIView):
         response_data = {
             'data': data_points,
             'interval_minutes': interval_minutes,
-            'total_points': len(data_points),
             'start_time': start_time,
             'end_time': now
         }

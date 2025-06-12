@@ -12,6 +12,7 @@ class ChartDataFilter(django_filters.FilterSet):
             ('1w', '1 Week'),
             ('1m', '1 Month'),
             ('3m', '3 Months'),
+            ('1y', '1 Year'),
             ('all', 'All Time'),
         ],
         required=True
