@@ -1,18 +1,22 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.exchange.filters.chart_data import ChartDataFilter
-from thenewboston.exchange.models import AssetPair, Trade
+from thenewboston.exchange.models import Trade
 from thenewboston.exchange.serializers.chart_data import ChartDataResponseSerializer
 
 
-class ChartDataView(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
+class ChartDataView(generics.ListAPIView):
+    filter_backends = [DjangoFilterBackend]
     filterset_class = ChartDataFilter
+    permission_classes = [IsAuthenticated]
+    queryset = Trade.objects.select_related('buy_order__primary_currency',
+                                            'buy_order__secondary_currency').order_by('created_date')
     serializer_class = ChartDataResponseSerializer
 
     @staticmethod
@@ -35,24 +39,23 @@ class ChartDataView(generics.GenericAPIView):
             'volume': volume
         }
 
-    def get(self, request, *args, **kwargs):
-        asset_pair_id = request.query_params.get('asset_pair')
-        time_range = request.query_params.get('time_range')
+    def list(self, request, *args, **kwargs):  # noqa: A003
+        queryset = self.filter_queryset(self.get_queryset())
 
-        if not asset_pair_id or not time_range:
-            return Response({'error': 'asset_pair and time_range parameters are required'}, status=400)
+        filterset = self.filterset_class(request.query_params, queryset=queryset)
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=400)
 
-        try:
-            asset_pair = AssetPair.objects.get(pk=asset_pair_id)
-        except AssetPair.DoesNotExist:
-            return Response({'error': 'Invalid asset_pair'}, status=400)
+        queryset = filterset.qs
+        asset_pair = filterset.asset_pair_obj
+        time_range = filterset.time_range_value
 
-        trades = Trade.objects.filter(
-            buy_order__primary_currency=asset_pair.primary_currency,
-            buy_order__secondary_currency=asset_pair.secondary_currency
-        ).order_by('created_date')
+        if not asset_pair:
+            return Response({'error': 'Invalid asset pair'}, status=400)
 
-        if not trades.exists():
+        trades = list(queryset)
+
+        if not trades:
             return Response({
                 'candlesticks': [],
                 'interval_minutes': 0,
@@ -61,39 +64,29 @@ class ChartDataView(generics.GenericAPIView):
             })
 
         now = timezone.now()
-        first_trade = trades.first()
+        first_trade = trades[0]
 
-        start_time = self.get_start_time(time_range, now)
+        start_time = filterset.start_time
         if start_time is None or first_trade.created_date > start_time:
             start_time = first_trade.created_date
 
         interval_minutes = self.get_interval_minutes(time_range)
-
-        # Round start time down to nearest interval
         start_time = self.round_time_to_interval(start_time, interval_minutes)
 
-        # Filter trades within the time range and convert to list for efficiency
-        trades = list(trades.filter(created_date__gte=start_time))
-
-        # Generate intervals and aggregate data
         candlesticks = []
         current_time = start_time
         interval_delta = timedelta(minutes=interval_minutes)
 
         while current_time < now:
             interval_end = current_time + interval_delta
-
-            # Get trades in this interval
             interval_trades = [trade for trade in trades if current_time <= trade.created_date < interval_end]
 
             if interval_trades:
-                # Calculate OHLC data
                 ohlc_data = self.aggregate_interval_data(interval_trades)
                 ohlc_data['start'] = current_time
                 ohlc_data['end'] = interval_end
                 candlesticks.append(ohlc_data)
             elif candlesticks:
-                # Carry forward the previous closing price for empty intervals
                 last_candlestick = candlesticks[-1]
                 candlesticks.append({
                     'start': current_time,
@@ -133,42 +126,17 @@ class ChartDataView(generics.GenericAPIView):
         return intervals[time_range]
 
     @staticmethod
-    def get_start_time(time_range, now):
-        if time_range == '1d':
-            return now - timedelta(days=1)
-        elif time_range == '1w':
-            return now - timedelta(days=7)
-        elif time_range == '1m':
-            return now - timedelta(days=30)
-        elif time_range == '3m':
-            return now - timedelta(days=90)
-        elif time_range == '1y':
-            return now - timedelta(days=365)
-        else:
-            return None
-
-    @staticmethod
     def round_time_to_interval(dt, interval_minutes):
-        # For intervals of 1 day or more, round to start of day
-        if interval_minutes >= 1440:  # 1440 minutes = 1 day
+        if interval_minutes >= 1440:
             return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # For weekly intervals, round to start of week (Monday)
-        if interval_minutes == 10080:  # 10080 minutes = 1 week
+        if interval_minutes == 10080:
             days_since_monday = dt.weekday()
             start_of_week = dt - timedelta(days=days_since_monday)
             return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # For intervals less than a day
-        # Convert to minutes since midnight
         minutes_since_midnight = dt.hour * 60 + dt.minute
-
-        # Round down to nearest interval
         rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
-
-        # Calculate hours and minutes
         hours = rounded_minutes // 60
         minutes = rounded_minutes % 60
-
-        # Return datetime with rounded time
         return dt.replace(hour=hours, minute=minutes, second=0, microsecond=0)

@@ -11,6 +11,6 @@ router.register('asset-pairs', AssetPairViewSet)
 router.register('exchange-orders', ExchangeOrderViewSet)
 router.register('trades', TradeViewSet)
 
-urlpatterns = [
+urlpatterns = router.urls + [
     path('chart-data', ChartDataView.as_view(), name='chart-data'),
-] + router.urls
+]
