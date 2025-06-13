@@ -126,17 +126,9 @@ class ChartDataView(generics.ListAPIView):
         return intervals[time_range]
 
     @staticmethod
-    def round_time_to_interval(dt, interval_minutes):
-        if interval_minutes >= 1440:
-            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        if interval_minutes == 10080:
-            days_since_monday = dt.weekday()
-            start_of_week = dt - timedelta(days=days_since_monday)
-            return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        minutes_since_midnight = dt.hour * 60 + dt.minute
+    def round_time_to_interval(start_time, interval_minutes):
+        minutes_since_midnight = start_time.hour * 60 + start_time.minute
         rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
         hours = rounded_minutes // 60
         minutes = rounded_minutes % 60
-        return dt.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+        return start_time.replace(hour=hours, minute=minutes, second=0, microsecond=0)
