@@ -22,11 +22,7 @@ class ChartDataView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):  # noqa: A003
         queryset = self.filter_queryset(self.get_queryset())
-
         filterset = self.filterset_class(request.query_params, queryset=queryset)
-        if not filterset.is_valid():
-            return Response(filterset.errors, status=400)
-
         queryset = filterset.qs
         asset_pair = filterset.asset_pair_obj
         time_range = filterset.time_range_value
