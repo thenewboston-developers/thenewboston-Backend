@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 
-class ChartDataPointSerializer(serializers.Serializer):
+class CandlestickSerializer(serializers.Serializer):
     start = serializers.DateTimeField()
     end = serializers.DateTimeField()
     close = serializers.IntegerField()
@@ -12,7 +12,7 @@ class ChartDataPointSerializer(serializers.Serializer):
 
 
 class ChartDataResponseSerializer(serializers.Serializer):
-    data = ChartDataPointSerializer(many=True)
+    candlesticks = CandlestickSerializer(many=True)
     interval_minutes = serializers.IntegerField()
     start_time = serializers.DateTimeField()
     end_time = serializers.DateTimeField()

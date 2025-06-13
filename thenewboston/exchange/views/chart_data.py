@@ -109,7 +109,7 @@ class ChartDataView(generics.GenericAPIView):
 
         if not trades.exists():
             return Response({
-                'data': [],
+                'candlesticks': [],
                 'interval_minutes': 0,
                 'start_time': timezone.now(),
                 'end_time': timezone.now()
@@ -132,7 +132,7 @@ class ChartDataView(generics.GenericAPIView):
         trades = list(trades.filter(created_date__gte=start_time))
 
         # Generate intervals and aggregate data
-        data_points = []
+        candlesticks = []
         current_time = start_time
         interval_delta = timedelta(minutes=interval_minutes)
 
@@ -147,17 +147,17 @@ class ChartDataView(generics.GenericAPIView):
                 ohlc_data = self.aggregate_interval_data(interval_trades)
                 ohlc_data['start'] = current_time
                 ohlc_data['end'] = interval_end
-                data_points.append(ohlc_data)
-            elif data_points:
+                candlesticks.append(ohlc_data)
+            elif candlesticks:
                 # Carry forward the previous closing price for empty intervals
-                last_point = data_points[-1]
-                data_points.append({
+                last_candlestick = candlesticks[-1]
+                candlesticks.append({
                     'start': current_time,
                     'end': interval_end,
-                    'open': last_point['close'],
-                    'high': last_point['close'],
-                    'low': last_point['close'],
-                    'close': last_point['close'],
+                    'open': last_candlestick['close'],
+                    'high': last_candlestick['close'],
+                    'low': last_candlestick['close'],
+                    'close': last_candlestick['close'],
                     'volume': 0
                 })
 
@@ -165,7 +165,7 @@ class ChartDataView(generics.GenericAPIView):
 
         # Prepare response
         response_data = {
-            'data': data_points,
+            'candlesticks': candlesticks,
             'interval_minutes': interval_minutes,
             'start_time': start_time,
             'end_time': now,
