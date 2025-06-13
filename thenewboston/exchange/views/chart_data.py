@@ -76,6 +76,7 @@ class ChartDataView(generics.ListAPIView):
         for interval_index, group_iter in groupby(trades, key=get_interval_key):
             interval_trades = list(group_iter)
 
+            # Carry through empty candlestick intervals between the last processed interval and current interval
             while current_interval_index < interval_index and last_close_price is not None:
                 interval_start = start_time + timedelta(minutes=current_interval_index * interval_minutes)
                 interval_end = interval_start + interval_delta
@@ -90,6 +91,7 @@ class ChartDataView(generics.ListAPIView):
                 })
                 current_interval_index += 1
 
+            # Process the current interval with actual trades
             interval_start = start_time + timedelta(minutes=interval_index * interval_minutes)
             interval_end = interval_start + interval_delta
             ohlc_data = {
@@ -102,10 +104,10 @@ class ChartDataView(generics.ListAPIView):
                 'volume': sum(trade.fill_quantity for trade in interval_trades)
             }
             candlesticks.append(ohlc_data)
-
             last_close_price = ohlc_data['close']
             current_interval_index = interval_index + 1
 
+        # Carry through empty candlestick intervals from the last trade up to the current time
         while True:
             interval_start = start_time + timedelta(minutes=current_interval_index * interval_minutes)
             if interval_start >= now:
