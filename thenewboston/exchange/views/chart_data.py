@@ -15,61 +15,8 @@ class ChartDataView(generics.GenericAPIView):
     filterset_class = ChartDataFilter
     serializer_class = ChartDataResponseSerializer
 
-    def get_interval_minutes(self, time_range):
-        """Get fixed interval minutes based on time range."""
-        intervals = {
-            '1d': 5,  # 5 minute intervals
-            '1w': 60,  # 1 hour intervals
-            '1m': 360,  # 6 hour intervals
-            '3m': 360,  # 1 day intervals
-            '1y': 360,  # 1 day intervals
-            'all': 360,  # 1 week intervals
-        }
-        return intervals.get(time_range, 60)  # Default to 1 hour
-
-    def round_time_to_interval(self, dt, interval_minutes):
-        """Round datetime down to the nearest interval."""
-        # For intervals of 1 day or more, round to start of day
-        if interval_minutes >= 1440:  # 1440 minutes = 1 day
-            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        # For weekly intervals, round to start of week (Monday)
-        if interval_minutes == 10080:  # 10080 minutes = 1 week
-            days_since_monday = dt.weekday()
-            start_of_week = dt - timedelta(days=days_since_monday)
-            return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        # For intervals less than a day
-        # Convert to minutes since midnight
-        minutes_since_midnight = dt.hour * 60 + dt.minute
-
-        # Round down to nearest interval
-        rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
-
-        # Calculate hours and minutes
-        hours = rounded_minutes // 60
-        minutes = rounded_minutes % 60
-
-        # Return datetime with rounded time
-        return dt.replace(hour=hours, minute=minutes, second=0, microsecond=0)
-
-    def get_start_time(self, time_range, now):
-        """Get the start time based on the time range."""
-        if time_range == '1d':
-            return now - timedelta(days=1)
-        elif time_range == '1w':
-            return now - timedelta(days=7)
-        elif time_range == '1m':
-            return now - timedelta(days=30)
-        elif time_range == '3m':
-            return now - timedelta(days=90)
-        elif time_range == '1y':
-            return now - timedelta(days=365)
-        else:  # 'all'
-            return None  # Will be set to first trade date
-
-    def aggregate_interval_data(self, interval_trades):
-        """Aggregate OHLC data for an interval."""
+    @staticmethod
+    def aggregate_interval_data(interval_trades):
         if not interval_trades:
             return None
 
@@ -84,12 +31,11 @@ class ChartDataView(generics.GenericAPIView):
             'open': first_trade.trade_price,
             'high': high,
             'low': low,
-            'close': last_trade.trade_price,  # closing price
+            'close': last_trade.trade_price,
             'volume': volume
         }
 
     def get(self, request, *args, **kwargs):
-        # Get query parameters
         asset_pair_id = request.query_params.get('asset_pair')
         time_range = request.query_params.get('time_range')
 
@@ -101,7 +47,6 @@ class ChartDataView(generics.GenericAPIView):
         except AssetPair.DoesNotExist:
             return Response({'error': 'Invalid asset_pair'}, status=400)
 
-        # Get trades for this asset pair
         trades = Trade.objects.filter(
             buy_order__primary_currency=asset_pair.primary_currency,
             buy_order__secondary_currency=asset_pair.secondary_currency
@@ -115,7 +60,6 @@ class ChartDataView(generics.GenericAPIView):
                 'end_time': timezone.now()
             })
 
-        # Determine time range
         now = timezone.now()
         first_trade = trades.first()
 
@@ -163,16 +107,68 @@ class ChartDataView(generics.GenericAPIView):
 
             current_time = interval_end
 
-        # Prepare response
-        response_data = {
-            'candlesticks': candlesticks,
-            'interval_minutes': interval_minutes,
-            'start_time': start_time,
-            'end_time': now,
-            'primary_currency': asset_pair.primary_currency_id,
-            'secondary_currency': asset_pair.secondary_currency_id
-        }
-
-        serializer = self.get_serializer(data=response_data)
+        serializer = self.get_serializer(
+            data={
+                'candlesticks': candlesticks,
+                'interval_minutes': interval_minutes,
+                'start_time': start_time,
+                'end_time': now,
+                'primary_currency': asset_pair.primary_currency_id,
+                'secondary_currency': asset_pair.secondary_currency_id
+            }
+        )
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
+
+    @staticmethod
+    def get_interval_minutes(time_range):
+        intervals = {
+            '1d': 5,
+            '1w': 60,
+            '1m': 360,
+            '3m': 360,
+            '1y': 360,
+            'all': 360,
+        }
+        return intervals[time_range]
+
+    @staticmethod
+    def get_start_time(time_range, now):
+        if time_range == '1d':
+            return now - timedelta(days=1)
+        elif time_range == '1w':
+            return now - timedelta(days=7)
+        elif time_range == '1m':
+            return now - timedelta(days=30)
+        elif time_range == '3m':
+            return now - timedelta(days=90)
+        elif time_range == '1y':
+            return now - timedelta(days=365)
+        else:
+            return None
+
+    @staticmethod
+    def round_time_to_interval(dt, interval_minutes):
+        # For intervals of 1 day or more, round to start of day
+        if interval_minutes >= 1440:  # 1440 minutes = 1 day
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # For weekly intervals, round to start of week (Monday)
+        if interval_minutes == 10080:  # 10080 minutes = 1 week
+            days_since_monday = dt.weekday()
+            start_of_week = dt - timedelta(days=days_since_monday)
+            return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # For intervals less than a day
+        # Convert to minutes since midnight
+        minutes_since_midnight = dt.hour * 60 + dt.minute
+
+        # Round down to nearest interval
+        rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
+
+        # Calculate hours and minutes
+        hours = rounded_minutes // 60
+        minutes = rounded_minutes % 60
+
+        # Return datetime with rounded time
+        return dt.replace(hour=hours, minute=minutes, second=0, microsecond=0)
