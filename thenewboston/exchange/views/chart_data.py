@@ -20,6 +20,18 @@ class ChartDataView(generics.ListAPIView):
                                             'buy_order__secondary_currency').order_by('created_date')
     serializer_class = ChartDataResponseSerializer
 
+    @staticmethod
+    def get_interval_minutes(time_range):
+        intervals = {
+            '1d': 5,
+            '1w': 60,
+            '1m': 360,
+            '3m': 360,
+            '1y': 360,
+            'all': 360,
+        }
+        return intervals[time_range]
+
     def list(self, request, *args, **kwargs):  # noqa: A003
         queryset = self.filter_queryset(self.get_queryset())
         filterset = self.filterset_class(request.query_params, queryset=queryset)
@@ -127,21 +139,22 @@ class ChartDataView(generics.ListAPIView):
         return Response(serializer.data)
 
     @staticmethod
-    def get_interval_minutes(time_range):
-        intervals = {
-            '1d': 5,
-            '1w': 60,
-            '1m': 360,
-            '3m': 360,
-            '1y': 360,
-            'all': 360,
-        }
-        return intervals[time_range]
-
-    @staticmethod
     def snap_time_down_to_interval_start(start_time, interval_minutes):
-        minutes_since_midnight = start_time.hour * 60 + start_time.minute
-        rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
-        hours = rounded_minutes // 60
-        minutes = rounded_minutes % 60
-        return start_time.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+        if interval_minutes < 1440:  # Sub-day intervals (5 min, 60 min, 360 min/6 hours)
+            minutes_since_midnight = start_time.hour * 60 + start_time.minute
+            rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
+            hours = rounded_minutes // 60
+            minutes = rounded_minutes % 60
+            return start_time.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+        elif interval_minutes == 1440:  # Daily interval (1440 minutes = 1 day)
+            return start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif interval_minutes == 10080:  # Weekly interval (10080 minutes = 1 week)
+            days_since_monday = start_time.weekday()
+            start_of_week = start_time - timedelta(days=days_since_monday)
+            return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif interval_minutes == 43200:  # Monthly interval (43200 minutes = 30 days approx)
+            return start_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif interval_minutes == 525600:  # Yearly interval (525600 minutes = 365 days)
+            return start_time.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            raise ValueError(f'Unsupported interval size: {interval_minutes} minutes')
