@@ -52,7 +52,7 @@ class ChartDataView(generics.ListAPIView):
             start_time = first_trade.created_date
 
         interval_minutes = self.get_interval_minutes(time_range)
-        start_time = self.round_start_time_down_to_interval(start_time, interval_minutes)
+        start_time = self.snap_time_down_to_interval_start(start_time, interval_minutes)
 
         candlesticks = []
         interval_delta = timedelta(minutes=interval_minutes)
@@ -143,7 +143,7 @@ class ChartDataView(generics.ListAPIView):
         return intervals[time_range]
 
     @staticmethod
-    def round_start_time_down_to_interval(start_time, interval_minutes):
+    def snap_time_down_to_interval_start(start_time, interval_minutes):
         minutes_since_midnight = start_time.hour * 60 + start_time.minute
         rounded_minutes = (minutes_since_midnight // interval_minutes) * interval_minutes
         hours = rounded_minutes // 60
