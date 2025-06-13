@@ -9,5 +9,5 @@ from ..serializers.trade import TradeSerializer
 class TradeViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = TradeFilter
-    queryset = Trade.objects.all()
+    queryset = Trade.objects.select_related('buy_order__primary_currency', 'buy_order__secondary_currency').all()
     serializer_class = TradeSerializer

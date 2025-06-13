@@ -10,7 +10,7 @@ router = SimpleRouter(trailing_slash=False)
 router.register('currencies', CurrencyViewSet)
 router.register('mints', MintViewSet)
 
-urlpatterns = [
+urlpatterns = router.urls + [
     path('currency-balances', CurrencyBalanceListView.as_view(), name='currency-balances'),
     path('total-amount-minted', TotalAmountMintedView.as_view(), name='total-amount-minted'),
-] + router.urls
+]
