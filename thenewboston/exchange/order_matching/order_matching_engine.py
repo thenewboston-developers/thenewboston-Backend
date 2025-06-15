@@ -37,8 +37,9 @@ class OrderMatchingEngine:
 
         notification_data = NotificationReadSerializer(notification, context={'request': request}).data
 
-        NotificationConsumer.stream_notification(
-            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
+        apply_on_commit(
+            lambda nd=notification_data: NotificationConsumer.
+            stream_notification(message_type=MessageType.CREATE_NOTIFICATION, notification_data=nd)
         )
 
     @transaction.atomic
