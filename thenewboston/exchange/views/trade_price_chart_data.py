@@ -7,18 +7,18 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.exchange.filters.chart_data import ChartDataFilter
+from thenewboston.exchange.filters.trade_price_chart_data import TradePriceChartDataFilter
 from thenewboston.exchange.models import Trade
-from thenewboston.exchange.serializers.chart_data import ChartDataResponseSerializer
+from thenewboston.exchange.serializers.trade_price_chart_data import TradePriceChartDataResponseSerializer
 
 
-class ChartDataView(generics.ListAPIView):
+class TradePriceChartDataView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
-    filterset_class = ChartDataFilter
+    filterset_class = TradePriceChartDataFilter
     permission_classes = [IsAuthenticated]
     queryset = Trade.objects.select_related('buy_order__primary_currency',
                                             'buy_order__secondary_currency').order_by('created_date')
-    serializer_class = ChartDataResponseSerializer
+    serializer_class = TradePriceChartDataResponseSerializer
 
     @staticmethod
     def get_interval_minutes(time_range):
