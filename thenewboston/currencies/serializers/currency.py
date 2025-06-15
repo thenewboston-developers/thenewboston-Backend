@@ -74,3 +74,9 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         # Reset file position to the beginning after validation since Image.open() moves it to the end
         value.seek(0)
         return value
+
+    @staticmethod
+    def validate_ticker(value):
+        if not value.isupper() or not value.isalpha():
+            raise serializers.ValidationError('Ticker must contain only uppercase letters.')
+        return value
