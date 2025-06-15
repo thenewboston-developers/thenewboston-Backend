@@ -2,9 +2,9 @@ from django.urls import path
 from rest_framework.routers import SimpleRouter
 
 from .views.asset_pair import AssetPairViewSet
-from .views.chart_data import ChartDataView
 from .views.exchange_order import ExchangeOrderViewSet
 from .views.trade import TradeViewSet
+from .views.trade_price_chart_data import TradePriceChartDataView
 
 router = SimpleRouter(trailing_slash=False)
 router.register('asset-pairs', AssetPairViewSet)
@@ -12,5 +12,5 @@ router.register('exchange-orders', ExchangeOrderViewSet)
 router.register('trades', TradeViewSet)
 
 urlpatterns = router.urls + [
-    path('chart-data', ChartDataView.as_view(), name='chart-data'),
+    path('trade-price-chart-data', TradePriceChartDataView.as_view(), name='trade-price-chart-data'),
 ]

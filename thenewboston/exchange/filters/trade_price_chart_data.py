@@ -6,7 +6,7 @@ from django.utils import timezone
 from thenewboston.exchange.models import AssetPair, Trade
 
 
-class ChartDataFilter(django_filters.FilterSet):
+class TradePriceChartDataFilter(django_filters.FilterSet):
     asset_pair = django_filters.NumberFilter(method='filter_asset_pair', required=True)
     time_range = django_filters.ChoiceFilter(
         method='filter_time_range',

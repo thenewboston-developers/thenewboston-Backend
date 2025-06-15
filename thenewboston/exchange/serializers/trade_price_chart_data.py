@@ -11,7 +11,7 @@ class CandlestickSerializer(serializers.Serializer):
     low = serializers.IntegerField()
 
 
-class ChartDataResponseSerializer(serializers.Serializer):
+class TradePriceChartDataResponseSerializer(serializers.Serializer):
     candlesticks = CandlestickSerializer(many=True)
     interval_minutes = serializers.IntegerField()
     start_time = serializers.DateTimeField()
