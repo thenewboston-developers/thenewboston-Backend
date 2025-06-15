@@ -29,7 +29,9 @@ class OrderMatchingEngine:
                 'order_type': order.order_type,
                 'quantity': order.quantity,
                 'price': order.price,
+                'primary_currency_id': order.primary_currency.id,
                 'primary_currency_ticker': order.primary_currency.ticker,
+                'secondary_currency_id': order.secondary_currency.id,
                 'secondary_currency_ticker': order.secondary_currency.ticker,
                 'order_id': order.id,
             }
