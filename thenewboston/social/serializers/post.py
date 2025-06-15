@@ -1,8 +1,13 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from thenewboston.general.enums import MessageType, NotificationType
+from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.transfers import transfer_coins
+from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.models import Notification
+from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
 
@@ -90,7 +95,35 @@ class PostWriteSerializer(serializers.ModelSerializer):
             **validated_data,
             'owner': request.user,
         })
+
+        if price_amount is not None and price_currency is not None and recipient is not None:
+            self.notify_coin_transfer(post=post, request=request)
+
         return post
+
+    @staticmethod
+    def notify_coin_transfer(post, request):
+        notification = Notification.objects.create(
+            owner=post.recipient,
+            payload={
+                'notification_type': NotificationType.POST_COIN_TRANSFER.value,
+                'owner': UserReadSerializer(post.owner, context={
+                    'request': request
+                }).data,
+                'content': post.content,
+                'post_id': post.id,
+                'price_amount': post.price_amount,
+                'price_currency_id': post.price_currency.id,
+                'price_currency_ticker': post.price_currency.ticker,
+            }
+        )
+
+        notification_data = NotificationReadSerializer(notification, context={'request': request}).data
+
+        apply_on_commit(
+            lambda nd=notification_data: NotificationConsumer.
+            stream_notification(message_type=MessageType.CREATE_NOTIFICATION, notification_data=nd)
+        )
 
     def update(self, instance, validated_data):
         """

@@ -11,5 +11,6 @@ class MessageType(Enum):
 
 class NotificationType(Enum):
     EXCHANGE_ORDER_FILLED = 'EXCHANGE_ORDER_FILLED'
+    POST_COIN_TRANSFER = 'POST_COIN_TRANSFER'
     POST_COMMENT = 'POST_COMMENT'
     POST_LIKE = 'POST_LIKE'
