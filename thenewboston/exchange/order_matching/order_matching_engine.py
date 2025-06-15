@@ -1,8 +1,11 @@
 from django.db import transaction
 
-from thenewboston.general.enums import MessageType
+from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.general.utils.database import apply_on_commit
+from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.models import Notification
+from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
@@ -16,6 +19,27 @@ from ..serializers.trade import TradeSerializer
 
 
 class OrderMatchingEngine:
+
+    @staticmethod
+    def notify_order_filled(order, request):
+        notification = Notification.objects.create(
+            owner=order.owner,
+            payload={
+                'notification_type': NotificationType.EXCHANGE_ORDER_FILLED.value,
+                'order_type': order.order_type,
+                'quantity': order.quantity,
+                'price': order.price,
+                'primary_currency_ticker': order.primary_currency.ticker,
+                'secondary_currency_ticker': order.secondary_currency.ticker,
+                'order_id': order.id,
+            }
+        )
+
+        notification_data = NotificationReadSerializer(notification, context={'request': request}).data
+
+        NotificationConsumer.stream_notification(
+            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
+        )
 
     @transaction.atomic
     def process_new_order(self, new_order, request):
@@ -55,8 +79,18 @@ class OrderMatchingEngine:
             matching_order.filled_amount += fill_quantity
 
             # Update the order and matching order's status
+            order_was_open = order.fill_status != FillStatus.FILLED
+            matching_order_was_open = matching_order.fill_status != FillStatus.FILLED
+
             OrderMatchingEngine.update_order_status(order)
             OrderMatchingEngine.update_order_status(matching_order)
+
+            # Send notifications if orders were just filled
+            if order_was_open and order.fill_status == FillStatus.FILLED:
+                OrderMatchingEngine.notify_order_filled(order, request)
+
+            if matching_order_was_open and matching_order.fill_status == FillStatus.FILLED:
+                OrderMatchingEngine.notify_order_filled(matching_order, request)
 
             trade_price = min(order.price, matching_order.price)
             total_trade_price = trade_price * fill_quantity
