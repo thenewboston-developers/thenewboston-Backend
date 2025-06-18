@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.enums import MessageType
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
@@ -17,6 +18,7 @@ from ..serializers.exchange_order import ExchangeOrderReadSerializer, ExchangeOr
 
 
 class ExchangeOrderViewSet(viewsets.ModelViewSet):
+    pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = ExchangeOrder.objects.all()
 
