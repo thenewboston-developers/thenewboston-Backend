@@ -1,15 +1,17 @@
 from django.db import transaction
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.enums import MessageType
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
-from ..consumers.exchange_order import ExchangeOrderConsumer
+from ..consumers.asset_pair_exchange_order import AssetPairExchangeOrderConsumer
 from ..models import ExchangeOrder
 from ..models.exchange_order import ExchangeOrderType, FillStatus
 from ..order_matching.order_matching_engine import OrderMatchingEngine
@@ -17,8 +19,39 @@ from ..serializers.exchange_order import ExchangeOrderReadSerializer, ExchangeOr
 
 
 class ExchangeOrderViewSet(viewsets.ModelViewSet):
+    pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = ExchangeOrder.objects.all()
+
+    @action(detail=False, methods=['get'], url_path='book')
+    def book(self, request):
+        primary_currency_id = request.query_params.get('primary_currency')
+        secondary_currency_id = request.query_params.get('secondary_currency')
+
+        if not primary_currency_id or not secondary_currency_id:
+            return Response({'error': 'Both primary_currency and secondary_currency parameters are required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Get top 50 buy orders (highest price first)
+        buy_orders = ExchangeOrder.objects.filter(
+            primary_currency_id=primary_currency_id,
+            secondary_currency_id=secondary_currency_id,
+            order_type=ExchangeOrderType.BUY,
+            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
+        ).order_by('-price')[:50]
+
+        # Get top 50 sell orders (lowest price first)
+        sell_orders = ExchangeOrder.objects.filter(
+            primary_currency_id=primary_currency_id,
+            secondary_currency_id=secondary_currency_id,
+            order_type=ExchangeOrderType.SELL,
+            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
+        ).order_by('price')[:50]
+
+        buy_orders_data = ExchangeOrderReadSerializer(buy_orders, many=True).data
+        sell_orders_data = ExchangeOrderReadSerializer(sell_orders, many=True).data
+
+        return Response({'buy_orders': buy_orders_data, 'sell_orders': sell_orders_data})
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -27,8 +60,11 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
         self.update_wallet_balance(order, request)
         order_data = ExchangeOrderReadSerializer(order).data
-        ExchangeOrderConsumer.stream_exchange_order(
-            message_type=MessageType.CREATE_EXCHANGE_ORDER, order_data=order_data
+        AssetPairExchangeOrderConsumer.stream_exchange_order(
+            message_type=MessageType.CREATE_EXCHANGE_ORDER,
+            order_data=order_data,
+            primary_currency_id=order.primary_currency_id,
+            secondary_currency_id=order.secondary_currency_id
         )
         read_serializer = ExchangeOrderReadSerializer(order)
 
@@ -36,6 +72,9 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         order_matching_engine.process_new_order(order, request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        return ExchangeOrder.objects.filter(owner=self.request.user).order_by('-created_date')
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:
@@ -52,8 +91,11 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         old_fill_status = instance.fill_status
         order = serializer.save()
         order_data = ExchangeOrderReadSerializer(order).data
-        ExchangeOrderConsumer.stream_exchange_order(
-            message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=order_data
+        AssetPairExchangeOrderConsumer.stream_exchange_order(
+            message_type=MessageType.UPDATE_EXCHANGE_ORDER,
+            order_data=order_data,
+            primary_currency_id=order.primary_currency_id,
+            secondary_currency_id=order.secondary_currency_id
         )
         read_serializer = ExchangeOrderReadSerializer(order)
 

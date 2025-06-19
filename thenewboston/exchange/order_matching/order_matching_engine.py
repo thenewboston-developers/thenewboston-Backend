@@ -10,7 +10,7 @@ from thenewboston.wallets.consumers.wallet import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
-from ..consumers.exchange_order import ExchangeOrderConsumer
+from ..consumers.asset_pair_exchange_order import AssetPairExchangeOrderConsumer
 from ..consumers.trade import TradeConsumer
 from ..models import Trade
 from ..models.exchange_order import ExchangeOrder, ExchangeOrderType, FillStatus
@@ -144,11 +144,17 @@ class OrderMatchingEngine:
 
             order_data = ExchangeOrderReadSerializer(order).data
             matching_order_data = ExchangeOrderReadSerializer(matching_order).data
-            ExchangeOrderConsumer.stream_exchange_order(
-                message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=order_data
+            AssetPairExchangeOrderConsumer.stream_exchange_order(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER,
+                order_data=order_data,
+                primary_currency_id=order.primary_currency_id,
+                secondary_currency_id=order.secondary_currency_id
             )
-            ExchangeOrderConsumer.stream_exchange_order(
-                message_type=MessageType.UPDATE_EXCHANGE_ORDER, order_data=matching_order_data
+            AssetPairExchangeOrderConsumer.stream_exchange_order(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER,
+                order_data=matching_order_data,
+                primary_currency_id=matching_order.primary_currency_id,
+                secondary_currency_id=matching_order.secondary_currency_id
             )
 
             if order.fill_status == FillStatus.FILLED:

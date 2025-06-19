@@ -43,13 +43,16 @@ class TradePriceChartDataView(generics.ListAPIView):
             return Response({'error': 'Invalid asset pair'}, status=400)
 
         trades = list(queryset)
+        interval_minutes = self.get_interval_minutes(time_range)
 
         if not trades:
             return Response({
                 'candlesticks': [],
-                'interval_minutes': 0,
+                'interval_minutes': interval_minutes,
                 'start_time': timezone.now(),
-                'end_time': timezone.now()
+                'end_time': timezone.now(),
+                'primary_currency': asset_pair.primary_currency_id,
+                'secondary_currency': asset_pair.secondary_currency_id
             })
 
         now = timezone.now()
@@ -59,9 +62,7 @@ class TradePriceChartDataView(generics.ListAPIView):
         if start_time is None or first_trade.created_date > start_time:
             start_time = first_trade.created_date
 
-        interval_minutes = self.get_interval_minutes(time_range)
         start_time = self.snap_time_down_to_interval_start(start_time, interval_minutes)
-
         candlesticks = []
         interval_delta = timedelta(minutes=interval_minutes)
 
