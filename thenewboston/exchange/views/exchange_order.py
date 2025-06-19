@@ -23,8 +23,35 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = ExchangeOrder.objects.all()
 
-    def get_queryset(self):
-        return ExchangeOrder.objects.filter(owner=self.request.user).order_by('-created_date')
+    @action(detail=False, methods=['get'], url_path='book')
+    def book(self, request):
+        primary_currency_id = request.query_params.get('primary_currency')
+        secondary_currency_id = request.query_params.get('secondary_currency')
+
+        if not primary_currency_id or not secondary_currency_id:
+            return Response({'error': 'Both primary_currency and secondary_currency parameters are required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Get top 50 buy orders (highest price first)
+        buy_orders = ExchangeOrder.objects.filter(
+            primary_currency_id=primary_currency_id,
+            secondary_currency_id=secondary_currency_id,
+            order_type=ExchangeOrderType.BUY,
+            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
+        ).order_by('-price')[:50]
+
+        # Get top 50 sell orders (lowest price first)
+        sell_orders = ExchangeOrder.objects.filter(
+            primary_currency_id=primary_currency_id,
+            secondary_currency_id=secondary_currency_id,
+            order_type=ExchangeOrderType.SELL,
+            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
+        ).order_by('price')[:50]
+
+        buy_orders_data = ExchangeOrderReadSerializer(buy_orders, many=True).data
+        sell_orders_data = ExchangeOrderReadSerializer(sell_orders, many=True).data
+
+        return Response({'buy_orders': buy_orders_data, 'sell_orders': sell_orders_data})
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -45,6 +72,9 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         order_matching_engine.process_new_order(order, request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        return ExchangeOrder.objects.filter(owner=self.request.user).order_by('-created_date')
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:
@@ -101,33 +131,3 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
         wallet.save()
         wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
         WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
-
-    @action(detail=False, methods=['get'], url_path='book')
-    def book(self, request):
-        primary_currency_id = request.query_params.get('primary_currency')
-        secondary_currency_id = request.query_params.get('secondary_currency')
-
-        if not primary_currency_id or not secondary_currency_id:
-            return Response({'error': 'Both primary_currency and secondary_currency parameters are required'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Get top 50 buy orders (highest price first)
-        buy_orders = ExchangeOrder.objects.filter(
-            primary_currency_id=primary_currency_id,
-            secondary_currency_id=secondary_currency_id,
-            order_type=ExchangeOrderType.BUY,
-            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
-        ).order_by('-price')[:50]
-
-        # Get top 50 sell orders (lowest price first)
-        sell_orders = ExchangeOrder.objects.filter(
-            primary_currency_id=primary_currency_id,
-            secondary_currency_id=secondary_currency_id,
-            order_type=ExchangeOrderType.SELL,
-            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
-        ).order_by('price')[:50]
-
-        buy_orders_data = ExchangeOrderReadSerializer(buy_orders, many=True).data
-        sell_orders_data = ExchangeOrderReadSerializer(sell_orders, many=True).data
-
-        return Response({'buy_orders': buy_orders_data, 'sell_orders': sell_orders_data})
