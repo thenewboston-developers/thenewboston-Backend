@@ -44,7 +44,6 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
             self.send_json({'error': 'Invalid message format. Required fields: action, asset_pair_id'})
             return
 
-        # Ensure asset_pair_id is an integer for consistency
         try:
             asset_pair_id = int(asset_pair_id)
         except (ValueError, TypeError):
@@ -72,7 +71,6 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         Send order details to the group associated with the asset pair.
         message_type indicates the type of the order action, order_data contains the order details.
         """
-        # Get or create the asset pair to find its ID
         asset_pair = cls.get_or_create_asset_pair(primary_currency_id, secondary_currency_id)
         asset_pair_id = asset_pair.id
 
