@@ -17,9 +17,13 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
 
     def create_exchange_order(self, event):
         """
-        Send order creation details to the client. The event is expected to contain the 'payload' with order details
-        and 'type' indicating the action.
+        Send order creation details to the client. The event is expected to contain the 'payload' with order details.
         """
+
+        print('\ncreate_exchange_order > TYPE > event')
+        print(event)
+        print()
+
         self.send_json({
             'exchange_order': event['payload'],
             'type': event['type'],
@@ -55,32 +59,32 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
     @classmethod
     def get_or_create_asset_pair(cls, primary_currency_id, secondary_currency_id):
         """Get or create an AssetPair for the given currency IDs."""
-        asset_pair, _ = AssetPair.objects.get_or_create(
+        asset_pair, created = AssetPair.objects.get_or_create(
             primary_currency_id=primary_currency_id, secondary_currency_id=secondary_currency_id
         )
+        if created:
+            print(f'Created new AssetPair: {asset_pair}')
         return asset_pair
 
     @classmethod
-    def stream_exchange_order(
-        cls, *, message_type, order_data, primary_currency_id=None, secondary_currency_id=None, asset_pair_id=None
-    ):
+    def stream_exchange_order(cls, *, message_type, order_data, primary_currency_id, secondary_currency_id):
         """
         Send order details to the group associated with the asset pair.
         message_type indicates the type of the order action, order_data contains the order details.
-        Either provide asset_pair_id or both primary_currency_id and secondary_currency_id.
         """
-        if asset_pair_id is None:
-            if primary_currency_id is None or secondary_currency_id is None:
-                raise ValueError(
-                    'Either asset_pair_id or both primary_currency_id and secondary_currency_id must be provided'
-                )
-            asset_pair = cls.get_or_create_asset_pair(primary_currency_id, secondary_currency_id)
-            asset_pair_id = asset_pair.id
+        # Get or create the asset pair to find its ID
+        asset_pair = cls.get_or_create_asset_pair(primary_currency_id, secondary_currency_id)
+        asset_pair_id = asset_pair.id
+
+        # Log for debugging
+        print(f'Streaming {message_type.value} to asset_pair_id: {asset_pair_id}')
+        print(f'Group name: {cls.get_group_name(asset_pair_id)}')
+        print(f'Message type value: {message_type.value}')
 
         channel_layer = get_channel_layer()
         order_event = {
             'payload': order_data,
-            'type': message_type.value,
+            'type': message_type.value.replace('.', '_'),  # Convert dots to underscores for handler method
         }
         async_to_sync(channel_layer.group_send)(cls.get_group_name(asset_pair_id), order_event)
 
@@ -90,6 +94,7 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
             group_name = self.get_group_name(asset_pair_id)
             async_to_sync(get_channel_layer().group_add)(group_name, self.channel_name)
             self.subscribed_asset_pairs.add(asset_pair_id)
+            print(f'Client {self.channel_name} subscribed to {group_name}')
             self.send_json({'success': f'Subscribed to asset pair: {asset_pair_id}'})
 
     def unsubscribe_from_asset_pair(self, asset_pair_id):
@@ -102,10 +107,14 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
 
     def update_exchange_order(self, event):
         """
-        Send order update details to the client. The event is expected to contain the 'payload' with order details
-        and 'type' indicating the action.
+        Send order update details to the client. The event is expected to contain the 'payload' with order details.
         """
+
+        print('\nupdate_exchange_order > TYPE > event')
+        print(event)
+        print()
+
         self.send_json({
             'exchange_order': event['payload'],
-            'type': event['type'],
+            'type': event['type'],  # Send the original dot notation
         })
