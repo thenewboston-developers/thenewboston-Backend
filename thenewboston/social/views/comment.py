@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
-from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models.notification import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer

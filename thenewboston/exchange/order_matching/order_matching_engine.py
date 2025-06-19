@@ -3,15 +3,14 @@ from django.db import transaction
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.utils.cryptography import generate_key_pair
 from thenewboston.general.utils.database import apply_on_commit
-from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
-from thenewboston.wallets.consumers.wallet import WalletConsumer
+from thenewboston.wallets.consumers import WalletConsumer
 from thenewboston.wallets.models import Wallet
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
-from ..consumers.asset_pair_exchange_order import AssetPairExchangeOrderConsumer
-from ..consumers.trade import TradeConsumer
+from ..consumers import ExchangeOrderConsumer, TradeConsumer
 from ..models import Trade
 from ..models.exchange_order import ExchangeOrder, ExchangeOrderType, FillStatus
 from ..serializers.exchange_order import ExchangeOrderReadSerializer
@@ -144,13 +143,13 @@ class OrderMatchingEngine:
 
             order_data = ExchangeOrderReadSerializer(order).data
             matching_order_data = ExchangeOrderReadSerializer(matching_order).data
-            AssetPairExchangeOrderConsumer.stream_exchange_order(
+            ExchangeOrderConsumer.stream_exchange_order(
                 message_type=MessageType.UPDATE_EXCHANGE_ORDER,
                 order_data=order_data,
                 primary_currency_id=order.primary_currency_id,
                 secondary_currency_id=order.secondary_currency_id
             )
-            AssetPairExchangeOrderConsumer.stream_exchange_order(
+            ExchangeOrderConsumer.stream_exchange_order(
                 message_type=MessageType.UPDATE_EXCHANGE_ORDER,
                 order_data=matching_order_data,
                 primary_currency_id=matching_order.primary_currency_id,
