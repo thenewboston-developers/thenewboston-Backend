@@ -3,7 +3,7 @@ from django.db import transaction
 from thenewboston.general.enums import MessageType
 from thenewboston.general.exceptions import ProgrammingError
 from thenewboston.general.utils.database import apply_on_commit
-from thenewboston.wallets.consumers.wallet import WalletConsumer
+from thenewboston.wallets.consumers import WalletConsumer
 from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 

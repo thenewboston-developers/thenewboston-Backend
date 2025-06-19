@@ -7,7 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.pagination import CustomPageNumberPagination
-from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer

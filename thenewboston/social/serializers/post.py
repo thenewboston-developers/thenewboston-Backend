@@ -5,7 +5,7 @@ from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.transfers import transfer_coins
-from thenewboston.notifications.consumers.notification import NotificationConsumer
+from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
