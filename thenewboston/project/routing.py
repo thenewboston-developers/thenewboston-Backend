@@ -1,9 +1,8 @@
 from django.urls import re_path
 
-from thenewboston.exchange.consumers.asset_pair_exchange_order import AssetPairExchangeOrderConsumer
-from thenewboston.exchange.consumers.trade import TradeConsumer
-from thenewboston.notifications.consumers.notification import NotificationConsumer
-from thenewboston.wallets.consumers.wallet import WalletConsumer
+from thenewboston.exchange.consumers import AssetPairExchangeOrderConsumer, TradeConsumer
+from thenewboston.notifications.consumers import NotificationConsumer
+from thenewboston.wallets.consumers import WalletConsumer
 
 websocket_urlpatterns = [
     re_path(
