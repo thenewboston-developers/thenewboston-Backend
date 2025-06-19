@@ -19,11 +19,6 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         """
         Send order creation details to the client. The event is expected to contain the 'payload' with order details.
         """
-
-        print('\ncreate_exchange_order > TYPE > event')
-        print(event)
-        print()
-
         self.send_json({
             'exchange_order': event['payload'],
             'type': event['type'],
@@ -49,6 +44,13 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
             self.send_json({'error': 'Invalid message format. Required fields: action, asset_pair_id'})
             return
 
+        # Ensure asset_pair_id is an integer for consistency
+        try:
+            asset_pair_id = int(asset_pair_id)
+        except (ValueError, TypeError):
+            self.send_json({'error': 'asset_pair_id must be a valid integer'})
+            return
+
         if action == 'subscribe':
             self.subscribe_to_asset_pair(asset_pair_id)
         elif action == 'unsubscribe':
@@ -62,8 +64,6 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         asset_pair, created = AssetPair.objects.get_or_create(
             primary_currency_id=primary_currency_id, secondary_currency_id=secondary_currency_id
         )
-        if created:
-            print(f'Created new AssetPair: {asset_pair}')
         return asset_pair
 
     @classmethod
@@ -76,15 +76,10 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         asset_pair = cls.get_or_create_asset_pair(primary_currency_id, secondary_currency_id)
         asset_pair_id = asset_pair.id
 
-        # Log for debugging
-        print(f'Streaming {message_type.value} to asset_pair_id: {asset_pair_id}')
-        print(f'Group name: {cls.get_group_name(asset_pair_id)}')
-        print(f'Message type value: {message_type.value}')
-
         channel_layer = get_channel_layer()
         order_event = {
             'payload': order_data,
-            'type': message_type.value.replace('.', '_'),  # Convert dots to underscores for handler method
+            'type': message_type.value,
         }
         async_to_sync(channel_layer.group_send)(cls.get_group_name(asset_pair_id), order_event)
 
@@ -94,7 +89,6 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
             group_name = self.get_group_name(asset_pair_id)
             async_to_sync(get_channel_layer().group_add)(group_name, self.channel_name)
             self.subscribed_asset_pairs.add(asset_pair_id)
-            print(f'Client {self.channel_name} subscribed to {group_name}')
             self.send_json({'success': f'Subscribed to asset pair: {asset_pair_id}'})
 
     def unsubscribe_from_asset_pair(self, asset_pair_id):
@@ -109,12 +103,7 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         """
         Send order update details to the client. The event is expected to contain the 'payload' with order details.
         """
-
-        print('\nupdate_exchange_order > TYPE > event')
-        print(event)
-        print()
-
         self.send_json({
             'exchange_order': event['payload'],
-            'type': event['type'],  # Send the original dot notation
+            'type': event['type'],
         })
