@@ -3,8 +3,7 @@ x-service: &service
     restart: unless-stopped
     depends_on:
       redis:
-        # TODO(dmu) LOW: Add redis health check and change to `condition: service_healthy`
-        condition: service_started
+        condition: service_healthy
     env_file:
       - path: '/etc/thenewboston/.env'
         required: false
@@ -21,6 +20,11 @@ services:
       - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/var/lib/redis
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     <<: *service
