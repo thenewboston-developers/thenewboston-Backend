@@ -55,22 +55,19 @@ class ExchangeOrderViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
+        # TODO(dmu) MEDIUM: Reuse DRF style ViewSet-Serializer pattern instead of just overriding .create()
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         self.update_wallet_balance(order, request)
-        order_data = ExchangeOrderReadSerializer(order).data
         ExchangeOrderConsumer.stream_exchange_order(
             message_type=MessageType.CREATE_EXCHANGE_ORDER,
-            order_data=order_data,
+            order_data=ExchangeOrderReadSerializer(order).data,
             primary_currency_id=order.primary_currency_id,
             secondary_currency_id=order.secondary_currency_id
         )
         read_serializer = ExchangeOrderReadSerializer(order)
-
-        order_matching_engine = OrderMatchingEngine()
-        order_matching_engine.process_new_order(order, request)
-
+        OrderMatchingEngine().process_new_order(order, request)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
