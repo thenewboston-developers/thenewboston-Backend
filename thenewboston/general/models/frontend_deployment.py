@@ -10,8 +10,6 @@ class FrontendDeployment(CreatedModified):
 
     class Meta:
         ordering = ['-created_date']
-        verbose_name = 'Frontend Deployment'
-        verbose_name_plural = 'Frontend Deployments'
 
     def __str__(self):
         return f'Deployment at {self.created_date}'
