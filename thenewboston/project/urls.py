@@ -6,6 +6,7 @@ from django.urls import include, path
 import thenewboston.authentication.urls
 import thenewboston.currencies.urls
 import thenewboston.exchange.urls
+import thenewboston.general.urls
 import thenewboston.invitations.urls
 import thenewboston.notifications.urls
 import thenewboston.social.urls
@@ -19,6 +20,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.authentication.urls)),
     path(API_PREFIX, include(thenewboston.currencies.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
+    path(API_PREFIX, include(thenewboston.general.urls)),
     path(API_PREFIX, include(thenewboston.invitations.urls)),
     path(API_PREFIX, include(thenewboston.notifications.urls)),
     path(API_PREFIX, include(thenewboston.social.urls)),
