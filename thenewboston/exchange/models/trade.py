@@ -1,13 +1,15 @@
 from django.db import models
 
-from thenewboston.general.models import CreatedModified
+from thenewboston.general.enums import MessageType
+from thenewboston.general.models.created_modified import AdjustableTimestampsModel
+from thenewboston.general.utils.database import apply_on_commit
 
 
-class Trade(CreatedModified):
+class Trade(AdjustableTimestampsModel):
     buy_order = models.ForeignKey('exchange.ExchangeOrder', related_name='buy_trades', on_delete=models.CASCADE)
     sell_order = models.ForeignKey('exchange.ExchangeOrder', related_name='sell_trades', on_delete=models.CASCADE)
-    fill_quantity = models.PositiveBigIntegerField()
-    trade_price = models.PositiveBigIntegerField()
+    filled_quantity = models.PositiveBigIntegerField()
+    price = models.PositiveBigIntegerField()
     overpayment_amount = models.PositiveBigIntegerField()
 
     def __str__(self):
@@ -19,3 +21,18 @@ class Trade(CreatedModified):
             f'Trade Price: {self.trade_price} | '
             f'Overpayment Amount: {self.overpayment_amount}'
         )
+
+    def save(self, *args, **kwargs):
+        was_adding = self.is_adding()
+        rv = super().save(*args, **kwargs)
+
+        if was_adding:
+            from ..consumers.trade import TradeConsumer
+            from ..serializers.trade import TradeSerializer
+
+            apply_on_commit(
+                lambda data=TradeSerializer(self).data, ticker=self.sell_order.primary_currency.ticker: TradeConsumer.
+                stream_trade(message_type=MessageType.CREATE_TRADE, trade_data=data, ticker=ticker)
+            )
+
+        return rv  # return value for forward compatibility
