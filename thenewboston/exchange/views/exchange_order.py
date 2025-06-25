@@ -1,133 +1,83 @@
 from django.db import transaction
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.general.enums import MessageType
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
-from thenewboston.wallets.consumers import WalletConsumer
-from thenewboston.wallets.models import Wallet
-from thenewboston.wallets.serializers.wallet import WalletReadSerializer
+from thenewboston.general.views.base import UPDATE_METHODS, CustomGenericViewSet, PatchOnlyUpdateModelMixin
 
-from ..consumers import ExchangeOrderConsumer
 from ..models import ExchangeOrder
-from ..models.exchange_order import ExchangeOrderType, FillStatus
-from ..order_matching.order_matching_engine import OrderMatchingEngine
-from ..serializers.exchange_order import ExchangeOrderReadSerializer, ExchangeOrderWriteSerializer
+from ..models.exchange_order import ORDER_PROCESSING_LOCK_ID, UNFILLED_STATUSES, ExchangeOrderSide
+from ..serializers.exchange_order import (
+    ExchangeOrderCreateSerializer, ExchangeOrderReadSerializer, ExchangeOrderUpdateSerializer
+)
 
 
-class ExchangeOrderViewSet(viewsets.ModelViewSet):
+# We do not to support order deletion, because we already have a cancellation mechanism
+class ExchangeOrderViewSet(
+    # PUT support is dropped due to complications related to updating order amount (related to wallet balances)
+    # and also to avoid mess up with primary keys
+    CreateModelMixin,
+    PatchOnlyUpdateModelMixin,
+    RetrieveModelMixin,
+    ListModelMixin,
+    CustomGenericViewSet
+):
+    # We are using declarative style to define serializer classes, queryset, etc., to follow DRF conventions
+    serializer_class = ExchangeOrderReadSerializer
+    serializer_classes = {'create': ExchangeOrderCreateSerializer, 'partial_update': ExchangeOrderUpdateSerializer}
+    assert 'update' not in serializer_classes, 'Avoid PUT support, use PATCH only'
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = ExchangeOrder.objects.all()
+    limit_to_user_id_field = 'owner_id'
+    queryset = ExchangeOrder.objects.order_by('-created_date')
+
+    # TODO(dmu) CRITICAL: Restrict any changes to order other than status, because corresponding updates to wallet
+    #                     balances is not supported yet
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        if self.request.method in UPDATE_METHODS:
+            queryset = queryset.with_advisory_xact_lock(ORDER_PROCESSING_LOCK_ID)
+
+        return queryset
 
     @action(detail=False, methods=['get'], url_path='book')
     def book(self, request):
+        # TODO(dmu) HIGH: Move to dedicated endpoint, so regular DRF filtering can be used
         primary_currency_id = request.query_params.get('primary_currency')
         secondary_currency_id = request.query_params.get('secondary_currency')
 
         if not primary_currency_id or not secondary_currency_id:
+            # TODO(dmu) MEDIUM: Mimic DRF format error response
             return Response({'error': 'Both primary_currency and secondary_currency parameters are required'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # Get top 50 buy orders (highest price first)
+        filter_kwargs = {
+            'primary_currency_id': primary_currency_id,
+            'secondary_currency_id': secondary_currency_id,
+            'status__in': UNFILLED_STATUSES,
+        }
+
         buy_orders = ExchangeOrder.objects.filter(
-            primary_currency_id=primary_currency_id,
-            secondary_currency_id=secondary_currency_id,
-            order_type=ExchangeOrderType.BUY,
-            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
-        ).order_by('-price')[:50]
-
-        # Get top 50 sell orders (lowest price first)
+            side=ExchangeOrderSide.BUY.value, **filter_kwargs
+        ).order_by('-price')[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
         sell_orders = ExchangeOrder.objects.filter(
-            primary_currency_id=primary_currency_id,
-            secondary_currency_id=secondary_currency_id,
-            order_type=ExchangeOrderType.SELL,
-            fill_status__in=[FillStatus.OPEN, FillStatus.PARTIALLY_FILLED]
-        ).order_by('price')[:50]
+            side=ExchangeOrderSide.SELL.value, **filter_kwargs
+        ).order_by('price')[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
+        return Response({
+            'sell_orders': ExchangeOrderReadSerializer(sell_orders, many=True).data,
+            'buy_orders': ExchangeOrderReadSerializer(buy_orders, many=True).data,
+        })
 
-        buy_orders_data = ExchangeOrderReadSerializer(buy_orders, many=True).data
-        sell_orders_data = ExchangeOrderReadSerializer(sell_orders, many=True).data
+    def create(self, *args, **kwargs):
+        assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
+        return super().create(*args, **kwargs)
 
-        return Response({'buy_orders': buy_orders_data, 'sell_orders': sell_orders_data})
-
-    @transaction.atomic
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        order = serializer.save()
-        self.update_wallet_balance(order, request)
-        order_data = ExchangeOrderReadSerializer(order).data
-        ExchangeOrderConsumer.stream_exchange_order(
-            message_type=MessageType.CREATE_EXCHANGE_ORDER,
-            order_data=order_data,
-            primary_currency_id=order.primary_currency_id,
-            secondary_currency_id=order.secondary_currency_id
-        )
-        read_serializer = ExchangeOrderReadSerializer(order)
-
-        order_matching_engine = OrderMatchingEngine()
-        order_matching_engine.process_new_order(order, request)
-
-        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
-
-    def get_queryset(self):
-        return ExchangeOrder.objects.filter(owner=self.request.user).order_by('-created_date')
-
-    def get_serializer_class(self):
-        if self.action in ['create', 'partial_update', 'update']:
-            return ExchangeOrderWriteSerializer
-
-        return ExchangeOrderReadSerializer
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        old_fill_status = instance.fill_status
-        order = serializer.save()
-        order_data = ExchangeOrderReadSerializer(order).data
-        ExchangeOrderConsumer.stream_exchange_order(
-            message_type=MessageType.UPDATE_EXCHANGE_ORDER,
-            order_data=order_data,
-            primary_currency_id=order.primary_currency_id,
-            secondary_currency_id=order.secondary_currency_id
-        )
-        read_serializer = ExchangeOrderReadSerializer(order)
-
-        if old_fill_status in [
-            FillStatus.OPEN, FillStatus.PARTIALLY_FILLED
-        ] and instance.fill_status == FillStatus.CANCELLED:
-            unfilled_quantity = instance.quantity - instance.filled_amount
-
-            if instance.order_type == ExchangeOrderType.BUY:
-                refund_amount = unfilled_quantity * instance.price
-                refund_currency = instance.secondary_currency
-            else:
-                refund_amount = unfilled_quantity
-                refund_currency = instance.primary_currency
-
-            wallet = Wallet.objects.get(owner=instance.owner, currency=refund_currency)
-            wallet.balance += refund_amount
-            wallet.save()
-            wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
-            WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
-
-        return Response(read_serializer.data)
-
-    @staticmethod
-    def update_wallet_balance(order, request):
-        if order.order_type == ExchangeOrderType.BUY:
-            wallet = Wallet.objects.filter(owner=order.owner, currency=order.secondary_currency).first()
-            wallet.balance -= order.quantity * order.price
-        else:
-            wallet = Wallet.objects.filter(owner=order.owner, currency=order.primary_currency).first()
-            wallet.balance -= order.quantity
-
-        wallet.save()
-        wallet_data = WalletReadSerializer(wallet, context={'request': request}).data
-        WalletConsumer.stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=wallet_data)
+    def update(self, *args, **kwargs):
+        assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
+        return super().update(*args, **kwargs)

@@ -15,10 +15,13 @@ docker-compose-down:
 run-production:  # purposefully do not depend on `build` target
 	cd; docker compose up -d --no-build --force-recreate
 
-.PHONY: run-development
-run-development: build
+.PHONY: run-development-no-build
+run-development-no-build:
 	# docker-compose.yml is inherited and overridden by docker-compose.dev.yml
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --force-recreate
+
+.PHONY: run-development
+run-development: build run-development-no-build
 
 .PHONY: deploy
 deploy: build docker-compose-down update-docker-compose-yaml run-production;
@@ -62,6 +65,10 @@ run-daphne:
 	poetry run python -m thenewboston.manage collectstatic --no-input
 	poetry run daphne thenewboston.project.asgi:application -p 8000 -b 127.0.0.1
 
+.PHONY: run-order-processing-engine
+run-order-processing-engine:
+	poetry run python -m thenewboston.manage order_processing_engine
+
 .PHONY: shell
 shell:
 	poetry run python -m thenewboston.manage shell
@@ -84,10 +91,17 @@ test-detailed:
 
 .PHONY: test-cov
 test-cov:
-	poetry run pytest -vv -rs --show-capture=no --cov=thenewboston --cov-report=html:./tmp/coverage
+	poetry run pytest -vv -rs --show-capture=no --cov=thenewboston --cov-report=html:./tmp/coverage/html --cov-report=xml:./tmp/coverage/coverage.xml
 
 .PHONY: lint-and-test
 lint-and-test: lint test ;
 
 .PHONY: update
 update: install migrate install-pre-commit ;
+
+.PHONY: diff-cover
+diff-cover:
+	poetry run diff-cover --format html:./tmp/coverage/diff-cover.html --compare-branch origin/master ./tmp/coverage/coverage.xml
+
+.PHONY: test-and-diff-cover
+test-and-diff-cover: test-cov diff-cover ;

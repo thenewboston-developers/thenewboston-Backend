@@ -20,6 +20,7 @@ LOGGING = {
             'propagate': True,
         } for logger_name in (
             # Too verbose loggers
+            'asyncio',
             'django',
             'django.request',
             'django.db.backends',

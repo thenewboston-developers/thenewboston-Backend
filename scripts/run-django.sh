@@ -9,7 +9,7 @@ echo 'Collecting static files...'
 $RUN_MANAGE_PY collectstatic --no-input
 
 echo 'Running migrations...'
-# TODO(dmu) LOW: Consider moving `migrate` to deployment step
+# TODO(dmu) LOW: Consider moving `migrate` to deployment step (as part Makefile target)
 $RUN_MANAGE_PY migrate --no-input
 
 exec poetry run daphne thenewboston.project.asgi:application -p 8000 -b 0.0.0.0

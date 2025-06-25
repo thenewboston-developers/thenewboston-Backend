@@ -3,13 +3,13 @@ x-service: &service
     restart: unless-stopped
     depends_on:
       redis:
-        # TODO(dmu) LOW: Add redis health check and change to `condition: service_healthy`
-        condition: service_started
+        condition: service_healthy
     env_file:
       - path: '/etc/thenewboston/.env'
         required: false
     environment:
       THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+      THENEWBOSTON_SETTING_ORDER_PROCESSING_REDIS_URL: 'redis://redis:6379'
 
 services:
 
@@ -21,12 +21,32 @@ services:
       - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/var/lib/redis
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     <<: *service
     command: ./run-django.sh
     ports:
       - 127.0.0.1:8000:8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  order-processing-engine:
+    <<: *service
+    command: ./run-order-processing-engine.sh
+    depends_on:
+      # TODO(dmu) LOW: We need this dependency because `app` service runs migrations. Fix the related TODO by moving
+      #                running migrations to deployment stage and remove the dependency.
+      app:
+        condition: service_healthy
 
 volumes:
   redis-data:

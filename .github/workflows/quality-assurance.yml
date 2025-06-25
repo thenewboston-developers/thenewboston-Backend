@@ -1,9 +1,12 @@
 name: Quality Assurance
 
-on: [pull_request]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   quality-assurance:
+    if: ${{ !github.event.pull_request.draft }}
     name: Quality Assurance
 
     # TODO(dmu) LOW: Consider using Debian Buster (the same as docker image is based on) if it is easy to do
@@ -51,3 +54,4 @@ jobs:
         env:
           THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
           THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
+          THENEWBOSTON_SETTING_ORDER_PROCESSING_REDIS_URL: 'redis://redis:6379'
