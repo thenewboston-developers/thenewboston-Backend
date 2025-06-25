@@ -5,9 +5,7 @@ ALLOWED_HOSTS: list[str] = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS: list[str] = []
 
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
+INTERNAL_IPS = ['127.0.0.1']
 
 APPEND_SLASH = False
 
@@ -37,6 +35,7 @@ INSTALLED_APPS = [
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
     'thenewboston.wallets.apps.WalletsConfig',
+    'thenewboston.web',
 ]
 
 # MIDDLEWARE is list because we need to insert a middleware in `post.py`

@@ -11,6 +11,7 @@ import thenewboston.notifications.urls
 import thenewboston.social.urls
 import thenewboston.users.urls
 import thenewboston.wallets.urls
+import thenewboston.web.urls
 
 API_PREFIX = 'api/'
 
@@ -24,6 +25,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.social.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
+    path('', include(thenewboston.web.urls)),
 ]
 
 if settings.DEBUG:
