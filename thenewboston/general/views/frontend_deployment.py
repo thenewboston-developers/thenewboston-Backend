@@ -1,5 +1,4 @@
-from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, DjangoModelPermissions
 from rest_framework.response import Response
@@ -30,16 +29,4 @@ class FrontendDeploymentViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(deployment)
             return Response(serializer.data)
 
-        return Response({'created_date': timezone.now().isoformat()})
-
-    @action(detail=False, methods=['post'], permission_classes=[DjangoModelPermissions])
-    def trigger(self, request):
-        deployment = FrontendDeployment.objects.create(deployed_by=request.user)
-        serializer = self.get_serializer(deployment)
-        deployment_data = serializer.data
-
-        FrontendDeploymentConsumer.stream_frontend_deployment(
-            message_type=MessageType.UPDATE_FRONTEND_DEPLOYMENT, deployment_data=deployment_data
-        )
-
-        return Response(deployment_data, status=status.HTTP_201_CREATED)
+        return Response(None)
