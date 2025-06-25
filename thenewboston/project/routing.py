@@ -6,7 +6,7 @@ from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.wallets.consumers import WalletConsumer
 
 websocket_urlpatterns = [
-    re_path(r'^ws/deployment-updates$', FrontendDeploymentConsumer.as_asgi()),
+    re_path(r'^ws/frontend-deployments$', FrontendDeploymentConsumer.as_asgi()),
     re_path(r'^ws/exchange-orders$', ExchangeOrderConsumer.as_asgi()),
     re_path(r'^ws/notifications/(?P<user_id>\d+)$', NotificationConsumer.as_asgi()),
     re_path(r'^ws/trades$', TradeConsumer.as_asgi()),

@@ -1,11 +1,8 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 
 from .views.frontend_deployment import FrontendDeploymentViewSet
 
-router = DefaultRouter()
-router.register(r'deployments', FrontendDeploymentViewSet, basename='deployment')
+router = SimpleRouter(trailing_slash=False)
+router.register('frontend-deployments', FrontendDeploymentViewSet)
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls

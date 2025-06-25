@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, DjangoModelPermissions
 from rest_framework.response import Response
 
 from ..consumers.frontend_deployment import FrontendDeploymentConsumer
+from ..enums import MessageType
 from ..models import FrontendDeployment
 from ..serializers import FrontendDeploymentSerializer
 
@@ -16,8 +17,10 @@ class FrontendDeploymentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         deployment = serializer.save(deployed_by=self.request.user)
-        # Broadcast to all connected WebSocket clients
-        FrontendDeploymentConsumer.broadcast_deployment_update(deployed_at=deployment.deployed_at)
+        deployment_data = FrontendDeploymentSerializer(deployment).data
+        FrontendDeploymentConsumer.stream_frontend_deployment(
+            message_type=MessageType.UPDATE_FRONTEND_DEPLOYMENT, deployment_data=deployment_data
+        )
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def status(self, request):
@@ -27,15 +30,16 @@ class FrontendDeploymentViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(deployment)
             return Response(serializer.data)
 
-        # Return a default response if no deployments exist
-        return Response({'deployed_at': timezone.now().isoformat()})
+        return Response({'created_date': timezone.now().isoformat()})
 
     @action(detail=False, methods=['post'], permission_classes=[DjangoModelPermissions])
     def trigger(self, request):
         deployment = FrontendDeployment.objects.create(deployed_by=request.user)
         serializer = self.get_serializer(deployment)
+        deployment_data = serializer.data
 
-        # Broadcast to all connected WebSocket clients
-        FrontendDeploymentConsumer.broadcast_deployment_update(deployed_at=deployment.deployed_at)
+        FrontendDeploymentConsumer.stream_frontend_deployment(
+            message_type=MessageType.UPDATE_FRONTEND_DEPLOYMENT, deployment_data=deployment_data
+        )
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(deployment_data, status=status.HTTP_201_CREATED)

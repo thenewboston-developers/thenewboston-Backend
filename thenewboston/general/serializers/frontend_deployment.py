@@ -9,5 +9,5 @@ class FrontendDeploymentSerializer(BaseModelSerializer):
 
     class Meta:
         model = FrontendDeployment
-        fields = ['id', 'deployed_at', 'deployed_by', 'deployed_by_username']
-        read_only_fields = ['id', 'deployed_at', 'deployed_by', 'deployed_by_username']
+        fields = ('id', 'created_date', 'deployed_by', 'deployed_by_username')
+        read_only_fields = ('id', 'created_date', 'deployed_by', 'deployed_by_username')
