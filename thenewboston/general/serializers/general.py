@@ -2,7 +2,7 @@ from django_restql.serializers import NestedModelSerializer
 from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import CurrentUserDefault, SkipField
 
-from .fields import FixedField
+from ..fields import FixedField
 
 
 class ValidateUnknownFieldsMixin:
