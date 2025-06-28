@@ -16,7 +16,18 @@ def test_login(api_client, bucky):
 
     assert response.data['user'] == {
         'avatar': None,
+        'discord_username': None,
+        'facebook_username': None,
+        'github_username': None,
         'id': bucky.id,
-        'username': bucky.username,
+        'instagram_username': None,
         'is_staff': False,
+        'linkedin_username': None,
+        'pinterest_username': None,
+        'reddit_username': None,
+        'tiktok_username': None,
+        'twitch_username': None,
+        'twitter_username': None,
+        'username': bucky.username,
+        'youtube_username': None,
     }
