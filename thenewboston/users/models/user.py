@@ -1,12 +1,13 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from thenewboston.general.models import SocialMediaMixin
 from thenewboston.wallets.models import Wallet
 
 from ..managers.user import UserManager
 
 
-class User(AbstractUser):
+class User(AbstractUser, SocialMediaMixin):
     avatar = models.ImageField(upload_to='images/', blank=True)
 
     objects = UserManager()

@@ -16,26 +16,38 @@ class UserReadSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar', 'id', 'username', 'is_staff')
+        fields = (
+            'avatar', 'discord_username', 'facebook_username', 'github_username', 'id', 'instagram_username',
+            'is_staff', 'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username',
+            'twitch_username', 'username', 'x_username', 'youtube_username'
+        )
 
 
 class UserUpdateSerializer(BaseModelSerializer):
 
     class Meta:
         model = User
-        fields = ('avatar',)
+        fields = (
+            'avatar', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
+            'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
+            'x_username', 'youtube_username'
+        )
 
     def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar')
+        request = self.context.get('request')
 
-        if avatar:
-            file = process_image(avatar)
-            instance.avatar = file
-        else:
-            instance.avatar = ''
+        if request and 'avatar' in request.data:
+            avatar_value = request.data.get('avatar')
 
-        instance.save()
-        return instance
+            if avatar_value == '':
+                # User explicitly sent empty string to clear avatar
+                instance.avatar.delete(save=False)
+                instance.avatar = ''
+                validated_data.pop('avatar', None)
+            elif 'avatar' in validated_data and validated_data['avatar']:
+                validated_data['avatar'] = process_image(validated_data['avatar'])
+
+        return super().update(instance, validated_data)
 
 
 class UserWriteSerializer(BaseModelSerializer):

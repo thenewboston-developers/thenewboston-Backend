@@ -1,9 +1,9 @@
 from django.db import models
 
-from thenewboston.general.models import CreatedModified
+from thenewboston.general.models import CreatedModified, SocialMediaMixin
 
 
-class Currency(CreatedModified):
+class Currency(CreatedModified, SocialMediaMixin):
     description = models.CharField(max_length=500, null=True, blank=True)
     domain = models.CharField(max_length=255, unique=True, null=True, blank=True)
     logo = models.ImageField(upload_to='images/')

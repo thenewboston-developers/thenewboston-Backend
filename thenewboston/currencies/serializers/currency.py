@@ -49,7 +49,11 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         return currency
 
     def update(self, instance, validated_data):
-        allowed_fields = {'description', 'logo'}
+        allowed_fields = {
+            'description', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
+            'linkedin_username', 'logo', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
+            'x_username', 'youtube_username'
+        }
         validated_data = {k: v for k, v in validated_data.items() if k in allowed_fields}
 
         if logo := validated_data.get('logo'):
