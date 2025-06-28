@@ -19,7 +19,7 @@ class UserReadSerializer(BaseModelSerializer):
         fields = (
             'avatar', 'discord_username', 'facebook_username', 'github_username', 'id', 'instagram_username',
             'is_staff', 'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username',
-            'twitch_username', 'twitter_username', 'username', 'youtube_username'
+            'twitch_username', 'username', 'x_username', 'youtube_username'
         )
 
 
@@ -30,7 +30,7 @@ class UserUpdateSerializer(BaseModelSerializer):
         fields = (
             'avatar', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
             'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
-            'twitter_username', 'youtube_username'
+            'x_username', 'youtube_username'
         )
 
     def update(self, instance, validated_data):

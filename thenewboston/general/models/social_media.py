@@ -11,7 +11,7 @@ class SocialMediaMixin(models.Model):
     reddit_username = models.CharField(max_length=255, null=True, blank=True)
     tiktok_username = models.CharField(max_length=255, null=True, blank=True)
     twitch_username = models.CharField(max_length=255, null=True, blank=True)
-    twitter_username = models.CharField(max_length=255, null=True, blank=True)
+    x_username = models.CharField(max_length=255, null=True, blank=True)
     youtube_username = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:

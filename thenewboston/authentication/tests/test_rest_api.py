@@ -27,7 +27,7 @@ def test_login(api_client, bucky):
         'reddit_username': None,
         'tiktok_username': None,
         'twitch_username': None,
-        'twitter_username': None,
         'username': bucky.username,
+        'x_username': None,
         'youtube_username': None,
     }

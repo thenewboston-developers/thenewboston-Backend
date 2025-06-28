@@ -52,7 +52,7 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
         allowed_fields = {
             'description', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
             'linkedin_username', 'logo', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
-            'twitter_username', 'youtube_username'
+            'x_username', 'youtube_username'
         }
         validated_data = {k: v for k, v in validated_data.items() if k in allowed_fields}
 

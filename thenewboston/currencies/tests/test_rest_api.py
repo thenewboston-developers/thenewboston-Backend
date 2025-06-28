@@ -27,7 +27,7 @@ def test_read_currencies_as_bucky(api_client_bucky):
         'ticker': currency.ticker,
         'tiktok_username': currency.tiktok_username,
         'twitch_username': currency.twitch_username,
-        'twitter_username': currency.twitter_username,
+        'x_username': currency.x_username,
         'youtube_username': currency.youtube_username,
         'owner': {
             'avatar': None,
@@ -42,8 +42,8 @@ def test_read_currencies_as_bucky(api_client_bucky):
             'reddit_username': currency.owner.reddit_username,
             'tiktok_username': currency.owner.tiktok_username,
             'twitch_username': currency.owner.twitch_username,
-            'twitter_username': currency.owner.twitter_username,
             'username': currency.owner.username,
+            'x_username': currency.owner.x_username,
             'youtube_username': currency.owner.youtube_username,
         },
     } for currency in currencies]
