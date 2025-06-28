@@ -34,20 +34,19 @@ class UserUpdateSerializer(BaseModelSerializer):
         )
 
     def update(self, instance, validated_data):
-        # Get the raw request data to check for avatar field
         request = self.context.get('request')
+
         if request and 'avatar' in request.data:
             avatar_value = request.data.get('avatar')
+
             if avatar_value == '':
                 # User explicitly sent empty string to clear avatar
                 instance.avatar.delete(save=False)
                 instance.avatar = ''
                 validated_data.pop('avatar', None)
             elif 'avatar' in validated_data and validated_data['avatar']:
-                # Process new avatar
                 validated_data['avatar'] = process_image(validated_data['avatar'])
 
-        # Update all fields using the parent's update method
         return super().update(instance, validated_data)
 
 
