@@ -9,6 +9,7 @@ from ..managers.user import UserManager
 
 class User(AbstractUser, SocialMediaMixin):
     avatar = models.ImageField(upload_to='images/', blank=True)
+    bio = models.CharField(max_length=160, blank=True)
 
     objects = UserManager()
 

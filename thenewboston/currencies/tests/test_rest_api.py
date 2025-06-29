@@ -31,6 +31,7 @@ def test_read_currencies_as_bucky(api_client_bucky):
         'youtube_username': currency.youtube_username,
         'owner': {
             'avatar': None,
+            'bio': '',
             'discord_username': currency.owner.discord_username,
             'facebook_username': currency.owner.facebook_username,
             'github_username': currency.owner.github_username,
