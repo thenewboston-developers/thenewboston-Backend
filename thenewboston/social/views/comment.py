@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
+from thenewboston.general.utils.text import truncate_text
 from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models.notification import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
@@ -49,6 +50,10 @@ class CommentViewSet(viewsets.ModelViewSet):
                 }).data,
                 'comment': comment.content,
                 'notification_type': NotificationType.POST_COMMENT.value,
+                'post_preview': truncate_text(post.content),
+                'comment_preview': truncate_text(comment.content),
+                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+                'post_created': post.created_date.isoformat(),
             }
         )
 

@@ -7,6 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.pagination import CustomPageNumberPagination
+from thenewboston.general.utils.text import truncate_text
 from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
@@ -55,6 +56,9 @@ class PostActionViewSet(GenericViewSet):
                     'request': request
                 }).data,
                 'notification_type': NotificationType.POST_LIKE.value,
+                'post_preview': truncate_text(post.content),
+                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+                'post_created': post.created_date.isoformat(),
             }
         )
 
