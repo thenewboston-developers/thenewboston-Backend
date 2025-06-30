@@ -4,6 +4,7 @@ from rest_framework import serializers
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.general.utils.image import process_image
+from thenewboston.general.utils.text import truncate_text
 from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
@@ -115,6 +116,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'price_amount': post.price_amount,
                 'price_currency_id': post.price_currency.id,
                 'price_currency_ticker': post.price_currency.ticker,
+                'post_preview': truncate_text(post.content),
+                'post_image_thumbnail': post.image.url if post.image else None,
+                'post_created': post.created_date.isoformat(),
             }
         )
 
