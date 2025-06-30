@@ -52,7 +52,7 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'notification_type': NotificationType.POST_COMMENT.value,
                 'post_preview': truncate_text(post.content),
                 'comment_preview': truncate_text(comment.content),
-                'post_image_thumbnail': post.image.url if post.image else None,
+                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
             }
         )

@@ -117,7 +117,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'price_currency_id': post.price_currency.id,
                 'price_currency_ticker': post.price_currency.ticker,
                 'post_preview': truncate_text(post.content),
-                'post_image_thumbnail': post.image.url if post.image else None,
+                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
             }
         )
