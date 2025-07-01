@@ -33,14 +33,6 @@ class UserUpdateSerializer(BaseModelSerializer):
             'twitch_username', 'x_username', 'youtube_username'
         )
 
-    def validate_banner(self, value):
-        if value:
-            is_valid, error_message = validate_image_max_dimensions(value, max_width=1920, max_height=1080)
-            if not is_valid:
-                raise serializers.ValidationError(error_message)
-            value.seek(0)  # Reset file pointer after validation
-        return value
-
     def update(self, instance, validated_data):
         request = self.context.get('request')
 
@@ -67,6 +59,18 @@ class UserUpdateSerializer(BaseModelSerializer):
                 validated_data['banner'] = process_image(validated_data['banner'])
 
         return super().update(instance, validated_data)
+
+    @staticmethod
+    def validate_banner(value):
+        if value:
+            is_valid, error_message = validate_image_max_dimensions(value, max_width=1920, max_height=1080)
+            if not is_valid:
+                raise serializers.ValidationError(error_message)
+
+            # Reset file position to the beginning after validation since Image.open() moves it to the end
+            value.seek(0)
+
+        return value
 
 
 class UserWriteSerializer(BaseModelSerializer):
