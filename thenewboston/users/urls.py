@@ -9,7 +9,8 @@ router = SimpleRouter(trailing_slash=False)
 router.register('users', UserViewSet)
 
 urlpatterns = [
+    # Keep users/search before router.urls to prevent it from being matched as users/<pk>
+    path('users/search', user_search, name='user-search'),
     path('', include(router.urls)),
     path('user/<int:user_id>/stats', StatsAPIView.as_view(), name='user-stats'),
-    path('users/search', user_search, name='user-search'),
 ]
