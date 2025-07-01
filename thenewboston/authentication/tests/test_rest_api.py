@@ -16,6 +16,7 @@ def test_login(api_client, bucky):
 
     assert response.data['user'] == {
         'avatar': None,
+        'banner': None,
         'bio': '',
         'discord_username': None,
         'facebook_username': None,

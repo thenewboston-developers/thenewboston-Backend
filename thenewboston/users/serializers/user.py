@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
 from thenewboston.general.serializers import BaseModelSerializer
-from thenewboston.general.utils.image import process_image
+from thenewboston.general.utils.image import process_image, validate_image_max_dimensions
 from thenewboston.invitations.models import Invitation, InvitationLimit
 
 from ..validators import username_validator
@@ -17,9 +17,9 @@ class UserReadSerializer(BaseModelSerializer):
     class Meta:
         model = User
         fields = (
-            'avatar', 'bio', 'discord_username', 'facebook_username', 'github_username', 'id', 'instagram_username',
-            'is_staff', 'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username',
-            'twitch_username', 'username', 'x_username', 'youtube_username'
+            'avatar', 'banner', 'bio', 'discord_username', 'facebook_username', 'github_username', 'id',
+            'instagram_username', 'is_staff', 'linkedin_username', 'pinterest_username', 'reddit_username',
+            'tiktok_username', 'twitch_username', 'username', 'x_username', 'youtube_username'
         )
 
 
@@ -28,9 +28,9 @@ class UserUpdateSerializer(BaseModelSerializer):
     class Meta:
         model = User
         fields = (
-            'avatar', 'bio', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
-            'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
-            'x_username', 'youtube_username'
+            'avatar', 'banner', 'bio', 'discord_username', 'facebook_username', 'github_username',
+            'instagram_username', 'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username',
+            'twitch_username', 'x_username', 'youtube_username'
         )
 
     def update(self, instance, validated_data):
@@ -47,7 +47,30 @@ class UserUpdateSerializer(BaseModelSerializer):
             elif 'avatar' in validated_data and validated_data['avatar']:
                 validated_data['avatar'] = process_image(validated_data['avatar'])
 
+        if request and 'banner' in request.data:
+            banner_value = request.data.get('banner')
+
+            if banner_value == '':
+                # User explicitly sent empty string to clear banner
+                instance.banner.delete(save=False)
+                instance.banner = ''
+                validated_data.pop('banner', None)
+            elif 'banner' in validated_data and validated_data['banner']:
+                validated_data['banner'] = process_image(validated_data['banner'])
+
         return super().update(instance, validated_data)
+
+    @staticmethod
+    def validate_banner(value):
+        if value:
+            is_valid, error_message = validate_image_max_dimensions(value, max_width=1920, max_height=1080)
+            if not is_valid:
+                raise serializers.ValidationError(error_message)
+
+            # Reset file position to the beginning after validation since Image.open() moves it to the end
+            value.seek(0)
+
+        return value
 
 
 class UserWriteSerializer(BaseModelSerializer):
