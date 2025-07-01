@@ -14,5 +14,5 @@ def user_search(request):
         return Response({'error': 'Query parameter "q" is required'}, status=status.HTTP_400_BAD_REQUEST)
 
     users = User.objects.filter(username__istartswith=query).order_by('username')[:10]
-    serializer = UserReadSerializer(users, many=True)
+    serializer = UserReadSerializer(users, many=True, context={'request': request})
     return Response(serializer.data)
