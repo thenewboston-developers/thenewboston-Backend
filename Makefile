@@ -62,6 +62,10 @@ run-daphne:
 	poetry run python -m thenewboston.manage collectstatic --no-input
 	poetry run daphne thenewboston.project.asgi:application -p 8000 -b 127.0.0.1
 
+.PHONY: run-order-processing-engine
+run-order-processing-engine:
+	poetry run python -m thenewboston.manage order_processing_engine
+
 .PHONY: shell
 shell:
 	poetry run python -m thenewboston.manage shell

@@ -28,6 +28,8 @@ whitenoise = "^6.9.0"
 channels-redis = "^4.2.1"
 sentry-sdk = {extras = ["django"], version = "^2.29.1"}
 django-restql = "^0.16.2"
+django-model-utils = "^5.0.0"
+redis = "^6.2.0"
 
 [tool.poetry.group.dev.dependencies]
 colorlog = "^6.9.0"
