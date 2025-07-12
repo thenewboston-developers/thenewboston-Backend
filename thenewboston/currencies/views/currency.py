@@ -12,6 +12,8 @@ from ..serializers.currency import CurrencyReadSerializer, CurrencyWriteSerializ
 
 
 class CurrencyViewSet(viewsets.ModelViewSet):
+    ordering = ['-created_date']
+    ordering_fields = ['ticker', 'created_date', 'modified_date']
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Currency.objects.all()
