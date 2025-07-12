@@ -4,3 +4,11 @@ class ThenewbostonError(Exception):
 
 class ProgrammingError(ThenewbostonError):
     pass
+
+
+class ThenewbostonRuntimeError(ThenewbostonError):
+    pass
+
+
+class ThenewbostonValueError(ThenewbostonError, ValueError):
+    pass
