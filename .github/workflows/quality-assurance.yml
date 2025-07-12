@@ -1,6 +1,13 @@
 name: Quality Assurance
 
-on: [pull_request]
+on:
+  pull_request:
+    types:
+      # Do not include draft pull requests
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 jobs:
   quality-assurance:
