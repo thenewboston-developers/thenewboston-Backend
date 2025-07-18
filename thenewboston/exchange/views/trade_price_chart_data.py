@@ -98,11 +98,11 @@ class TradePriceChartDataView(generics.ListAPIView):
             ohlc_data = {
                 'start': interval_start,
                 'end': interval_end,
-                'open': interval_trades[0].trade_price,
-                'high': max(trade.trade_price for trade in interval_trades),
-                'low': min(trade.trade_price for trade in interval_trades),
-                'close': interval_trades[-1].trade_price,
-                'volume': sum(trade.fill_quantity for trade in interval_trades)
+                'open': interval_trades[0].price,
+                'high': max(trade.price for trade in interval_trades),
+                'low': min(trade.price for trade in interval_trades),
+                'close': interval_trades[-1].price,
+                'volume': sum(trade.filled_quantity for trade in interval_trades)
             }
             candlesticks.append(ohlc_data)
             last_close_price = ohlc_data['close']

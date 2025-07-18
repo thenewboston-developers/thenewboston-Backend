@@ -1,16 +1,16 @@
 from django_restql.serializers import NestedModelSerializer
 from rest_framework.exceptions import ValidationError
-from rest_framework.serializers import CurrentUserDefault, SkipField
+from rest_framework.serializers import CurrentUserDefault, HiddenField, SkipField
 
 from ..fields import FixedField
 
 
-class ValidateUnknownFieldsMixin:
+class ValidateFieldsMixin:
 
     def validate(self, attrs):
         """
         Make front-end developers life easier when they make a typo in an
-        optional attribute name.
+        optional attribute name. And also allows better unittests
         """
         attrs = super().validate(attrs)
 
@@ -19,51 +19,24 @@ class ValidateUnknownFieldsMixin:
         if not hasattr(self, 'initial_data'):
             return attrs
 
-        if unknown_fields := set(self.initial_data).difference(self.fields):
+        initial_fields_set = set(self.initial_data)
+        if unknown_fields := initial_fields_set - set(self.fields):
             raise ValidationError(f'Unknown field(s): {", ".join(sorted(unknown_fields))}')
 
-        return attrs
-
-
-class ValidateReadonlyFieldsMixin:
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-
-        # TODO(dmu) HIGH: Nested serializers do not have `initial_data` (why?).
-        #                 Produce a fix instead of current workaround
-        if not hasattr(self, 'initial_data'):
-            return attrs
-
-        readonly_fields = {field_name for field_name, field in self.fields.items() if field.read_only
-                           } | set(getattr(self.Meta, 'read_only_fields', ()))
-
-        if readonly_fields := set(self.initial_data) & readonly_fields:
+        all_readonly_fields = {field_name for field_name, field in self.fields.items() if field.read_only
+                               } | set(getattr(self.Meta, 'read_only_fields', ()))
+        if readonly_fields := initial_fields_set & all_readonly_fields:
             raise ValidationError(f'Readonly field(s): {", ".join(sorted(readonly_fields))}')
 
-        return attrs
-
-
-class ValidateFixedFieldsMixin:
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-
-        # TODO(dmu) HIGH: Nested serializers do not have `initial_data` (why?).
-        #                 Produce a fix instead of current workaround
-        if not hasattr(self, 'initial_data'):
-            return attrs
-
-        fixed_fields = {field_name for field_name, field in self.fields.items() if isinstance(field, FixedField)}
-
-        if fixed_fields := set(self.initial_data) & fixed_fields:
+        all_fixed_fields = {field_name for field_name, field in self.fields.items() if isinstance(field, FixedField)}
+        if fixed_fields := initial_fields_set & all_fixed_fields:
             raise ValidationError(f'Fixed field(s): {", ".join(sorted(fixed_fields))}')
 
+        all_hidden_fields = {field_name for field_name, field in self.fields.items() if isinstance(field, HiddenField)}
+        if hidden_fields := initial_fields_set & all_hidden_fields:
+            raise ValidationError(f'Hidden field(s): {", ".join(sorted(hidden_fields))}')
+
         return attrs
-
-
-class ValidateFieldsMixin(ValidateUnknownFieldsMixin, ValidateReadonlyFieldsMixin, ValidateFixedFieldsMixin):
-    pass
 
 
 class CreateOnlyCurrentUserDefault(CurrentUserDefault):

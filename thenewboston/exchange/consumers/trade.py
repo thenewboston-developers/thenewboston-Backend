@@ -58,10 +58,7 @@ class TradeConsumer(JsonWebsocketConsumer):
         and ticker specifies which currency group to broadcast to.
         """
         channel_layer = get_channel_layer()
-        trade_event = {
-            'payload': trade_data,
-            'type': message_type.value,
-        }
+        trade_event = {'payload': trade_data, 'type': message_type.value}
         async_to_sync(channel_layer.group_send)(cls.get_group_name(ticker), trade_event)
 
     def subscribe_to_ticker(self, ticker):

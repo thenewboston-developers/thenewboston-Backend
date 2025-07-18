@@ -1,10 +1,8 @@
-from typing import Optional
-
 from rest_framework import permissions
 
 
 class IsFieldUserOrReadOnly(permissions.BasePermission):
-    user_field: Optional[str] = None
+    user_field: str | None = None
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:

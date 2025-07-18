@@ -21,6 +21,7 @@ include(
     'rest_framework.py',
     'channels.py',
     'aws.py',
+    'misc.py',
     'custom.py',
     'testing.py',
     optional(LOCAL_SETTINGS_PATH),

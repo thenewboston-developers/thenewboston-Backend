@@ -7,6 +7,8 @@ x-service-override: &service-override
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
 services:
 
@@ -31,6 +33,10 @@ services:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
 
   app:
+    restart: 'no'  # so the service is not auto-started after developer's laptop reboot
+    <<: *service-override
+
+  order-processing-engine:
     restart: 'no'  # so the service is not auto-started after developer's laptop reboot
     <<: *service-override
 

@@ -46,8 +46,5 @@ class NotificationConsumer(JsonWebsocketConsumer):
         """
         channel_layer = get_channel_layer()
         notification_owner_id = notification_data['owner']
-        notification_event = {
-            'payload': notification_data,
-            'type': message_type.value,
-        }
+        notification_event = {'payload': notification_data, 'type': message_type.value}
         async_to_sync(channel_layer.group_send)(cls.get_group_name(notification_owner_id), notification_event)
