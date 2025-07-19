@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
 from rest_framework import serializers
 
 from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
@@ -7,6 +8,7 @@ from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.general.utils.image import process_image, validate_image_max_dimensions
 from thenewboston.invitations.models import Invitation, InvitationLimit
 
+from ..models import UserAgreement
 from ..validators import username_validator
 
 User = get_user_model()
@@ -74,14 +76,16 @@ class UserUpdateSerializer(BaseModelSerializer):
 
 
 class UserWriteSerializer(BaseModelSerializer):
+    agree_to_terms = serializers.BooleanField(write_only=True)
     invitation_code = serializers.CharField(write_only=True)
     password = serializers.CharField(validators=[validate_password], write_only=True)
 
     class Meta:
         model = User
-        fields = ('invitation_code', 'password', 'username')
+        fields = ('agree_to_terms', 'invitation_code', 'password', 'username')
 
     def create(self, validated_data):
+        validated_data.pop('agree_to_terms')
         invitation_code = validated_data.pop('invitation_code')
         password = validated_data.pop('password')
         username = validated_data.get('username')
@@ -92,6 +96,9 @@ class UserWriteSerializer(BaseModelSerializer):
             raise serializers.ValidationError('Invalid or used invitation code')
 
         user = User.objects.create_user(username=username, password=password)
+        current_time = timezone.now()
+        UserAgreement.objects.create(user=user, terms_agreed_at=current_time, privacy_policy_agreed_at=current_time)
+
         invitation.recipient = user
         invitation.save()
         inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
@@ -104,6 +111,12 @@ class UserWriteSerializer(BaseModelSerializer):
         InvitationLimit.objects.create(owner=user, amount=recipient_limit)
 
         return user
+
+    @staticmethod
+    def validate_agree_to_terms(value):
+        if not value:
+            raise serializers.ValidationError('You must agree to the terms and conditions and privacy policy.')
+        return value
 
     @staticmethod
     def validate_username(value):
