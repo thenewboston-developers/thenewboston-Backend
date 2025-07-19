@@ -1,6 +1,9 @@
 from django.db import transaction
+from django.db.models import Sum
 from rest_framework import serializers
 
+from thenewboston.currencies.models import Currency
+from thenewboston.currencies.serializers.currency import CurrencyReadSerializer
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.general.utils.image import process_image
@@ -22,12 +25,13 @@ class PostReadSerializer(serializers.ModelSerializer):
     recipient = UserReadSerializer(read_only=True)
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    tip_amounts = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = (
             'comments', 'content', 'created_date', 'id', 'image', 'modified_date', 'owner', 'price_amount',
-            'price_currency', 'recipient', 'like_count', 'is_liked'
+            'price_currency', 'recipient', 'like_count', 'is_liked', 'tip_amounts'
         )
         read_only_fields = (
             'comments',
@@ -42,6 +46,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'recipient',
             'like_count',
             'is_liked',
+            'tip_amounts',
         )
 
     @staticmethod
@@ -53,6 +58,26 @@ class PostReadSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return PostLike.objects.filter(post=obj, user=request.user).exists()
         return False
+
+    def get_tip_amounts(self, obj):
+        tip_amounts = []
+        comments_with_tips = obj.comments.filter(price_amount__isnull=False, price_currency__isnull=False)
+        currency_sums = comments_with_tips.values('price_currency').annotate(total_amount=Sum('price_amount'))
+        currency_ids = [item['price_currency'] for item in currency_sums]
+
+        if currency_ids:
+            currencies = {c.id: c for c in Currency.objects.filter(id__in=currency_ids)}
+
+            for item in currency_sums:
+                currency = currencies.get(item['price_currency'])
+
+                if currency:
+                    tip_amounts.append({
+                        'currency': CurrencyReadSerializer(currency, context=self.context).data,
+                        'total_amount': item['total_amount']
+                    })
+
+        return tip_amounts
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
