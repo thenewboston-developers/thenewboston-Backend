@@ -1,5 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -50,3 +51,15 @@ class PostViewSet(viewsets.ModelViewSet):
         read_serializer = PostReadSerializer(post, context={'request': request})
 
         return Response(read_serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated], url_path='tip-amounts')
+    def tip_amounts(self, request, pk=None):
+        """
+        Retrieve tip amounts for a specific post.
+        Returns the aggregated tip amounts by currency with currency details.
+        """
+        post = self.get_object()
+        serializer = PostReadSerializer(post, context={'request': request})
+        tip_amounts = serializer.get_tip_amounts(post)
+
+        return Response({'tip_amounts': tip_amounts})
