@@ -61,16 +61,16 @@ class PostReadSerializer(serializers.ModelSerializer):
 
     def get_tip_amounts(self, obj):
         tip_amounts = []
-
         comments_with_tips = obj.comments.filter(price_amount__isnull=False, price_currency__isnull=False)
         currency_sums = comments_with_tips.values('price_currency').annotate(total_amount=Sum('price_amount'))
-
         currency_ids = [item['price_currency'] for item in currency_sums]
+
         if currency_ids:
             currencies = {c.id: c for c in Currency.objects.filter(id__in=currency_ids)}
 
             for item in currency_sums:
                 currency = currencies.get(item['price_currency'])
+
                 if currency:
                     tip_amounts.append({
                         'currency': CurrencyReadSerializer(currency, context=self.context).data,

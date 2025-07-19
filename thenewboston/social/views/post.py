@@ -42,6 +42,14 @@ class PostViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated], url_path='tip-amounts')
+    def tip_amounts(self, request, pk=None):
+        post = self.get_object()
+        serializer = PostReadSerializer(post, context={'request': request})
+        tip_amounts = serializer.get_tip_amounts(post)
+
+        return Response({'tip_amounts': tip_amounts})
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -51,15 +59,3 @@ class PostViewSet(viewsets.ModelViewSet):
         read_serializer = PostReadSerializer(post, context={'request': request})
 
         return Response(read_serializer.data)
-
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated], url_path='tip-amounts')
-    def tip_amounts(self, request, pk=None):
-        """
-        Retrieve tip amounts for a specific post.
-        Returns the aggregated tip amounts by currency with currency details.
-        """
-        post = self.get_object()
-        serializer = PostReadSerializer(post, context={'request': request})
-        tip_amounts = serializer.get_tip_amounts(post)
-
-        return Response({'tip_amounts': tip_amounts})
