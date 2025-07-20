@@ -9,7 +9,7 @@ class WalletFilter(django_filters.FilterSet):
 
     class Meta:
         model = Wallet
-        fields = ('user', 'has_balance', 'currency')
+        fields = ('user', 'has_balance')
 
     @staticmethod
     def filter_has_balance(queryset, name, value):
