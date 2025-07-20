@@ -22,10 +22,10 @@ from ..utils.wallet import get_default_wallet
 class WalletViewSet(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Wallet.objects.none()
     filter_backends = [DjangoFilterBackend]
     filterset_class = WalletFilter
+    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
+    queryset = Wallet.objects.none()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -116,11 +116,8 @@ class WalletViewSet(
         user_param = self.request.query_params.get('user')
 
         if user_param:
-            # Allow viewing other users' wallets (read-only)
-            # The IsObjectOwnerOrReadOnly permission will handle write protection
             return Wallet.objects.all()
 
-        # Default behavior - return wallets for authenticated user
         return Wallet.objects.filter(owner=user)
 
     def get_serializer_class(self):
