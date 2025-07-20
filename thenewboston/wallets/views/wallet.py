@@ -1,4 +1,5 @@
 from django.conf import settings
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +9,7 @@ from thenewboston.api.accounts import fetch_balance, wire_funds
 from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
+from ..filters.wallet import WalletFilter
 from ..models import Wallet, Wire
 from ..models.wire import WireType
 from ..serializers.block import BlockSerializer
@@ -20,6 +22,8 @@ from ..utils.wallet import get_default_wallet
 class WalletViewSet(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = WalletFilter
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Wallet.objects.none()
 
@@ -109,6 +113,11 @@ class WalletViewSet(
 
     def get_queryset(self):
         user = self.request.user
+        user_param = self.request.query_params.get('user')
+
+        if user_param:
+            return Wallet.objects.all()
+
         return Wallet.objects.filter(owner=user)
 
     def get_serializer_class(self):
