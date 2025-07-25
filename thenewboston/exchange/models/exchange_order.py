@@ -160,11 +160,9 @@ class ExchangeOrder(AdjustableTimestampsModel):
         unfilled_quantity = self.unfilled_quantity
         if (side := self.side) == ExchangeOrderSide.BUY.value:  # type: ignore
             return unfilled_quantity * self.price, 'secondary_currency'
-        else:
-            assert side == ExchangeOrderSide.SELL.value  # type: ignore # defensive programming
-            return unfilled_quantity, 'primary_currency'
 
-        raise NotImplementedError(f'Unsupported order side: {side}')  # defensive programming
+        assert side == ExchangeOrderSide.SELL.value  # type: ignore # defensive programming
+        return unfilled_quantity, 'primary_currency'
 
     def get_debit_wallet(self, currency):
         return Wallet.objects.filter(owner=self.owner, currency=currency).select_for_update().get_or_none()
