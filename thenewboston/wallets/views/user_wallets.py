@@ -42,6 +42,7 @@ class UserWalletListView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):  # noqa: A003
         user_id = self.kwargs.get('user_id')
+
         try:
             User.objects.get(id=user_id)
         except User.DoesNotExist:
