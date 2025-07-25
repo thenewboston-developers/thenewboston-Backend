@@ -18,14 +18,12 @@ class UserWalletListView(generics.ListAPIView):
     def get_queryset(self):
         user_id = self.kwargs.get('user_id')
 
-        # Subquery to get total users with balance > 0 for each currency
         total_users_subquery = (
             Wallet.objects.filter(currency=OuterRef('currency'),
                                   balance__gt=0).values('currency').annotate(total=Count('owner', distinct=True)
                                                                              ).values('total')
         )
 
-        # Subquery to get rank for user's balance in each currency
         rank_subquery = (
             Wallet.objects.filter(currency=OuterRef('currency'),
                                   balance__gt=OuterRef('balance')).values('currency').annotate(
@@ -33,12 +31,9 @@ class UserWalletListView(generics.ListAPIView):
                                   ).values('rank')  # noqa: E126
         )
 
-        # Get all wallets with balance > 0 for the specified user
         queryset = Wallet.objects.filter(owner_id=user_id, balance__gt=0).select_related(
             'currency', 'currency__owner'
         ).annotate(
-            # Add 1 to rank since we count users with greater balance
-            # Use Coalesce to handle case where user has highest balance (rank would be null)
             rank=Coalesce(Subquery(rank_subquery, output_field=models.IntegerField()), Value(0)) + 1,
             total_users=Coalesce(Subquery(total_users_subquery, output_field=models.IntegerField()), Value(1))
         ).order_by('-balance')
@@ -46,7 +41,6 @@ class UserWalletListView(generics.ListAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):  # noqa: A003
-        # Validate that the user exists
         user_id = self.kwargs.get('user_id')
         try:
             User.objects.get(id=user_id)
