@@ -1,6 +1,14 @@
 from django.db import models
+from django.db.models import Sum
 
 from thenewboston.general.models import CreatedModified, SocialMediaMixin
+
+from .mint import Mint
+
+
+def get_total_amount_minted(currency_id):
+    # So we do not have to select `Currency` just to get the total amount minted
+    return Mint.objects.filter(currency_id=currency_id).aggregate(total=Sum('amount'))['total'] or 0
 
 
 class Currency(CreatedModified, SocialMediaMixin):
@@ -15,3 +23,6 @@ class Currency(CreatedModified, SocialMediaMixin):
 
     def __str__(self):
         return self.ticker
+
+    def get_total_amount_minted(self):
+        return get_total_amount_minted(self.id)

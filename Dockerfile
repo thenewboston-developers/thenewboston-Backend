@@ -23,8 +23,6 @@ COPY ["README.md", "Makefile", "./"]
 COPY ["poetry.lock", "pyproject.toml", "./"]
 RUN poetry install --no-root
 
-COPY scripts/run-django.sh scripts/run-order-processing-engine.sh ./
-RUN chmod a+x ./run-django.sh
-RUN chmod a+x ./run-order-processing-engine.sh
+COPY scripts/*.sh ./
 
 COPY thenewboston thenewboston

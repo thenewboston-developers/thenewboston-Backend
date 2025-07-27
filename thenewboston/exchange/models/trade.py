@@ -3,11 +3,27 @@ import logging
 from django.db import models
 from model_utils import FieldTracker
 
+from thenewboston.exchange.tasks import update_trade_history_for_currency_pair_task
 from thenewboston.general.enums import MessageType
+from thenewboston.general.managers import CustomManager, CustomQuerySet
 from thenewboston.general.models.created_modified import AdjustableTimestampsModel
+from thenewboston.general.utils.celery import run_task_on_commit
 from thenewboston.general.utils.database import apply_on_commit
 
 logger = logging.getLogger(__name__)
+
+
+class TradeQuerySet(CustomQuerySet):
+
+    def filter_by_currency_pair(self, primary_currency_id, secondary_currency_id):
+        # TODO(dmu) LOW: We can optimize performance by storing the currency pair in the Trade model
+        return self.filter(
+            buy_order__primary_currency_id=primary_currency_id, buy_order__secondary_currency_id=secondary_currency_id
+        )
+
+
+class TradeManager(CustomManager.from_queryset(TradeQuerySet)):  # type: ignore
+    pass
 
 
 class Trade(AdjustableTimestampsModel):
@@ -18,6 +34,7 @@ class Trade(AdjustableTimestampsModel):
     price = models.PositiveBigIntegerField()
     overpayment_amount = models.PositiveBigIntegerField()
 
+    objects = TradeManager()
     tracker = FieldTracker()
 
     def __str__(self):
@@ -40,6 +57,12 @@ class Trade(AdjustableTimestampsModel):
             from ..consumers.trade import TradeConsumer
             from ..serializers.trade import TradeSerializer
 
+            buy_order = self.buy_order
+            run_task_on_commit(
+                update_trade_history_for_currency_pair_task,
+                primary_currency_id=buy_order.primary_currency_id,
+                secondary_currency_id=buy_order.secondary_currency_id,
+            )
             apply_on_commit(
                 lambda data=TradeSerializer(self).data, ticker=self.sell_order.primary_currency.ticker: TradeConsumer.
                 stream_trade(message_type=MessageType.CREATE_TRADE, trade_data=data, ticker=ticker)

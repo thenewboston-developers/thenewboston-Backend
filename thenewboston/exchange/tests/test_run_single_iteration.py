@@ -3,7 +3,8 @@ from unittest.mock import patch
 import pytest
 from django.test import override_settings
 
-from thenewboston.exchange.models import ExchangeOrder, Trade
+from thenewboston.exchange.business_logic.trade_history import update_trade_history
+from thenewboston.exchange.models import ExchangeOrder, Trade, TradeHistoryItem
 from thenewboston.exchange.order_processing.engine import get_potentially_matching_orders, run_single_iteration
 from thenewboston.general.advisory_locks import clear_all_advisory_locks
 from thenewboston.general.tests.any import ANY_DATETIME, ANY_INT, ANY_STR
@@ -328,11 +329,12 @@ def test_run_single_iteration__no_trade_situation(bucky, dmitry, tnb_currency, y
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('bucky_yyy_wallet', 'dmitry_tnb_wallet')
+@pytest.mark.usefixtures('bucky_yyy_wallet', 'dmitry_tnb_wallet', 'tnb_mint', 'yyy_mint')
 @pytest.mark.usefixtures('lock_order_processing')
 def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
     assert not ExchangeOrder.objects.exists()
     assert not Trade.objects.exists()
+    assert not TradeHistoryItem.objects.exists()
 
     sell_order_1 = make_sell_order(dmitry, tnb_currency, yyy_currency, price=10)
     sell_order_2 = make_sell_order(dmitry, tnb_currency, yyy_currency, price=9, quantity=8)
@@ -370,6 +372,33 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 9
     }]
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
+    assert [
+        model_to_dict_with_id(item)
+        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
+    ] == [{
+        'id':
+            ANY_INT,
+        'primary_currency':
+            tnb_currency.id,
+        'secondary_currency':
+            yyy_currency.id,
+        'price':
+            8,
+        'change_1h':
+            0.0,
+        'change_24h':
+            0.0,
+        'change_7d':
+            0.0,
+        'volume_24h':
+            3,
+        'market_cap':
+            800000,
+        'sparkline': [
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, 8
+        ]
+    }]
 
     # Call 2
     with override_settings(ONE_TRADE_PER_ITERATION=True):
@@ -402,6 +431,33 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 14
     })
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
+    assert [
+        model_to_dict_with_id(item)
+        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
+    ] == [{
+        'id':
+            ANY_INT,
+        'primary_currency':
+            tnb_currency.id,
+        'secondary_currency':
+            yyy_currency.id,
+        'price':
+            8,
+        'change_1h':
+            0.0,
+        'change_24h':
+            0.0,
+        'change_7d':
+            0.0,
+        'volume_24h':
+            10,
+        'market_cap':
+            800000,
+        'sparkline': [
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, 8
+        ]
+    }]
 
     # Call 3
     with override_settings(ONE_TRADE_PER_ITERATION=True):
@@ -435,3 +491,61 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 5
     })
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
+    assert [
+        model_to_dict_with_id(item)
+        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
+    ] == [{
+        'id':
+            ANY_INT,
+        'primary_currency':
+            tnb_currency.id,
+        'secondary_currency':
+            yyy_currency.id,
+        'price':
+            9,
+        'change_1h':
+            0.0,
+        'change_24h':
+            0.0,
+        'change_7d':
+            0.0,
+        'volume_24h':
+            15,
+        'market_cap':
+            900000,
+        'sparkline': [
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, 9
+        ]
+    }]
+
+    TradeHistoryItem.objects.all().delete()
+    assert not TradeHistoryItem.objects.exists()
+    update_trade_history()
+    assert [
+        model_to_dict_with_id(item)
+        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
+    ] == [{
+        'id':
+            ANY_INT,
+        'primary_currency':
+            tnb_currency.id,
+        'secondary_currency':
+            yyy_currency.id,
+        'price':
+            9,
+        'change_1h':
+            0.0,
+        'change_24h':
+            0.0,
+        'change_7d':
+            0.0,
+        'volume_24h':
+            15,
+        'market_cap':
+            900000,
+        'sparkline': [
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, 9
+        ]
+    }]

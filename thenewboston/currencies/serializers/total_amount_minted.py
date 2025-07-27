@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from rest_framework import serializers
 
 from ..models import Currency
@@ -13,4 +12,5 @@ class TotalAmountMintedSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_total_amount_minted(obj):
-        return obj.mints.aggregate(total=Sum('amount'))['total'] or 0
+        # TODO(dmu) LOW: Implement `total_amount_minted` property and declare it as read-only field
+        return obj.get_total_amount_minted()

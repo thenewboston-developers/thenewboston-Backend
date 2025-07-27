@@ -10,6 +10,16 @@ x-service: &service
     environment:
       THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
       THENEWBOSTON_SETTING_ORDER_PROCESSING_REDIS_URL: 'redis://redis:6379'
+      THENEWBOSTON_SETTING_CELERY_BROKER_URL: redis://redis:6379
+
+x-service-extra: &service-extra
+    <<: *service
+    depends_on:
+      # TODO(dmu) MEDIUM: We need this dependency because `app` service runs migrations. Fix the related TODO by moving
+      #                running migrations to deployment stage and remove the dependency.
+      app:
+        condition: service_healthy
+
 
 services:
 
@@ -40,13 +50,16 @@ services:
       start_period: 10s
 
   order-processing-engine:
-    <<: *service
+    <<: *service-extra
     command: ./run-order-processing-engine.sh
-    depends_on:
-      # TODO(dmu) LOW: We need this dependency because `app` service runs migrations. Fix the related TODO by moving
-      #                running migrations to deployment stage and remove the dependency.
-      app:
-        condition: service_healthy
+
+  celery:
+    <<: *service-extra
+    command: ./run-celery.sh
+
+  celery-beat:
+    <<: *service-extra
+    command: ./run-celery-beat.sh
 
 volumes:
   redis-data:

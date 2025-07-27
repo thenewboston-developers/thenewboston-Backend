@@ -33,6 +33,8 @@ class TradePriceChartDataView(generics.ListAPIView):
         return intervals[time_range]
 
     def list(self, request, *args, **kwargs):  # noqa: A003
+        # TODO(dmu) HIGH: This has potential performance issues. Instead calculate historical candlestick and store
+        #                 them in the database.
         queryset = self.filter_queryset(self.get_queryset())
         filterset = self.filterset_class(request.query_params, queryset=queryset)
         queryset = filterset.qs
