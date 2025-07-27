@@ -249,6 +249,30 @@ def test_get_potentially_matching_orders__partially_filled_order_included(
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures('bucky_yyy_wallet', 'dmitry_tnb_wallet')
+def test_get_potentially_matching_orders__time_priority(trade_at, bucky, dmitry, tnb_currency, yyy_currency):
+    assert not ExchangeOrder.objects.exists()
+
+    now = datetime.now(timezone.utc)
+    sell_order_later = make_sell_order(
+        dmitry, tnb_currency, yyy_currency, price=100, created_date=now - timedelta(minutes=3)
+    )
+    sell_order_earlier = make_sell_order(
+        dmitry, tnb_currency, yyy_currency, price=100, created_date=now - timedelta(minutes=4)
+    )
+    buy_order_earlier = make_buy_order(
+        bucky, tnb_currency, yyy_currency, price=105, created_date=now - timedelta(minutes=2)
+    )
+    buy_order_later = make_buy_order(
+        bucky, tnb_currency, yyy_currency, price=105, created_date=now - timedelta(minutes=1)
+    )
+
+    assert get_potentially_matching_orders(trade_at) == [
+        sell_order_earlier, sell_order_later, buy_order_later, buy_order_earlier
+    ]
+
+
+@pytest.mark.django_db
 @pytest.mark.usefixtures('bucky_yyy_wallet', 'bucky_zzz_wallet', 'dmitry_tnb_wallet', 'dmitry_zzz_wallet')
 def test_get_potentially_matching_orders__complex_realistic_scenario(
     trade_at, bucky, dmitry, tnb_currency, yyy_currency, zzz_currency
