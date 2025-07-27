@@ -11,11 +11,12 @@ from itertools import chain
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError, transaction
-from django.db.models import Case, F, IntegerField, Max, Min, Q, When, Window
+from django.db.models import Case, ExpressionWrapper, F, FloatField, IntegerField, Max, Min, Q, When, Window
 from django.utils import timezone
 
 from thenewboston.general.clients.redis import get_redis_client
 from thenewboston.general.exceptions import ThenewbostonRuntimeError
+from thenewboston.general.misc import ExtractEpoch
 from thenewboston.general.utils.logging import log
 from thenewboston.general.utils.pytest import is_pytest_running
 from thenewboston.wallets.models import Wallet
@@ -170,12 +171,17 @@ def get_potentially_matching_orders(trade_at=None):
                 When(side=BUY, then=-F('secondary_currency_id')),
                 output_field=IntegerField(),
             ),
+            sort_created_timestamp=Case(
+                When(side=SELL, then=ExtractEpoch(F('created_date'))),
+                When(side=BUY, then=ExpressionWrapper(-ExtractEpoch(F('created_date')), output_field=FloatField())),
+                output_field=FloatField(),
+            ),
         ).order_by(
             'side',  # SELL will be first, then BUY
             'sort_primary_currency_id',
             'sort_secondary_currency_id',
             'price',  # lowest ask first (best sell goes first), then highest bid (best buy goes last)
-            'created_date',
+            'sort_created_timestamp',
             'id',  # for stable ordering in case of exactly equal created_date
         )
     )
