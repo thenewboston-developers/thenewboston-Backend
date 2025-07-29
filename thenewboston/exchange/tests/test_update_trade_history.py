@@ -303,10 +303,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             'results': [{
                 'primary_currency': {
                     'id': tnb_currency.id,
+                    'logo': None,
                     'ticker': 'TNB'
                 },
                 'secondary_currency': {
                     'id': yyy_currency.id,
+                    'logo': None,
                     'ticker': 'YYY'
                 },
                 'price':
@@ -328,10 +330,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             }, {
                 'primary_currency': {
                     'id': tnb_currency.id,
+                    'logo': None,
                     'ticker': 'TNB'
                 },
                 'secondary_currency': {
                     'id': zzz_currency.id,
+                    'logo': None,
                     'ticker': 'ZZZ'
                 },
                 'price':
@@ -353,10 +357,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             }, {
                 'primary_currency': {
                     'id': zzz_currency.id,
+                    'logo': None,
                     'ticker': 'ZZZ'
                 },
                 'secondary_currency': {
                     'id': yyy_currency.id,
+                    'logo': None,
                     'ticker': 'YYY'
                 },
                 'price':

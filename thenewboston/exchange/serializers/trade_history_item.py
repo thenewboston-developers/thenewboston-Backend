@@ -9,7 +9,7 @@ class CurrencyTinySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Currency
-        fields = ('id', 'ticker')
+        fields = ('id', 'logo', 'ticker')
 
 
 class TradeHistoryItemSerializer(serializers.ModelSerializer):
