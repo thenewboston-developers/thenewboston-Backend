@@ -29,7 +29,8 @@ channels-redis = "^4.2.1"
 sentry-sdk = {extras = ["django"], version = "^2.29.1"}
 django-restql = "^0.16.2"
 django-model-utils = "^5.0.0"
-redis = "^6.2.0"
+celery = {extras = ["redis"], version = "^5.5.3"}
+redis = "<=5.2.1"  # Celery requires this version of Redis
 
 [tool.poetry.group.dev.dependencies]
 colorlog = "^6.9.0"
@@ -57,6 +58,8 @@ testpaths = ["thenewboston"]
 filterwarnings = "ignore::DeprecationWarning:^(?!node\\.).*:"
 asyncio_default_fixture_loop_scope = "function"
 env = [
+    # We put here only settings that we should set before pytest starts or improtst anything, the rest go to
+    # `thenewboston.general.tests.fixtures.setup.unittest_settings`
     "PYTEST_RUNNING = true",
     "THENEWBOSTON_SETTING_SECRET_KEY = dummy",
 ]

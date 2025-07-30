@@ -1,6 +1,11 @@
 .PHONY: build
 build:
 	# We are not building with Docker compose on purpose, so we can have just one image (and probably save disk space)
+	docker build . -t thenewboston-backend:current
+
+.PHONY: build-no-cache
+build-no-cache:
+	# We are not building with Docker compose on purpose, so we can have just one image (and probably save disk space)
 	docker build . -t thenewboston-backend:current --no-cache
 
 .PHONY: update-docker-compose-yaml
@@ -24,7 +29,7 @@ run-development-no-build:
 run-development: build run-development-no-build
 
 .PHONY: deploy
-deploy: build docker-compose-down update-docker-compose-yaml run-production;
+deploy: build-no-cache docker-compose-down update-docker-compose-yaml run-production;
 
 .PHONY: deploy-cleanup
 deploy-cleanup:
@@ -62,12 +67,21 @@ run-server:
 
 .PHONY: run-daphne
 run-daphne:
+# TODO(dmu): Convert to having `run-server-prod` using `./run-django.sh` for consistency with production and Ccelery
 	poetry run python -m thenewboston.manage collectstatic --no-input
 	poetry run daphne thenewboston.project.asgi:application -p 8000 -b 127.0.0.1
 
 .PHONY: run-order-processing-engine
 run-order-processing-engine:
-	poetry run python -m thenewboston.manage order_processing_engine
+	./scripts/run-order-processing-engine.sh
+
+.PHONY: run-celery
+run-celery:
+	./scripts/run-celery.sh
+
+.PHONY: run-celery-beat
+run-celery-beat:
+	./scripts/run-celery-beat.sh
 
 .PHONY: shell
 shell:

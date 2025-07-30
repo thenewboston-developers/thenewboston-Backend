@@ -20,6 +20,7 @@ include(
     'logging.py',
     'rest_framework.py',
     'channels.py',
+    'celery.py',
     'aws.py',
     'misc.py',
     'custom.py',

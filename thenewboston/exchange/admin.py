@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AssetPair, ExchangeOrder, OrderProcessingLock, Trade
+from .models import AssetPair, ExchangeOrder, OrderProcessingLock, Trade, TradeHistoryItem
 
 admin.site.register(AssetPair)
 
@@ -38,3 +38,12 @@ class OrderProcessingLockAdmin(admin.ModelAdmin):
 class TradeAdmin(admin.ModelAdmin):
     list_display = ('id', 'buy_order', 'sell_order', 'filled_quantity', 'price', 'overpayment_amount', 'created_date')
     ordering = ('-created_date', '-pk')
+
+
+@admin.register(TradeHistoryItem)
+class TradeHistoryItemAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'primary_currency', 'secondary_currency', 'price', 'change_1h', 'change_24h', 'change_7d', 'volume_24h',
+        'market_cap', 'sparkline', 'modified_date'
+    )
+    ordering = ('primary_currency__ticker', 'secondary_currency__ticker')
