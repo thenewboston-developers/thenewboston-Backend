@@ -137,10 +137,10 @@ class ExchangeOrder(AdjustableTimestampsModel):
         from ..serializers.exchange_order import ExchangeOrderReadSerializer
 
         apply_on_commit(
-            lambda data=ExchangeOrderReadSerializer(self).data, primary_currency_id=self.primary_currency_id,
-            secondary_currency_id=self.secondary_currency_id: ExchangeOrderConsumer.stream_exchange_order(
+            lambda order=self, primary_currency_id=self.primary_currency_id, secondary_currency_id=self.
+            secondary_currency_id: ExchangeOrderConsumer.stream_exchange_order(
                 message_type=MessageType.UPDATE_EXCHANGE_ORDER,
-                order_data=data,
+                order_data=ExchangeOrderReadSerializer(order).data,
                 # TODO(dmu) LOW: Should we `primary_currency_id` and `secondary_currency_id` explicitly while it is
                 #                already in `order_data`?
                 primary_currency_id=primary_currency_id,

@@ -3,7 +3,6 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from thenewboston.general.constants import MAX_MINT_AMOUNT
-from thenewboston.general.utils.transfers import change_wallet_balance
 from thenewboston.wallets.models import Wallet
 
 from ..models import Currency, Mint
@@ -36,24 +35,17 @@ class MintWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Cannot mint external currencies.')
 
         total_minted = Mint.objects.filter(currency=currency).aggregate(total=Sum('amount'))['total'] or 0
-
         if total_minted + amount > MAX_MINT_AMOUNT:
             raise serializers.ValidationError(
                 f'Total minted amount would exceed maximum of {MAX_MINT_AMOUNT:,}. '
                 f'Current total: {total_minted:,}'
             )
 
-        mint = super().create({
-            **validated_data,
-            'owner': request.user,
-        })
-
+        mint = super().create({**validated_data, 'owner': request.user})
         wallet, _ = Wallet.objects.select_for_update().get_or_create(
             owner=request.user, currency=currency, defaults={'balance': 0}
         )
-
-        change_wallet_balance(wallet, amount, request)
-
+        wallet.change_balance(amount)
         return mint
 
     @staticmethod

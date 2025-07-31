@@ -4,14 +4,11 @@ from rest_framework import serializers
 
 from thenewboston.currencies.models import Currency
 from thenewboston.currencies.serializers.currency import CurrencyReadSerializer
-from thenewboston.general.enums import MessageType, NotificationType
-from thenewboston.general.utils.database import apply_on_commit
+from thenewboston.general.enums import NotificationType
 from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.text import truncate_text
 from thenewboston.general.utils.transfers import transfer_coins
-from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
-from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
 
@@ -110,12 +107,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 owner=recipient, currency=price_currency, defaults={'balance': 0}
             )
 
-            transfer_coins(
-                sender_wallet=sender_wallet,
-                recipient_wallet=recipient_wallet,
-                amount=price_amount,
-                request=request,
-            )
+            transfer_coins(sender_wallet=sender_wallet, recipient_wallet=recipient_wallet, amount=price_amount)
 
         post = super().create({
             **validated_data,
@@ -129,7 +121,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def notify_coin_transfer(post, request):
-        notification = Notification.objects.create(
+        Notification.objects.create(
             owner=post.recipient,
             payload={
                 'notification_type': NotificationType.POST_COIN_TRANSFER.value,
@@ -145,13 +137,6 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
             }
-        )
-
-        notification_data = NotificationReadSerializer(notification, context={'request': request}).data
-
-        apply_on_commit(
-            lambda nd=notification_data: NotificationConsumer.
-            stream_notification(message_type=MessageType.CREATE_NOTIFICATION, notification_data=nd)
         )
 
     def update(self, instance, validated_data):

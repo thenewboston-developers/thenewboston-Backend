@@ -92,8 +92,8 @@ class Wallet(AdjustableTimestampsModel):
         from ..serializers.wallet import WalletReadSerializer
 
         apply_on_commit(
-            lambda data=WalletReadSerializer(self).data: WalletConsumer.
-            stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=data)
+            lambda wallet=self: WalletConsumer.
+            stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=WalletReadSerializer(wallet).data)
         )
 
     def _adjust_timestamps(self, was_adding, had_changes):

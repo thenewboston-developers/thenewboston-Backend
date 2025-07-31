@@ -64,8 +64,9 @@ class Trade(AdjustableTimestampsModel):
                 secondary_currency_id=buy_order.secondary_currency_id,
             )
             apply_on_commit(
-                lambda data=TradeSerializer(self).data, ticker=self.sell_order.primary_currency.ticker: TradeConsumer.
-                stream_trade(message_type=MessageType.CREATE_TRADE, trade_data=data, ticker=ticker)
+                lambda trade=self, ticker=self.sell_order.primary_currency.ticker: TradeConsumer.stream_trade(
+                    message_type=MessageType.CREATE_TRADE, trade_data=TradeSerializer(trade).data, ticker=ticker
+                )
             )
 
         return rv  # return value for forward compatibility
