@@ -18,8 +18,10 @@ class Notification(CreatedModified):
         from ..serializers.notification import NotificationReadSerializer
 
         apply_on_commit(
-            lambda data=NotificationReadSerializer(self).data: NotificationConsumer.
-            stream_notification(message_type=MessageType.CREATE_NOTIFICATION, notification_data=data)
+            lambda notification=self: NotificationConsumer.stream_notification(
+                message_type=MessageType.CREATE_NOTIFICATION,
+                notification_data=NotificationReadSerializer(notification).data
+            )
         )
 
     def save(self, *args, should_stream=False, **kwargs):
