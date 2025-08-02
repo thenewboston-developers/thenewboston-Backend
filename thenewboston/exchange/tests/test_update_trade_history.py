@@ -8,7 +8,7 @@ from django.utils import timezone
 from model_bakery import baker
 
 from thenewboston.exchange.business_logic.trade_history import update_trade_history
-from thenewboston.exchange.models import ExchangeOrder, Trade, TradeHistoryItem
+from thenewboston.exchange.models import AssetPair, ExchangeOrder, Trade, TradeHistoryItem
 from thenewboston.exchange.models.exchange_order import ExchangeOrderSide
 from thenewboston.general.tests.any import ANY_INT
 from thenewboston.general.tests.misc import model_to_dict_with_id
@@ -20,17 +20,18 @@ from thenewboston.general.tests.misc import model_to_dict_with_id
 @patch('thenewboston.exchange.consumers.trade.TradeConsumer.stream_trade', new=Mock())
 def make_trade(primary_currency_id, secondary_currency_id, price, filled_quantity, created_at: datetime | None = None):
     created_at = created_at or timezone.now()
+    asset_pair, _ = AssetPair.objects.get_or_create(
+        primary_currency_id=primary_currency_id, secondary_currency_id=secondary_currency_id
+    )
     buy_order = baker.make(
         'exchange.ExchangeOrder',
         side=ExchangeOrderSide.BUY.value,  # type: ignore[attr-defined]
-        primary_currency_id=primary_currency_id,
-        secondary_currency_id=secondary_currency_id
+        asset_pair=asset_pair,
     )
     sell_order = baker.make(
         'exchange.ExchangeOrder',
         side=ExchangeOrderSide.SELL.value,  # type: ignore[attr-defined]
-        primary_currency_id=primary_currency_id,
-        secondary_currency_id=secondary_currency_id
+        asset_pair=asset_pair,
     )
     baker.make(
         'exchange.Trade',
@@ -52,15 +53,13 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
     # One simple trade
     make_trade(tnb_currency.id, yyy_currency.id, 7, 2)
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'price':
             7,
         'change_1h':
@@ -82,15 +81,13 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
     # Another currency pair
     make_trade(tnb_currency.id, zzz_currency.id, 11, 4)
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'price':
             7,
         'change_1h':
@@ -110,10 +107,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
     }, {
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            zzz_currency.id,
+        'asset_pair':
+            AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=zzz_currency).id,
         'price':
             11,
         'change_1h':
@@ -144,10 +139,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
         {
             'id':
                 ANY_INT,
-            'primary_currency':
-                tnb_currency.id,
-            'secondary_currency':
-                yyy_currency.id,
+            'asset_pair':
+                AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'price':
                 7,
             'change_1h':
@@ -167,10 +160,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
         {
             'id':
                 ANY_INT,
-            'primary_currency':
-                tnb_currency.id,
-            'secondary_currency':
-                zzz_currency.id,
+            'asset_pair':
+                AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=zzz_currency).id,
             'price':
                 11,
             'change_1h':
@@ -191,8 +182,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
     ]
 
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == expected_trade_history
 
     TradeHistoryItem.objects.all().delete()
@@ -200,8 +191,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
 
     update_trade_history()
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == expected_trade_history
 
     with patch('thenewboston.exchange.models.Trade.save', new=Model.save):  # "forget" to update trade history
@@ -209,22 +200,20 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
         make_trade(zzz_currency.id, yyy_currency.id, 10, 5)
 
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == expected_trade_history
 
     update_trade_history()
     assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict_with_id(item) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] != expected_trade_history
 
     expected_trade_history = [
         {
-            'primary_currency':
-                tnb_currency.id,
-            'secondary_currency':
-                yyy_currency.id,
+            'asset_pair':
+                AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'price':
                 7,
             'change_1h':
@@ -242,10 +231,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             ]  # noqa: E122
         },
         {
-            'primary_currency':
-                tnb_currency.id,
-            'secondary_currency':
-                zzz_currency.id,
+            'asset_pair':
+                AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=zzz_currency).id,
             'price':
                 9,
             'change_1h':
@@ -264,10 +251,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             ]
         },
         {
-            'primary_currency':
-                zzz_currency.id,
-            'secondary_currency':
-                yyy_currency.id,
+            'asset_pair':
+                AssetPair.objects.get(primary_currency=zzz_currency, secondary_currency=yyy_currency).id,
             'price':
                 10,
             'change_1h':
@@ -287,8 +272,8 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
         }
     ]
     assert [
-        model_to_dict(item, exclude=('id', 'created_date', 'modified_date'))
-        for item in TradeHistoryItem.objects.order_by('primary_currency__ticker', 'secondary_currency__ticker')
+        model_to_dict(item, exclude=('id', 'created_date', 'modified_date')) for item in TradeHistoryItem.objects.
+        order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == expected_trade_history
 
     response = api_client.get('/api/trade-history-items')
@@ -301,15 +286,18 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
             'previous':
                 None,
             'results': [{
-                'primary_currency': {
-                    'id': tnb_currency.id,
-                    'logo': None,
-                    'ticker': 'TNB'
-                },
-                'secondary_currency': {
-                    'id': yyy_currency.id,
-                    'logo': None,
-                    'ticker': 'YYY'
+                'asset_pair': {
+                    'id': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'logo': None,
+                        'ticker': 'TNB'
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'logo': None,
+                        'ticker': 'YYY'
+                    },
                 },
                 'price':
                     7,
@@ -328,15 +316,18 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
                     15, 7
                 ]
             }, {
-                'primary_currency': {
-                    'id': tnb_currency.id,
-                    'logo': None,
-                    'ticker': 'TNB'
-                },
-                'secondary_currency': {
-                    'id': zzz_currency.id,
-                    'logo': None,
-                    'ticker': 'ZZZ'
+                'asset_pair': {
+                    'id': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=zzz_currency).id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'logo': None,
+                        'ticker': 'TNB'
+                    },
+                    'secondary_currency': {
+                        'id': zzz_currency.id,
+                        'logo': None,
+                        'ticker': 'ZZZ'
+                    },
                 },
                 'price':
                     9,
@@ -355,15 +346,18 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
                     None, None, None, None, None, None, None, None, None, None, None, 9
                 ]
             }, {
-                'primary_currency': {
-                    'id': zzz_currency.id,
-                    'logo': None,
-                    'ticker': 'ZZZ'
-                },
-                'secondary_currency': {
-                    'id': yyy_currency.id,
-                    'logo': None,
-                    'ticker': 'YYY'
+                'asset_pair': {
+                    'id': AssetPair.objects.get(primary_currency=zzz_currency, secondary_currency=yyy_currency).id,
+                    'primary_currency': {
+                        'id': zzz_currency.id,
+                        'logo': None,
+                        'ticker': 'ZZZ'
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'logo': None,
+                        'ticker': 'YYY'
+                    },
                 },
                 'price':
                     10,

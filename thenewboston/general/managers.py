@@ -42,9 +42,9 @@ class CustomQuerySet(QuerySet):
 
                 raise
 
-    def with_advisory_lock(self, lock_id: int, just_try: bool = False):
+    def with_advisory_lock(self, lock_id: int, just_try: bool = False, row_id: str = 'id'):
         func = PgTryAdvisoryLock if just_try else PgAdvisoryLock
-        return self.annotate(advisory_lock=func(make_advisory_lock_expression_raw_sql(lock_id)))
+        return self.annotate(advisory_lock=func(make_advisory_lock_expression_raw_sql(lock_id, row_id=row_id)))
 
     def with_advisory_xact_lock(self, lock_id: int):
         return self.annotate(advisory_lock=PgAdvisoryXactLock(make_advisory_lock_expression_raw_sql(lock_id)))

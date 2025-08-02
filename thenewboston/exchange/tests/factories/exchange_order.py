@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from thenewboston.exchange.models import AssetPair
 from thenewboston.exchange.models.exchange_order import ExchangeOrderSide
 
 # TODO(dmu) MEDIUM: Move this to factories
@@ -10,12 +11,15 @@ def make_order(owner, side, primary_currency, secondary_currency, quantity=1, pr
     if status is not None:
         kwargs['status'] = status
 
+    asset_pair, _ = AssetPair.objects.get_or_create(
+        primary_currency=primary_currency,
+        secondary_currency=secondary_currency,
+    )
     return baker.make(
         'exchange.ExchangeOrder',
         owner=owner,
         side=side,
-        primary_currency=primary_currency,
-        secondary_currency=secondary_currency,
+        asset_pair=asset_pair,
         quantity=quantity,
         price=price,
         **kwargs,

@@ -58,7 +58,7 @@ def update_wallet(owner, currency, amount, trade_at):
 def advance_to_next_pair(current_index: int, potentially_matching_orders: list[ExchangeOrder]) -> int | None:
     original_order = potentially_matching_orders[current_index]
     original_order_side = original_order.side
-    original_pair = original_order.get_pair_ids()
+    original_asset_pair_id = original_order.asset_pair_id
 
     direction = -original_order.side  # move forward for the SELL orders, because they are on the top
     assert direction in (-1, 1)
@@ -70,7 +70,7 @@ def advance_to_next_pair(current_index: int, potentially_matching_orders: list[E
         if current_order.side != original_order_side:
             return None  # we hit another order side that means that we have exhausted matching orders
 
-        if current_order.get_pair_ids() != original_pair:
+        if current_order.asset_pair_id != original_asset_pair_id:
             return current_index
 
         # TODO(dmu) LOW: Linear search should be perfectly fine here since we do not expect more than several
@@ -113,12 +113,17 @@ def make_trade(sell_order, buy_order, trade_at):
     )
 
     buy_order_owner = buy_order.owner
-    update_wallet(buy_order_owner, buy_order.primary_currency, filled_quantity, trade_at)
+    assert buy_order.asset_pair_id == sell_order.asset_pair_id
+    asset_pair = buy_order.asset_pair
+    primary_currency = asset_pair.primary_currency
+    secondary_currency = asset_pair.secondary_currency
+
+    update_wallet(buy_order_owner, primary_currency, filled_quantity, trade_at)
     if overpayment_amount:
         assert overpayment_amount > 0
-        update_wallet(buy_order_owner, buy_order.secondary_currency, overpayment_amount, trade_at)
+        update_wallet(buy_order_owner, secondary_currency, overpayment_amount, trade_at)
 
-    update_wallet(sell_order.owner, sell_order.secondary_currency, trade_price * filled_quantity, trade_at)
+    update_wallet(sell_order.owner, secondary_currency, trade_price * filled_quantity, trade_at)
 
     buy_order.modified_date = trade_at
     buy_order.save(should_adjust_timestamps=False)
@@ -131,28 +136,10 @@ def get_potentially_matching_orders(trade_at=None):
     trade_at = trade_at or timezone.now()
     subquery = (
         ExchangeOrder.objects.filter(status__in=UNFILLED_STATUSES, created_date__lte=trade_at).annotate(
-            best_sell_price=Window(
-                expression=Min('price', filter=Q(side=SELL)),
-                partition_by=('primary_currency_id', 'secondary_currency_id'),
-            ),
-            best_buy_price=Window(
-                expression=Max('price', filter=Q(side=BUY)),
-                partition_by=('primary_currency_id', 'secondary_currency_id'),
-            ),
-        ).filter(Q(side=BUY, price__gte=F('best_sell_price')) | Q(side=SELL, price__lte=F('best_buy_price'))).annotate(
-            # Make SELL and BUY orders currencies go in reverse direction, so we can iterate one from top
-            # and the other one from bottom
-            sort_primary_currency_id=Case(
-                When(side=SELL, then=F('primary_currency_id')),
-                When(side=BUY, then=-F('primary_currency_id')),
-                output_field=IntegerField(),
-            ),
-            sort_secondary_currency_id=Case(
-                When(side=SELL, then=F('secondary_currency_id')),
-                When(side=BUY, then=-F('secondary_currency_id')),
-                output_field=IntegerField(),
-            ),
-        ).only('pk')
+            best_sell_price=Window(expression=Min('price', filter=Q(side=SELL)), partition_by='asset_pair_id'),
+            best_buy_price=Window(expression=Max('price', filter=Q(side=BUY)), partition_by='asset_pair_id'),
+        ).filter(Q(side=BUY, price__gte=F('best_sell_price')) |
+                 Q(side=SELL, price__lte=F('best_buy_price'))).only('pk')
     )
     return list(
         # We need it to be subquery for two related reasons:
@@ -161,14 +148,9 @@ def get_potentially_matching_orders(trade_at=None):
         ExchangeOrder.objects.filter(pk__in=subquery).with_advisory_lock(ORDER_PROCESSING_LOCK_ID).annotate(
             # Make SELL and BUY orders currencies go in reverse direction, so we can iterate one from top
             # and the other one from bottom
-            sort_primary_currency_id=Case(
-                When(side=SELL, then=F('primary_currency_id')),
-                When(side=BUY, then=-F('primary_currency_id')),
-                output_field=IntegerField(),
-            ),
-            sort_secondary_currency_id=Case(
-                When(side=SELL, then=F('secondary_currency_id')),
-                When(side=BUY, then=-F('secondary_currency_id')),
+            sort_asset_pair_id=Case(
+                When(side=SELL, then=F('asset_pair_id')),
+                When(side=BUY, then=-F('asset_pair_id')),
                 output_field=IntegerField(),
             ),
             sort_created_timestamp=Case(
@@ -178,8 +160,7 @@ def get_potentially_matching_orders(trade_at=None):
             ),
         ).order_by(
             'side',  # SELL will be first, then BUY
-            'sort_primary_currency_id',
-            'sort_secondary_currency_id',
+            'sort_asset_pair_id',
             'price',  # lowest ask first (best sell goes first), then highest bid (best buy goes last)
             'sort_created_timestamp',
             'id',  # for stable ordering in case of exactly equal created_date
@@ -203,24 +184,24 @@ def find_matching_orders(sell_index, buy_index, potentially_matching_orders: lis
             logger.debug('Buy orders exhausted at index %s', buy_index)
             break
 
-        sell_order_pair = sell_order.get_pair_ids()
-        assert isinstance(sell_order_pair[0], int) and isinstance(sell_order_pair[1], int)
-        logger.debug('Sell order pair: %s', sell_order_pair)
-        buy_order_pair = buy_order.get_pair_ids()
-        assert isinstance(buy_order_pair[0], int) and isinstance(buy_order_pair[1], int)
-        logger.debug('Buy order pair: %s', buy_order_pair)
+        sell_order_asset_pair_id = sell_order.asset_pair_id
+        assert isinstance(sell_order_asset_pair_id, int)
+        logger.debug('Sell order pair: %s', sell_order_asset_pair_id)
+        buy_order_asset_pair_id = buy_order.asset_pair_id
+        assert isinstance(buy_order_asset_pair_id, int)
+        logger.debug('Buy order pair: %s', buy_order_asset_pair_id)
 
-        if buy_order_pair < sell_order_pair:  # catch up currency pair for the buy orders
+        if buy_order_asset_pair_id < sell_order_asset_pair_id:  # catch up currency pair for the buy orders
             buy_index = advance_to_next_pair(buy_index, potentially_matching_orders)
             logger.debug('Advanced buy index to %s after currency pair mismatch', buy_index)
             continue
-        elif sell_order_pair < buy_order_pair:  # catch up currency pair for the sell orders
+        elif sell_order_asset_pair_id < buy_order_asset_pair_id:  # catch up currency pair for the sell orders
             # TODO(dmu) MEDIUM: Cover this clause with unittests
             sell_index = advance_to_next_pair(sell_index, potentially_matching_orders)
             logger.debug('Advanced sell index to %s after currency pair mismatch', sell_index)
             continue
 
-        assert sell_order_pair == buy_order_pair
+        assert sell_order_asset_pair_id == buy_order_asset_pair_id
         if sell_order.price > buy_order.price:  # there is no match let's go to another currency pair
             # We probably never get here in production because of how get_potentially_matching_orders() works
             logger.debug('Price mismatch: sell_order.price=%s, buy_order.price=%s', sell_order.price, buy_order.price)
@@ -280,7 +261,7 @@ def match_orders(potentially_matching_orders, trade_at) -> tuple[bool, set[int]]
 
             # These are algorithm correctness asserts, not runtime error handling against direct database access
             # (although they serve as an extra preventive measure in case asserts are not disable in production)
-            assert sell_order.get_pair_ids() == buy_order.get_pair_ids()
+            assert sell_order.asset_pair_id == buy_order.asset_pair_id
             assert sell_order.price <= buy_order.price
 
             # Because it allowed to change only status and filled_quantity for order (in Django Admin)

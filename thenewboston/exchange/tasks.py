@@ -9,7 +9,7 @@ def update_trade_history_task():
 
 
 @app.task(name='tasks.update_trade_history_for_currency_pair')
-def update_trade_history_for_currency_pair_task(primary_currency_id, secondary_currency_id):
+def update_trade_history_for_currency_pair_task(asset_pair_id):
     from .models import TradeHistoryItem
 
-    TradeHistoryItem.objects.update_for_currency_pair(primary_currency_id, secondary_currency_id)
+    TradeHistoryItem.objects.update_for_currency_pair(asset_pair_id)

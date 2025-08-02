@@ -1,18 +1,19 @@
 from datetime import timedelta
 
 from django.contrib.postgres.fields import ArrayField
-from django.db.models import CASCADE, FloatField, ForeignKey, PositiveBigIntegerField, Sum, UniqueConstraint
+from django.db.models import CASCADE, FloatField, OneToOneField, PositiveBigIntegerField, Sum
 from django.utils import timezone
 
 from thenewboston.currencies.models.currency import get_total_amount_minted
+from thenewboston.exchange.models import AssetPair
 from thenewboston.general.managers import CustomManager
 from thenewboston.general.models.created_modified import CreatedModified
 
 
-def get_past_price(primary_currency_id, secondary_currency_id, recency: timedelta | None = None, now=None):
+def get_past_price(asset_pair_id, recency: timedelta | None = None, now=None):
     from .trade import Trade
 
-    qs = Trade.objects.filter_by_currency_pair(primary_currency_id, secondary_currency_id)
+    qs = Trade.objects.filter_by_asset_pair(asset_pair_id)
     if recency:
         qs = qs.filter(created_date__lte=(now or timezone.now()) - recency)
 
@@ -28,62 +29,51 @@ def calculate_change_percent(current_price, past_price):
 
 class TradeHistoryItemManager(CustomManager):
 
-    def update_for_currency_pair(self, primary_currency_id, secondary_currency_id):
+    def update_for_currency_pair(self, asset_pair_id):
         from .trade import Trade
 
-        if (current_price := get_past_price(primary_currency_id, secondary_currency_id)) is None:
+        if (current_price := get_past_price(asset_pair_id)) is None:
             # TODO(dmu) LOW: This is questionable behavior: what if we deleted all trades and
             #                want trade history selfheal?
             return  # we do not do anything if there were no trades at all
 
         now = timezone.now()  # bind to the same moment for consistency
         sparkline = [
-            get_past_price(primary_currency_id, secondary_currency_id, recency=timedelta(hours=offset), now=now)
+            get_past_price(asset_pair_id, recency=timedelta(hours=offset), now=now)
             for offset in range(24 * 7 - 6, 0, -6)
         ]
         sparkline.append(current_price)
 
+        asset_pair = AssetPair.objects.get(id=asset_pair_id)
         defaults = {
             'price':
                 current_price,
             'change_1h':
                 calculate_change_percent(
-                    current_price,
-                    get_past_price(primary_currency_id, secondary_currency_id, recency=timedelta(hours=1), now=now)
+                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=1), now=now)
                 ) or 0,
             'change_24h':
                 calculate_change_percent(
-                    current_price,
-                    get_past_price(primary_currency_id, secondary_currency_id, recency=timedelta(hours=24), now=now)
+                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24), now=now)
                 ) or 0,
             'change_7d':
                 calculate_change_percent(
-                    current_price,
-                    get_past_price(
-                        primary_currency_id, secondary_currency_id, recency=timedelta(hours=24 * 7), now=now
-                    )
+                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24 * 7), now=now)
                 ) or 0,
             'volume_24h':
-                Trade.objects.filter_by_currency_pair(primary_currency_id, secondary_currency_id).filter(
-                    created_date__gte=now - timedelta(hours=24)
-                ).aggregate(volume=Sum('filled_quantity'))['volume'] or 0,
+                Trade.objects.filter_by_asset_pair(asset_pair_id).filter(created_date__gte=now - timedelta(hours=24)
+                                                                         ).aggregate(volume=Sum('filled_quantity')
+                                                                                     )['volume'] or 0,
             'market_cap':
-                current_price * get_total_amount_minted(primary_currency_id),
+                current_price * get_total_amount_minted(asset_pair.primary_currency_id),
             'sparkline':
                 sparkline,
         }
-        self.update_or_create(
-            primary_currency_id=primary_currency_id,
-            secondary_currency_id=secondary_currency_id,
-            defaults=defaults,
-        )
+        self.update_or_create(asset_pair_id=asset_pair_id, defaults=defaults)
 
 
 class TradeHistoryItem(CreatedModified):
-    primary_currency = ForeignKey('currencies.Currency', on_delete=CASCADE, related_name='primary_trade_history_items')
-    secondary_currency = ForeignKey(
-        'currencies.Currency', on_delete=CASCADE, related_name='secondary_trade_history_items'
-    )
+    asset_pair = OneToOneField('AssetPair', on_delete=CASCADE, related_name='trade_history_items', null=True)
 
     price = PositiveBigIntegerField()
     change_1h = FloatField()
@@ -94,8 +84,3 @@ class TradeHistoryItem(CreatedModified):
     sparkline = ArrayField(base_field=PositiveBigIntegerField(null=True, blank=True), blank=True, default=list)
 
     objects = TradeHistoryItemManager()
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(fields=['primary_currency', 'secondary_currency'], name='unique_trade_history_item')
-        ]

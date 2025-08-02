@@ -119,3 +119,16 @@ diff-cover:
 
 .PHONY: test-and-diff-cover
 test-and-diff-cover: test-cov diff-cover ;
+
+.PHONY: prod-dump-db
+prod-dump-db:
+	PGPASSWORD=$(password) pg_dump -h thenewboston-new.cif0ormi7x5n.us-west-2.rds.amazonaws.com -U thenewboston -F p -b -v -O -f "$(destination)" thenewboston
+
+.PHONY: restore-db-dump
+restore-db-dump:
+	PGPASSWORD=thenewboston psql -h localhost -U thenewboston -c "CREATE DATABASE $(dbname);"
+	PGPASSWORD=thenewboston psql -h localhost -U thenewboston -d "$(dbname)" -f "$(source)"
+
+.PHONY: prod-shell
+prod-shell:
+	ssh ubuntu@thenewboston.network

@@ -1,6 +1,6 @@
 import pytest
 
-from thenewboston.exchange.models import ExchangeOrder
+from thenewboston.exchange.models import AssetPair, ExchangeOrder
 from thenewboston.general.tests.misc import model_to_dict_with_id
 
 from ..factories.exchange_order import make_buy_order
@@ -16,8 +16,7 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,
@@ -39,8 +38,7 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,
@@ -62,8 +60,7 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,
@@ -78,8 +75,7 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,
@@ -101,8 +97,7 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,

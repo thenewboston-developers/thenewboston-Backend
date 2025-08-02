@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
-from django.db.models import ForeignKey
+from django.db import transaction
+from django.db.models import (
+    PROTECT, ForeignKey, IntegerChoices, PositiveBigIntegerField, PositiveSmallIntegerField, SmallIntegerField
+)
 from django.utils.translation import gettext_lazy as _
 from model_utils import FieldTracker
 
@@ -13,15 +15,13 @@ from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.notifications.models import Notification
 from thenewboston.wallets.models import Wallet
 
-from .asset_pair import AssetPair
 
-
-class ExchangeOrderSide(models.IntegerChoices):
+class ExchangeOrderSide(IntegerChoices):
     BUY = 1, _('Buy')
     SELL = -1, _('Sell')
 
 
-class ExchangeOrderStatus(models.IntegerChoices):
+class ExchangeOrderStatus(IntegerChoices):
     OPEN = 1, _('Open')
     PARTIALLY_FILLED = 2, _('Partially Filled')
     FILLED = 3, _('Filled')
@@ -46,14 +46,13 @@ def publish_new_order_message():
 
 
 class ExchangeOrder(AdjustableTimestampsModel):
-    owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
-    primary_currency = ForeignKey('currencies.Currency', on_delete=models.CASCADE, related_name='primary_orders')
-    secondary_currency = ForeignKey('currencies.Currency', on_delete=models.CASCADE, related_name='secondary_orders')
-    side = models.SmallIntegerField(choices=ExchangeOrderSide.choices)
-    quantity = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
-    price = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
-    filled_quantity = models.PositiveBigIntegerField(default=0)
-    status = models.PositiveSmallIntegerField(
+    owner = ForeignKey('users.User', on_delete=PROTECT)
+    asset_pair = ForeignKey('AssetPair', on_delete=PROTECT, related_name='exchange_orders', null=True)
+    side = SmallIntegerField(choices=ExchangeOrderSide.choices)
+    quantity = PositiveBigIntegerField(validators=[MinValueValidator(1)])
+    price = PositiveBigIntegerField(validators=[MinValueValidator(1)])
+    filled_quantity = PositiveBigIntegerField(default=0)
+    status = PositiveSmallIntegerField(
         choices=ExchangeOrderStatus.choices,
         default=ExchangeOrderStatus.OPEN.value  # type: ignore
     )
@@ -77,7 +76,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
 
     def _clean_wallet_balance_for_reservation(self):
         total, currency_field = self.get_unfilled_total_and_currency_field()
-        currency = getattr(self, currency_field)
+        currency = getattr(self.asset_pair, currency_field)
         if not (wallet := self.get_debit_wallet(currency)):
             raise ValidationError([{currency_field: [f'{currency.ticker} wallet does not exist.']}])
 
@@ -95,17 +94,8 @@ class ExchangeOrder(AdjustableTimestampsModel):
         self._clean_filled_quantity()
         self._clean_status()
 
-        if self.has_changed('primary_currency', 'secondary_currency') and not AssetPair.objects.filter(
-            primary_currency=self.primary_currency,
-            secondary_currency=self.secondary_currency,
-        ).exists():
-            raise ValidationError('Asset pair for the given primary and secondary currency does not exist.')
-
         if self.is_adding():
             self._clean_wallet_balance_for_reservation()
-
-    def get_pair_ids(self) -> tuple[int, int]:
-        return self.primary_currency_id, self.secondary_currency_id
 
     @property
     def unfilled_quantity(self):
@@ -117,6 +107,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
         self.ensure_filled_status()
 
     def notify_filled(self):
+        asset_pair = self.asset_pair
         Notification(
             owner=self.owner,
             payload={
@@ -125,10 +116,10 @@ class ExchangeOrder(AdjustableTimestampsModel):
                 'side': self.side,
                 'quantity': self.quantity,
                 'price': self.price,
-                'primary_currency_id': self.primary_currency_id,
-                'primary_currency_ticker': self.primary_currency.ticker,
-                'secondary_currency_id': self.secondary_currency_id,
-                'secondary_currency_ticker': self.secondary_currency.ticker,
+                'primary_currency_id': asset_pair.primary_currency_id,
+                'primary_currency_ticker': asset_pair.primary_currency.ticker,
+                'secondary_currency_id': asset_pair.secondary_currency_id,
+                'secondary_currency_ticker': asset_pair.secondary_currency.ticker,
             }
         ).save(should_stream=True)
 
@@ -136,13 +127,14 @@ class ExchangeOrder(AdjustableTimestampsModel):
         from ..consumers.exchange_order import ExchangeOrderConsumer
         from ..serializers.exchange_order import ExchangeOrderReadSerializer
 
+        asset_pair = self.asset_pair
         apply_on_commit(
-            lambda order=self, primary_currency_id=self.primary_currency_id, secondary_currency_id=self.
+            lambda order=self, primary_currency_id=asset_pair.primary_currency_id, secondary_currency_id=asset_pair.
             secondary_currency_id: ExchangeOrderConsumer.stream_exchange_order(
                 message_type=MessageType.UPDATE_EXCHANGE_ORDER,
                 order_data=ExchangeOrderReadSerializer(order).data,
-                # TODO(dmu) LOW: Should we `primary_currency_id` and `secondary_currency_id` explicitly while it is
-                #                already in `order_data`?
+                # TODO(dmu) LOW: Refactor, so we pass the order to stream_exchange_order() which is used to
+                #                extract `primary_currency_id` and `secondary_currency_id` and then serialized
                 primary_currency_id=primary_currency_id,
                 secondary_currency_id=secondary_currency_id,
             )
@@ -171,7 +163,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
         assert transaction.get_connection().in_atomic_block
         assert self.status == ExchangeOrderStatus.CANCELLED.value
         refund_amount, refund_currency_field = self.get_unfilled_total_and_currency_field()
-        wallet = self.get_debit_wallet(getattr(self, refund_currency_field))
+        wallet = self.get_debit_wallet(getattr(self.asset_pair, refund_currency_field))
         wallet.change_balance(refund_amount)
 
     def cancel(self):
@@ -193,7 +185,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
             assert self.unfilled_quantity == self.quantity
 
             total, currency_field = self.get_unfilled_total_and_currency_field()
-            wallet = self.get_debit_wallet(getattr(self, currency_field))
+            wallet = self.get_debit_wallet(getattr(self.asset_pair, currency_field))
 
             # We just assert assuming the `._clean_wallet_balance_for_reservation()` has been called before
             assert wallet
@@ -219,10 +211,11 @@ class ExchangeOrder(AdjustableTimestampsModel):
         return rv  # return value for forward compatibility
 
     def __str__(self):
+        asset_pair = self.asset_pair
         return (
             f'{self.pk} | '
             f'{self.get_side_display()} | '
-            f'{self.quantity} {self.primary_currency.ticker} | '
-            f'{self.price} {self.secondary_currency.ticker} | '
+            f'{self.quantity} {asset_pair.primary_currency.ticker} | '
+            f'{self.price} {asset_pair.secondary_currency.ticker} | '
             f'{self.get_status_display()}'
         )

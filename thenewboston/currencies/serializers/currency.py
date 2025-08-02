@@ -20,6 +20,13 @@ class CurrencyReadSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CurrencyTinySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Currency
+        fields = ('id', 'logo', 'ticker')
+
+
 class CurrencyWriteSerializer(serializers.ModelSerializer):
     logo = serializers.ImageField(required=True)
 

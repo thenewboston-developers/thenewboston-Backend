@@ -15,11 +15,9 @@ logger = logging.getLogger(__name__)
 
 class TradeQuerySet(CustomQuerySet):
 
-    def filter_by_currency_pair(self, primary_currency_id, secondary_currency_id):
-        # TODO(dmu) LOW: We can optimize performance by storing the currency pair in the Trade model
-        return self.filter(
-            buy_order__primary_currency_id=primary_currency_id, buy_order__secondary_currency_id=secondary_currency_id
-        )
+    def filter_by_asset_pair(self, asset_pair_id):
+        # TODO(dmu) LOW: We can optimize performance by storing the asset pair in the Trade model
+        return self.filter(buy_order__asset_pair_id=asset_pair_id)
 
 
 class TradeManager(CustomManager.from_queryset(TradeQuerySet)):  # type: ignore
@@ -58,13 +56,12 @@ class Trade(AdjustableTimestampsModel):
             from ..serializers.trade import TradeSerializer
 
             buy_order = self.buy_order
-            run_task_on_commit(
-                update_trade_history_for_currency_pair_task,
-                primary_currency_id=buy_order.primary_currency_id,
-                secondary_currency_id=buy_order.secondary_currency_id,
-            )
+            run_task_on_commit(update_trade_history_for_currency_pair_task, asset_pair_id=buy_order.asset_pair_id)
             apply_on_commit(
-                lambda trade=self, ticker=self.sell_order.primary_currency.ticker: TradeConsumer.stream_trade(
+                # TODO(dmu) LOW: Add comment explaining why `self.sell_order.asset_pair.primary_currency` ticker
+                #                is used not, but not `self.buy_order.asset_pair.primary_currency`
+                lambda trade=self, ticker=self.sell_order.asset_pair.primary_currency.ticker: TradeConsumer.
+                stream_trade(
                     message_type=MessageType.CREATE_TRADE, trade_data=TradeSerializer(trade).data, ticker=ticker
                 )
             )

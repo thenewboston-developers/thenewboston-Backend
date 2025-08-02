@@ -1,6 +1,6 @@
 import pytest
 
-from thenewboston.exchange.models import ExchangeOrder
+from thenewboston.exchange.models import AssetPair, ExchangeOrder
 from thenewboston.general.utils.datetime import to_iso_format
 
 from ..factories.exchange_order import make_buy_order, make_sell_order
@@ -16,6 +16,7 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
     buy_order_1 = make_buy_order(bucky, tnb_currency, yyy_currency, price=10, quantity=12)
     buy_order_2 = make_buy_order(bucky, tnb_currency, yyy_currency, price=11, quantity=3)
 
+    asset_pair, _ = AssetPair.objects.get_or_create(primary_currency=tnb_currency, secondary_currency=yyy_currency)
     response = authenticated_api_client.get(
         f'/api/exchange-orders/book?primary_currency={tnb_currency.id}&secondary_currency={yyy_currency.id}'
     )
@@ -31,8 +32,19 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                 'filled_quantity': 0,
                 'status': 1,
                 'owner': dmitry.id,
-                'primary_currency': tnb_currency.id,
-                'secondary_currency': yyy_currency.id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                }
             }, {
                 'id': sell_order_2.id,
                 'created_date': to_iso_format(sell_order_2.created_date),
@@ -43,8 +55,19 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                 'filled_quantity': 0,
                 'status': 1,
                 'owner': dmitry.id,
-                'primary_currency': tnb_currency.id,
-                'secondary_currency': yyy_currency.id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                }
             }, {
                 'id': sell_order_1.id,
                 'created_date': to_iso_format(sell_order_1.created_date),
@@ -55,8 +78,19 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                 'filled_quantity': 0,
                 'status': 1,
                 'owner': dmitry.id,
-                'primary_currency': tnb_currency.id,
-                'secondary_currency': yyy_currency.id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                }
             }],
             'buy_orders': [{
                 'id': buy_order_2.id,
@@ -68,8 +102,19 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                 'filled_quantity': 0,
                 'status': 1,
                 'owner': bucky.id,
-                'primary_currency': tnb_currency.id,
-                'secondary_currency': yyy_currency.id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                }
             }, {
                 'id': buy_order_1.id,
                 'created_date': to_iso_format(buy_order_1.created_date),
@@ -80,8 +125,19 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                 'filled_quantity': 0,
                 'status': 1,
                 'owner': bucky.id,
-                'primary_currency': tnb_currency.id,
-                'secondary_currency': yyy_currency.id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                }
             }]
         }
     )
