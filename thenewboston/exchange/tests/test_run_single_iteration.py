@@ -4,7 +4,7 @@ import pytest
 from django.test import override_settings
 
 from thenewboston.exchange.business_logic.trade_history import update_trade_history
-from thenewboston.exchange.models import ExchangeOrder, Trade, TradeHistoryItem
+from thenewboston.exchange.models import AssetPair, ExchangeOrder, Trade, TradeHistoryItem
 from thenewboston.exchange.order_processing.engine import get_potentially_matching_orders, run_single_iteration
 from thenewboston.general.advisory_locks import clear_all_advisory_locks
 from thenewboston.general.tests.any import ANY_DATETIME, ANY_INT, ANY_STR
@@ -104,8 +104,7 @@ def test_run_single_iteration__matching_by_price_exactly(
         'created_date': ANY_DATETIME,
         'modified_date': trade_at,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 5,
         'price': 102,
@@ -119,8 +118,7 @@ def test_run_single_iteration__matching_by_price_exactly(
         'created_date': ANY_DATETIME,
         'modified_date': trade_at,
         'owner': dmitry.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': -1,
         'quantity': 3,
         'price': 100,
@@ -372,16 +370,12 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 9
     }]
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
-    assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
-    ] == [{
+    asset_pair = AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            asset_pair.id,
         'price':
             8,
         'change_1h':
@@ -431,16 +425,11 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 14
     })
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
-    assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
-    ] == [{
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            asset_pair.id,
         'price':
             8,
         'change_1h':
@@ -491,16 +480,11 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
         'overpayment_amount': 5
     })
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
-    assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
-    ] == [{
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            asset_pair.id,
         'price':
             9,
         'change_1h':
@@ -522,16 +506,11 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
     TradeHistoryItem.objects.all().delete()
     assert not TradeHistoryItem.objects.exists()
     update_trade_history()
-    assert [
-        model_to_dict_with_id(item)
-        for item in TradeHistoryItem.objects.order_by('primary_currency_id', 'secondary_currency_id')
-    ] == [{
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
         'id':
             ANY_INT,
-        'primary_currency':
-            tnb_currency.id,
-        'secondary_currency':
-            yyy_currency.id,
+        'asset_pair':
+            asset_pair.id,
         'price':
             9,
         'change_1h':

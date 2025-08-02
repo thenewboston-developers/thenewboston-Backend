@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
+from model_bakery import baker
 
 from thenewboston.exchange.models import ExchangeOrder, OrderProcessingLock
 from thenewboston.general.clients.redis import get_redis_client
@@ -36,9 +37,10 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         id=uuid.uuid4(), acquired_at=now - timedelta(minutes=5), trade_at=trade_at, extra={}
     )
 
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    asset_pair_id = asset_pair.id
     payload = {
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair_id,
         'side': 1,  # buy
         'quantity': 2,
         'price': 101
@@ -54,8 +56,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     assert (response.status_code, response_json) == (
         201, {
             'id': ANY_INT,
-            'primary_currency': tnb_currency.id,
-            'secondary_currency': yyy_currency.id,
+            'asset_pair': asset_pair_id,
             'side': 1,
             'quantity': 2,
             'price': 101,
@@ -69,8 +70,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'created_date': after_trade_at,  # timestamp adjusted to after trade_at
         'modified_date': after_trade_at,  # timestamp adjusted to after trade_at
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair_id,
         'side': 1,
         'quantity': 2,
         'price': 101,
@@ -155,11 +155,22 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
             'filled_quantity': 0,
             'status': 1,
             'owner': bucky.id,
-            'primary_currency': order.primary_currency_id,
-            'secondary_currency': order.secondary_currency_id,
+            'asset_pair': {
+                'id': asset_pair_id,
+                'primary_currency': {
+                    'id': tnb_currency.id,
+                    'ticker': tnb_currency.ticker,
+                    'logo': None,
+                },
+                'secondary_currency': {
+                    'id': yyy_currency.id,
+                    'ticker': yyy_currency.ticker,
+                    'logo': None,
+                }
+            },
         },
-        primary_currency_id=order.primary_currency_id,
-        secondary_currency_id=order.secondary_currency_id,
+        primary_currency_id=order.asset_pair.primary_currency_id,
+        secondary_currency_id=order.asset_pair.secondary_currency_id,
     )
 
 
@@ -185,9 +196,10 @@ def test_create_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
         id=uuid.uuid4(), acquired_at=now - timedelta(minutes=5), trade_at=trade_at, extra={}
     )
 
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    asset_pair_id = asset_pair.id
     payload = {
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair_id,
         'side': -1,  # sell
         'quantity': 2,
         'price': 101
@@ -197,8 +209,7 @@ def test_create_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
     assert (response.status_code, response_json) == (
         201, {
             'id': ANY_INT,
-            'primary_currency': tnb_currency.id,
-            'secondary_currency': yyy_currency.id,
+            'asset_pair': asset_pair_id,
             'side': -1,
             'quantity': 2,
             'price': 101,
@@ -212,8 +223,7 @@ def test_create_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
         'created_date': after_trade_at,  # timestamp adjusted to after trade_at
         'modified_date': after_trade_at,  # timestamp adjusted to after trade_at
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair_id,
         'side': -1,
         'quantity': 2,
         'price': 101,
@@ -240,10 +250,10 @@ def test_create_order_for_someone_else(authenticated_api_client, dmitry, tnb_cur
     assert not ExchangeOrder.objects.exists()
     assert Wallet.objects.count() == 1
 
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
     payload = {
         'owner': dmitry.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair.id,
         'side': 1,  # buy
         'quantity': 2,
         'price': 101
@@ -266,13 +276,9 @@ def test_create_order__not_enough_balance(
     assert not ExchangeOrder.objects.exists()
 
     assert bucky_yyy_wallet.balance == 1000
-    payload = {
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
-        'side': 1,
-        'quantity': 1,
-        'price': 1001
-    }
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    asset_pair_id = asset_pair.id
+    payload = {'asset_pair': asset_pair_id, 'side': 1, 'quantity': 1, 'price': 1001}
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     assert (response.status_code, response.json()) == (
         400, {
@@ -286,13 +292,7 @@ def test_create_order__not_enough_balance(
     # We use a different balance to make sure the correct wallet is checked
     bucky_tnb_wallet.change_balance(-1)
     assert bucky_tnb_wallet.balance == 999
-    payload = {
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
-        'side': -1,
-        'quantity': 1000,
-        'price': 2
-    }
+    payload = {'asset_pair': asset_pair_id, 'side': -1, 'quantity': 1000, 'price': 2}
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     assert (response.status_code, response.json()) == (
         400, {
@@ -306,11 +306,12 @@ def test_create_order__not_enough_balance(
 
 
 @pytest.mark.django_db
-def test_publish_new_order_message(authenticated_api_client, bucky, tnb_currency, yyy_currency, bucky_yyy_wallet):
+@pytest.mark.usefixtures('bucky_yyy_wallet')
+def test_publish_new_order_message(authenticated_api_client, tnb_currency, yyy_currency):
     assert not ExchangeOrder.objects.exists()
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
     payload = {
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': asset_pair.id,
         'side': 1,  # buy
         'quantity': 2,
         'price': 101
@@ -325,7 +326,15 @@ def test_publish_new_order_message(authenticated_api_client, bucky, tnb_currency
 
     try:
         response = authenticated_api_client.post('/api/exchange-orders', payload)
-        assert response.status_code == 201
+        assert (response.status_code, response.json(
+        )) == (201, {
+            'id': ANY_INT,
+            'asset_pair': ANY_INT,
+            'side': 1,
+            'quantity': 2,
+            'price': 101,
+            'status': 1
+        })
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0.01)
         assert message
         assert message.get('type') == 'message' and message.get('data') == 'new_order'

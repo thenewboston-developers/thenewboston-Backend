@@ -35,3 +35,7 @@ class CustomModel(models.Model):
 
     def advisory_unlock(self, lock_id: int) -> bool:
         return self.__class__.objects.with_advisory_unlock(lock_id).get(pk=self.pk)
+
+    @classmethod
+    def get_field_names(cls):
+        return [field.name for field in cls._meta.fields]

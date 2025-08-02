@@ -12,5 +12,7 @@ class TradeViewSet(viewsets.ReadOnlyModelViewSet):
     #                Just add a filter to orders viewset, so FE can get only own orders.
     filter_backends = [DjangoFilterBackend]
     filterset_class = TradeFilter
-    queryset = Trade.objects.select_related('buy_order__primary_currency', 'buy_order__secondary_currency').all()
+    queryset = Trade.objects.select_related(
+        'buy_order__asset_pair', 'buy_order__asset_pair__primary_currency', 'buy_order__asset_pair__secondary_currency'
+    ).all()
     serializer_class = TradeSerializer

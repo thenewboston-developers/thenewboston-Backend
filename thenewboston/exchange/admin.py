@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import AssetPair, ExchangeOrder, OrderProcessingLock, Trade, TradeHistoryItem
+from .models.exchange_order import CHANGEABLE_FIELDS
 
 admin.site.register(AssetPair)
 
@@ -8,25 +9,23 @@ admin.site.register(AssetPair)
 @admin.register(ExchangeOrder)
 class ExchangeOrderAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'owner', 'primary_currency', 'secondary_currency', 'side', 'quantity', 'price', 'filled_quantity',
-        'status', 'created_date', 'modified_date'
+        'id', 'owner', 'asset_pair', 'side', 'quantity', 'price', 'filled_quantity', 'status', 'created_date',
+        'modified_date'
     )
-    list_filter = (
-        'side',
-        'status',
-        'primary_currency',
-        'secondary_currency',
-    )
+    list_filter = ('side', 'status', 'asset_pair')
+    # no set arithmetics to keep the field order
+    readonly_fields = [
+        field_name for field_name in ExchangeOrder.get_field_names() if field_name not in CHANGEABLE_FIELDS
+    ]
     search_fields = (
         'owner__username',
         'owner__first_name',
         'owner__last_name',
-        'primary_currency__ticker',
-        'secondary_currency__ticker',
+        'asset_pair__primary_currency__ticker',
+        'asset_pair__secondary_currency__ticker',
     )
     ordering = ('-created_date', '-pk')
     date_hierarchy = 'created_date'
-    readonly_fields = ('created_date', 'modified_date')
 
 
 @admin.register(OrderProcessingLock)
@@ -43,7 +42,7 @@ class TradeAdmin(admin.ModelAdmin):
 @admin.register(TradeHistoryItem)
 class TradeHistoryItemAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'primary_currency', 'secondary_currency', 'price', 'change_1h', 'change_24h', 'change_7d', 'volume_24h',
-        'market_cap', 'sparkline', 'modified_date'
+        'id', 'asset_pair', 'price', 'change_1h', 'change_24h', 'change_7d', 'volume_24h', 'market_cap', 'sparkline',
+        'modified_date'
     )
-    ordering = ('primary_currency__ticker', 'secondary_currency__ticker')
+    ordering = ('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')

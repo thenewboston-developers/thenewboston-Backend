@@ -4,9 +4,12 @@ from thenewboston.exchange.models.exchange_order import ExchangeOrderStatus
 from thenewboston.general.serializers import BaseModelSerializer
 
 from ..models import ExchangeOrder
+from .asset_pair import AssetPairTinySerializer
 
 
 class ExchangeOrderReadSerializer(BaseModelSerializer):
+
+    asset_pair = AssetPairTinySerializer()
 
     class Meta:
         model = ExchangeOrder
@@ -19,17 +22,17 @@ class ExchangeOrderCreateSerializer(BaseModelSerializer):
 
     class Meta:
         model = ExchangeOrder
-        fields = ('id', 'owner', 'primary_currency', 'secondary_currency', 'side', 'quantity', 'price', 'status')
+        fields = ('id', 'owner', 'asset_pair', 'side', 'quantity', 'price', 'status')
         # It safer to define writeable fields explicitly, so adding new fields to the model
         # does not accidentally expose them for writing.
-        read_only_fields = tuple(set(fields) - {'primary_currency', 'secondary_currency', 'side', 'quantity', 'price'})
+        read_only_fields = tuple(set(fields) - {'asset_pair', 'side', 'quantity', 'price'})
 
 
 class ExchangeOrderUpdateSerializer(BaseModelSerializer):
 
     class Meta:
         model = ExchangeOrder
-        fields = ('primary_currency', 'secondary_currency', 'side', 'quantity', 'price', 'status')
+        fields = ('asset_pair', 'side', 'quantity', 'price', 'status')
         # TODO(dmu) LOW: Support update of other fields (need to update the logic of )
         read_only_fields = tuple(set(fields) - {'status'})
 

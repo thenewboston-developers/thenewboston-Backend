@@ -16,8 +16,9 @@ class TradePriceChartDataView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = TradePriceChartDataFilter
     permission_classes = [IsAuthenticated]
-    queryset = Trade.objects.select_related('buy_order__primary_currency',
-                                            'buy_order__secondary_currency').order_by('created_date')
+    queryset = Trade.objects.select_related(
+        'buy_order__asset_pair', 'buy_order__asset_pair__primary_currency', 'buy_order__asset_pair__secondary_currency'
+    ).order_by('created_date')
     serializer_class = TradePriceChartDataResponseSerializer
 
     @staticmethod

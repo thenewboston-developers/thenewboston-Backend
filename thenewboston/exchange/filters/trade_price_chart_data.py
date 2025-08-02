@@ -35,10 +35,7 @@ class TradePriceChartDataFilter(django_filters.FilterSet):
         try:
             asset_pair = AssetPair.objects.get(pk=value)
             self.asset_pair_obj = asset_pair
-            return queryset.filter(
-                buy_order__primary_currency=asset_pair.primary_currency,
-                buy_order__secondary_currency=asset_pair.secondary_currency
-            )
+            return queryset.filter(buy_order__asset_pair=asset_pair)
         except AssetPair.DoesNotExist:
             self.asset_pair_obj = None
             return queryset.none()

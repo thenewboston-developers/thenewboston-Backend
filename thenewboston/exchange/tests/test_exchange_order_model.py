@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from thenewboston.exchange.models import AssetPair
 from thenewboston.general.enums import MessageType
 from thenewboston.general.utils.datetime import to_iso_format
 from thenewboston.wallets.models import Wallet
@@ -83,6 +84,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
         }
     )
 
+    asset_pair = AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency)
     stream_exchange_order_mock.assert_called_once_with(
         message_type=MessageType.UPDATE_EXCHANGE_ORDER,
         order_data={
@@ -95,11 +97,22 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
             'filled_quantity': 0,
             'status': 1,
             'owner': bucky.id,
-            'primary_currency': buy_order.primary_currency_id,
-            'secondary_currency': buy_order.secondary_currency_id,
+            'asset_pair': {
+                'id': asset_pair.id,
+                'primary_currency': {
+                    'id': tnb_currency.id,
+                    'ticker': tnb_currency.ticker,
+                    'logo': None,
+                },
+                'secondary_currency': {
+                    'id': yyy_currency.id,
+                    'ticker': yyy_currency.ticker,
+                    'logo': None,
+                }
+            },
         },
-        primary_currency_id=buy_order.primary_currency_id,
-        secondary_currency_id=buy_order.secondary_currency_id,
+        primary_currency_id=asset_pair.primary_currency_id,
+        secondary_currency_id=asset_pair.secondary_currency_id,
     )
 
     with (
@@ -185,11 +198,22 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
             'filled_quantity': 0,
             'status': 1,
             'owner': dmitry.id,
-            'primary_currency': sell_order.primary_currency_id,
-            'secondary_currency': sell_order.secondary_currency_id,
+            'asset_pair': {
+                'id': asset_pair.id,
+                'primary_currency': {
+                    'id': tnb_currency.id,
+                    'ticker': tnb_currency.ticker,
+                    'logo': None,
+                },
+                'secondary_currency': {
+                    'id': yyy_currency.id,
+                    'ticker': yyy_currency.ticker,
+                    'logo': None,
+                }
+            },
         },
-        primary_currency_id=sell_order.primary_currency_id,
-        secondary_currency_id=sell_order.secondary_currency_id,
+        primary_currency_id=asset_pair.primary_currency_id,
+        secondary_currency_id=asset_pair.secondary_currency_id,
     )
 
     with (

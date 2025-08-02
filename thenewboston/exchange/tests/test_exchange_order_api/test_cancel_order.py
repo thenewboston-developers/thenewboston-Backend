@@ -1,6 +1,6 @@
 import pytest
 
-from thenewboston.exchange.models import ExchangeOrder
+from thenewboston.exchange.models import AssetPair, ExchangeOrder
 from thenewboston.general.tests.misc import model_to_dict_with_id
 
 from ..factories.exchange_order import make_buy_order, make_sell_order
@@ -41,8 +41,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
         200, {
-            'primary_currency': buy_order.primary_currency_id,
-            'secondary_currency': buy_order.secondary_currency_id,
+            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 2,
             'price': 101,
@@ -55,8 +54,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'created_date': before_update_created_date,
         'modified_date': buy_order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 2,
         'price': 101,
@@ -85,8 +83,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
         200, {
-            'primary_currency': buy_order.primary_currency_id,
-            'secondary_currency': buy_order.secondary_currency_id,
+            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 2,
             'price': 101,
@@ -99,8 +96,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'created_date': before_update_created_date,
         'modified_date': before_update_modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 2,
         'price': 101,
@@ -130,16 +126,14 @@ def test_cancel_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
     bucky_tnb_wallet.refresh_from_db()
     assert bucky_tnb_wallet.balance == 1000 - 2
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100})
-    assert (response.status_code, response.json()) == (
-        200, {
-            'primary_currency': order.primary_currency_id,
-            'secondary_currency': order.secondary_currency_id,
-            'side': -1,
-            'quantity': 2,
-            'price': 101,
-            'status': 100
-        }
-    )
+    assert (response.status_code, response.json()
+            ) == (200, {
+                'asset_pair': order.asset_pair_id,
+                'side': -1,
+                'quantity': 2,
+                'price': 101,
+                'status': 100
+            })
     order.refresh_from_db()
     assert order.status == 100  # CANCELLED
     bucky_tnb_wallet.refresh_from_db()
@@ -183,8 +177,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
         'created_date': buy_order.created_date,
         'modified_date': buy_order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 5,
         'price': 101,
@@ -195,8 +188,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
         200, {
-            'primary_currency': buy_order.primary_currency_id,
-            'secondary_currency': buy_order.secondary_currency_id,
+            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 5,
             'price': 101,
@@ -209,8 +201,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
         'created_date': buy_order.created_date,
         'modified_date': buy_order.modified_date,
         'owner': bucky.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 5,
         'price': 101,
@@ -242,8 +233,7 @@ def test_cancel_someones_else_order(authenticated_api_client, dmitry, tnb_curren
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': dmitry.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,
@@ -259,8 +249,7 @@ def test_cancel_someones_else_order(authenticated_api_client, dmitry, tnb_curren
         'created_date': order.created_date,
         'modified_date': order.modified_date,
         'owner': dmitry.id,
-        'primary_currency': tnb_currency.id,
-        'secondary_currency': yyy_currency.id,
+        'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
         'side': 1,
         'quantity': 1,
         'price': 100,

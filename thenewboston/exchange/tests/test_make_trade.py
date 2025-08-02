@@ -10,7 +10,7 @@ from thenewboston.general.tests.misc import model_to_dict_with_id
 from thenewboston.general.utils.datetime import to_iso_format
 from thenewboston.wallets.models import Wallet
 
-from ..models import Trade
+from ..models import AssetPair, Trade
 from .factories.exchange_order import make_buy_order, make_sell_order
 
 
@@ -158,10 +158,12 @@ def test_make_trade_successfully_creates_trade(
     assert sell_order_credit_wallet.created_date == trade_at
     assert sell_order_credit_wallet.modified_date == trade_at
 
+    asset_pair = AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency)
     stream_trade_mock.assert_called_once_with(
         message_type=MessageType.CREATE_TRADE,
         trade_data={
             'id': trade.id,
+            'asset_pair': asset_pair.id,
             'primary_currency': tnb_currency.id,
             'secondary_currency': yyy_currency.id,
             'created_date': to_iso_format(trade_at),
@@ -188,11 +190,22 @@ def test_make_trade_successfully_creates_trade(
                 'filled_quantity': expected_filled_quantity,
                 'status': expected_buy_order_status,
                 'owner': bucky.id,
-                'primary_currency': buy_order.primary_currency_id,
-                'secondary_currency': buy_order.secondary_currency_id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                },
             },
-            primary_currency_id=buy_order.primary_currency_id,
-            secondary_currency_id=buy_order.secondary_currency_id,
+            primary_currency_id=asset_pair.primary_currency_id,
+            secondary_currency_id=asset_pair.secondary_currency_id,
         ),
         call(
             message_type=MessageType.UPDATE_EXCHANGE_ORDER,
@@ -206,11 +219,22 @@ def test_make_trade_successfully_creates_trade(
                 'filled_quantity': expected_filled_quantity,
                 'status': expected_sell_order_status,
                 'owner': dmitry.id,
-                'primary_currency': sell_order.primary_currency_id,
-                'secondary_currency': sell_order.secondary_currency_id,
+                'asset_pair': {
+                    'id': asset_pair.id,
+                    'primary_currency': {
+                        'id': tnb_currency.id,
+                        'ticker': tnb_currency.ticker,
+                        'logo': None,
+                    },
+                    'secondary_currency': {
+                        'id': yyy_currency.id,
+                        'ticker': yyy_currency.ticker,
+                        'logo': None,
+                    }
+                },
             },
-            primary_currency_id=sell_order.primary_currency_id,
-            secondary_currency_id=sell_order.secondary_currency_id,
+            primary_currency_id=asset_pair.primary_currency_id,
+            secondary_currency_id=asset_pair.secondary_currency_id,
         ),
     ])
 
