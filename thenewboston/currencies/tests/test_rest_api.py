@@ -7,7 +7,7 @@ def test_read_currencies_as_bucky(api_client_bucky):
     url = '/api/currencies'
     response = api_client_bucky.get(url)
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {'count': 0, 'next': None, 'previous': None, 'results': []}
 
     currencies = baker.make('currencies.Currency', logo=None, _quantity=3)
     expected_currencies = [{
@@ -51,4 +51,8 @@ def test_read_currencies_as_bucky(api_client_bucky):
     } for currency in currencies]
     response = api_client_bucky.get(url)
     assert response.status_code == 200
-    assert response.json() == sorted(expected_currencies, key=lambda x: x['created_date'], reverse=True)
+    data = response.json()
+    assert data['count'] == 3
+    assert data['next'] is None
+    assert data['previous'] is None
+    assert data['results'] == sorted(expected_currencies, key=lambda x: x['created_date'], reverse=True)

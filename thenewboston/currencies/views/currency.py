@@ -5,6 +5,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
 from ..models import Currency
@@ -14,6 +15,7 @@ from ..serializers.currency import CurrencyReadSerializer, CurrencyWriteSerializ
 class CurrencyViewSet(viewsets.ModelViewSet):
     ordering = ['-created_date']
     ordering_fields = ['ticker', 'created_date', 'modified_date']
+    pagination_class = CustomPageNumberPagination
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
     queryset = Currency.objects.all()
