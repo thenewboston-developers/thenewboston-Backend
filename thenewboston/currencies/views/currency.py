@@ -8,11 +8,13 @@ from rest_framework.response import Response
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
+from ..filters.currency import CurrencyFilter
 from ..models import Currency
 from ..serializers.currency import CurrencyReadSerializer, CurrencyWriteSerializer
 
 
 class CurrencyViewSet(viewsets.ModelViewSet):
+    filterset_class = CurrencyFilter
     ordering = ['-created_date']
     ordering_fields = ['ticker', 'created_date', 'modified_date']
     pagination_class = CustomPageNumberPagination
