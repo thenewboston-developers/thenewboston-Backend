@@ -8,6 +8,7 @@ from django.db.models import (
 from django.utils.translation import gettext_lazy as _
 from model_utils import FieldTracker
 
+from thenewboston.currencies.serializers.currency import CurrencyTinySerializer
 from thenewboston.general.clients.redis import get_redis_client
 from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.models.created_modified import AdjustableTimestampsModel
@@ -107,8 +108,6 @@ class ExchangeOrder(AdjustableTimestampsModel):
         self.ensure_filled_status()
 
     def notify_filled(self):
-        from thenewboston.currencies.serializers.currency import CurrencyTinySerializer
-
         asset_pair = self.asset_pair
         Notification(
             owner=self.owner,
