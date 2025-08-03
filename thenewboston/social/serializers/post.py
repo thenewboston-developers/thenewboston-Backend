@@ -3,7 +3,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from thenewboston.currencies.models import Currency
-from thenewboston.currencies.serializers.currency import CurrencyReadSerializer
+from thenewboston.currencies.serializers.currency import CurrencyReadSerializer, CurrencyTinySerializer
 from thenewboston.general.enums import NotificationType
 from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.text import truncate_text
@@ -20,6 +20,7 @@ class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
+    price_currency = CurrencyTinySerializer(read_only=True)
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     tip_amounts = serializers.SerializerMethodField()
