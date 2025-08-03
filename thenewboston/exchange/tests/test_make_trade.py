@@ -253,10 +253,16 @@ def test_make_trade_successfully_creates_trade(
                         'side': 1,
                         'quantity': expected_filled_quantity,
                         'price': buy_price,
-                        'primary_currency_id': tnb_currency.id,
-                        'primary_currency_ticker': 'TNB',
-                        'secondary_currency_id': yyy_currency.id,
-                        'secondary_currency_ticker': 'YYY'
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'logo': None,
+                            'ticker': 'TNB'
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'logo': None,
+                            'ticker': 'YYY'
+                        }
                     },
                     'is_read': False,
                     'owner': bucky.id,
@@ -278,10 +284,16 @@ def test_make_trade_successfully_creates_trade(
                         'side': -1,
                         'quantity': expected_filled_quantity,
                         'price': sell_price,
-                        'primary_currency_id': tnb_currency.id,
-                        'primary_currency_ticker': 'TNB',
-                        'secondary_currency_id': yyy_currency.id,
-                        'secondary_currency_ticker': 'YYY'
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'logo': None,
+                            'ticker': 'TNB'
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'logo': None,
+                            'ticker': 'YYY'
+                        }
                     },
                     'is_read': False,
                     'owner': dmitry.id,

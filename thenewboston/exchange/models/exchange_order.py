@@ -107,6 +107,8 @@ class ExchangeOrder(AdjustableTimestampsModel):
         self.ensure_filled_status()
 
     def notify_filled(self):
+        from thenewboston.currencies.serializers.currency import CurrencyTinySerializer
+
         asset_pair = self.asset_pair
         Notification(
             owner=self.owner,
@@ -116,10 +118,8 @@ class ExchangeOrder(AdjustableTimestampsModel):
                 'side': self.side,
                 'quantity': self.quantity,
                 'price': self.price,
-                'primary_currency_id': asset_pair.primary_currency_id,
-                'primary_currency_ticker': asset_pair.primary_currency.ticker,
-                'secondary_currency_id': asset_pair.secondary_currency_id,
-                'secondary_currency_ticker': asset_pair.secondary_currency.ticker,
+                'primary_currency': CurrencyTinySerializer(asset_pair.primary_currency).data,
+                'secondary_currency': CurrencyTinySerializer(asset_pair.secondary_currency).data,
             }
         ).save(should_stream=True)
 
