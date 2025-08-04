@@ -106,6 +106,10 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# Base URL for absolute URL generation when request context is not available
+# This is only used for local development since S3 handles this in production
+BASE_URL = 'http://localhost:8000'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'  # type: ignore # noqa: F821
 
@@ -118,6 +122,3 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# Base URL for absolute URL generation when request context is not available
-BASE_URL = 'http://localhost:8000'
