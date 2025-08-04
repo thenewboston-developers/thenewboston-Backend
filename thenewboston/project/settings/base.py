@@ -118,3 +118,6 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Base URL for absolute URL generation when request context is not available
+BASE_URL = 'http://localhost:8000'
