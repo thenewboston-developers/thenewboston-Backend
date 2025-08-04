@@ -3,6 +3,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from thenewboston.exchange.models import AssetPair
+from thenewboston.general.serializers.fields import AbsoluteURLImageField
 from thenewboston.general.utils.image import process_image, validate_image_dimensions
 from thenewboston.users.serializers.user import UserReadSerializer
 
@@ -21,6 +22,7 @@ class CurrencyReadSerializer(serializers.ModelSerializer):
 
 
 class CurrencyTinySerializer(serializers.ModelSerializer):
+    logo = AbsoluteURLImageField(read_only=True)
 
     class Meta:
         model = Currency
