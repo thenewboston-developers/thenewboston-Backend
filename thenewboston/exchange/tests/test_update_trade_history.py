@@ -290,12 +290,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
                     'id': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
                     'primary_currency': {
                         'id': tnb_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                         'ticker': 'TNB'
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                         'ticker': 'YYY'
                     },
                 },
@@ -320,12 +320,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
                     'id': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=zzz_currency).id,
                     'primary_currency': {
                         'id': tnb_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                         'ticker': 'TNB'
                     },
                     'secondary_currency': {
                         'id': zzz_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/zzz_currency.png',
                         'ticker': 'ZZZ'
                     },
                 },
@@ -350,12 +350,12 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
                     'id': AssetPair.objects.get(primary_currency=zzz_currency, secondary_currency=yyy_currency).id,
                     'primary_currency': {
                         'id': zzz_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/zzz_currency.png',
                         'ticker': 'ZZZ'
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                         'ticker': 'YYY'
                     },
                 },

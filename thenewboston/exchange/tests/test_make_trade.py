@@ -195,12 +195,12 @@ def test_make_trade_successfully_creates_trade(
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 },
             },
@@ -224,12 +224,12 @@ def test_make_trade_successfully_creates_trade(
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 },
             },
@@ -255,12 +255,12 @@ def test_make_trade_successfully_creates_trade(
                         'price': buy_price,
                         'primary_currency': {
                             'id': tnb_currency.id,
-                            'logo': None,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                             'ticker': 'TNB'
                         },
                         'secondary_currency': {
                             'id': yyy_currency.id,
-                            'logo': None,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                             'ticker': 'YYY'
                         }
                     },
@@ -286,12 +286,12 @@ def test_make_trade_successfully_creates_trade(
                         'price': sell_price,
                         'primary_currency': {
                             'id': tnb_currency.id,
-                            'logo': None,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                             'ticker': 'TNB'
                         },
                         'secondary_currency': {
                             'id': yyy_currency.id,
-                            'logo': None,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                             'ticker': 'YYY'
                         }
                     },
@@ -347,7 +347,7 @@ def test_make_trade_successfully_creates_trade(
                         'modified_date': to_iso_format(yyy_currency.modified_date),
                         'description': None,
                         'domain': 'yyy.net',
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                         'ticker': 'YYY'
                     },
                     'created_date': to_iso_format(bucky_yyy_wallet.created_date),

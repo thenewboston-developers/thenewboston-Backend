@@ -59,7 +59,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                 'modified_date': to_iso_format(currency.modified_date),
                 'description': None,
                 'domain': 'thenewboston.net',
-                'logo': None,
+                'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                 'ticker': 'TNB'
             },
             'created_date': to_iso_format(bucky_tnb_wallet.created_date),
@@ -118,7 +118,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                 'modified_date': to_iso_format(currency.modified_date),
                 'description': None,
                 'domain': 'thenewboston.net',
-                'logo': None,
+                'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                 'ticker': 'TNB'
             },
             'created_date': to_iso_format(bucky_tnb_wallet.created_date),

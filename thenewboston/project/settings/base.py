@@ -106,10 +106,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Base URL for absolute URL generation when request context is not available
-# This is only used for local development since S3 handles this in production
-BASE_URL = 'http://localhost:8000'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'  # type: ignore # noqa: F821
 
