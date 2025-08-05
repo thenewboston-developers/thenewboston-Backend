@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from thenewboston.currencies.serializers.currency import CurrencyTinySerializer
 from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
@@ -10,6 +11,7 @@ from ..models import Comment
 
 class CommentReadSerializer(serializers.ModelSerializer):
     owner = UserReadSerializer(read_only=True)
+    price_currency = CurrencyTinySerializer(read_only=True)
 
     class Meta:
         model = Comment
