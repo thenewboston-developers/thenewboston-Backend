@@ -38,7 +38,9 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action in ['retrieve', 'list']:
-            queryset = queryset.prefetch_related('owner', 'likes')
+            queryset = queryset.prefetch_related(
+                'owner', 'likes', 'comments__owner', 'comments__price_currency', 'price_currency', 'recipient'
+            )
 
         return queryset
 
