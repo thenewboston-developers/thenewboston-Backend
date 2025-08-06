@@ -15,6 +15,7 @@ def unittest_settings():
         # The exposed signing key is used for testing only
         SIGNING_KEY=settings.SIGNING_KEY or '756eb20e5569a0c906ccb813263aa27159aeafa07d7208f860ae290c03066c51',
         DEBUG=settings.LOG_DATABASE_QUERIES,
+        MEDIA_URL='http://localhost:8000/media/',
     ):
         yield
 

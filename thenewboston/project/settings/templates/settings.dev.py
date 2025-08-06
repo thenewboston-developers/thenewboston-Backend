@@ -11,3 +11,5 @@ LOGGING['handlers']['console']['level'] = 'DEBUG'  # type: ignore
 LOGGING['handlers']['console']['formatter'] = 'colored'  # type: ignore
 
 ENV_NAME = 'local-development'
+
+MEDIA_URL = 'http://localhost:8000/media/'

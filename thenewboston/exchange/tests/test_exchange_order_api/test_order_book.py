@@ -37,12 +37,12 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 }
             }, {
@@ -60,12 +60,12 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 }
             }, {
@@ -83,12 +83,12 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 }
             }],
@@ -107,12 +107,12 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 }
             }, {
@@ -130,12 +130,12 @@ def test_get_order_book__smoke_test(authenticated_api_client, dmitry, bucky, tnb
                     'primary_currency': {
                         'id': tnb_currency.id,
                         'ticker': tnb_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
                     },
                     'secondary_currency': {
                         'id': yyy_currency.id,
                         'ticker': yyy_currency.ticker,
-                        'logo': None,
+                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
                     }
                 }
             }]
