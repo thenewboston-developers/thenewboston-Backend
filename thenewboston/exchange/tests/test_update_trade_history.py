@@ -276,7 +276,7 @@ def test_update_trade_history(api_client, tnb_currency, yyy_currency, zzz_curren
         order_by('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')
     ] == expected_trade_history
 
-    response = api_client.get('/api/trade-history-items')
+    response = api_client.get('/api/trade-history-items?ordering=asset_pair__primary_currency__ticker')
     assert (response.status_code, response.json()) == (
         200, {
             'count':
