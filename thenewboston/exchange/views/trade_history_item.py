@@ -23,13 +23,13 @@ class RequiredOrderingFilter(OrderingFilter):
 
 
 class TradeHistoryItemViewSet(ListModelMixin, GenericViewSet):
-    serializer_class = TradeHistoryItemSerializer
+    filter_backends = [RequiredOrderingFilter]
+    ordering_fields = [
+        'asset_pair__primary_currency__ticker', 'change_1h', 'change_24h', 'change_7d', 'market_cap', 'price',
+        'volume_24h'
+    ]
+    pagination_class = CustomPageNumberPagination
     queryset = TradeHistoryItemSerializer.Meta.model.objects.select_related(
         'asset_pair', 'asset_pair__primary_currency', 'asset_pair__secondary_currency'
     ).all()
-    pagination_class = CustomPageNumberPagination
-    filter_backends = [RequiredOrderingFilter]
-    ordering_fields = [
-        'asset_pair__primary_currency__ticker', 'price', 'change_1h', 'change_24h', 'change_7d', 'volume_24h',
-        'market_cap'
-    ]
+    serializer_class = TradeHistoryItemSerializer
