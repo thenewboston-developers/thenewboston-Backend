@@ -1,10 +1,12 @@
 from django.conf import settings
+from nacl.encoding import HexEncoder
+from nacl.signing import SigningKey
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.api.accounts import fetch_balance, wire_funds
+from thenewboston.api.accounts import encode_verify_key, fetch_balance, get_verify_key, wire_funds
 from thenewboston.general.constants import TRANSACTION_FEE
 from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 
@@ -40,10 +42,21 @@ class WalletViewSet(
             return Response({'error': f'Minimum balance of {minimum_balance} required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        if settings.SIGNING_KEY:
+            platform_signing_key = SigningKey(settings.SIGNING_KEY.encode('utf-8'), encoder=HexEncoder)
+            platform_account_number = encode_verify_key(verify_key=get_verify_key(signing_key=platform_signing_key))
+        else:
+            # Fallback to ACCOUNT_NUMBER if SIGNING_KEY is not set
+            platform_account_number = settings.ACCOUNT_NUMBER
+
+        if not platform_account_number:
+            return Response({'error': 'Platform account not configured. Please set SIGNING_KEY in settings.'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         block = wire_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
             domain=wallet.currency.domain,
-            recipient_account_number_str=settings.ACCOUNT_NUMBER,
+            recipient_account_number_str=platform_account_number,
             sender_signing_key_str=wallet.deposit_signing_key,
         )
         block_serializer = BlockSerializer(data=block)
