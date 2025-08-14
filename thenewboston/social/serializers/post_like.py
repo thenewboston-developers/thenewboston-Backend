@@ -15,14 +15,15 @@ class PostLikeReadSerializer(serializers.ModelSerializer):
 
 
 class PostLikeWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PostLike
         fields = ('post',)
 
     def create(self, validated_data):
         request = self.context.get('request')
-        return super().create({
-            **validated_data,
-            'user': request.user,
-        })
+        return super().create(
+            {
+                **validated_data,
+                'user': request.user,
+            }
+        )

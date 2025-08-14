@@ -4,4 +4,4 @@ root = true
 charset = utf-8
 indent_size = 4
 indent_style = space
-max_line_length = 119
+max_line_length = 120

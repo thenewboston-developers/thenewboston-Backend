@@ -46,10 +46,6 @@ pytest-parametrize-cases = "^0.1.2"
 pytest-asyncio = "^0.26.0"
 diff-cover = "^9.6.0"
 
-[tool.isort]
-line_length = 119
-multi_line_output = 5
-
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "thenewboston.project.settings"
 django_find_project = false
@@ -64,12 +60,40 @@ env = [
     "THENEWBOSTON_SETTING_SECRET_KEY = dummy",
 ]
 
-[tool.yapf]
-align_closing_bracket_with_visual_indent = true
-based_on_style = "google"
-coalesce_brackets = true
-column_limit = 119
-dedent_closing_brackets = true
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py313"
+include = ["*.py"]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    "__pycache__",
+    "venv"
+]
+
+[tool.ruff.lint]
+# TODO(dmu) MEDIUM: Consider enabling all rules (`select = ["ALL"]`), but this will require
+#                   adding plenty of ignores manually
+ignore = ["A005", "D403", "F403", "F405"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+"thenewboston/project/settings/templates/settings.dev.py" = ["F821"]
+"thenewboston/project/settings/templates/settings.unittests.py" = ["F821"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+relative-imports-order = "closest-to-furthest"
+known-first-party = ["app", "tests"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [build-system]
 requires = ["poetry-core"]

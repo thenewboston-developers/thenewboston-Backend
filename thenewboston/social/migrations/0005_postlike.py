@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('social', '0004_delete_postreaction'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -23,7 +22,7 @@ class Migration(migrations.Migration):
                     'post',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE, related_name='likes', to='social.post'
-                    )
+                    ),
                 ),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],

@@ -18,7 +18,7 @@ class TradePriceChartDataFilter(django_filters.FilterSet):
             ('1y', '1 Year'),
             ('all', 'All Time'),
         ],
-        required=True
+        required=True,
     )
 
     class Meta:

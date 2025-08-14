@@ -47,10 +47,7 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
             validated_data['logo'] = process_image(logo)
 
         with transaction.atomic():
-            currency = super().create({
-                **validated_data,
-                'owner': request.user,
-            })
+            currency = super().create({**validated_data, 'owner': request.user})
             default_currency = get_default_currency()
             AssetPair.objects.create(primary_currency=currency, secondary_currency=default_currency)
 
@@ -58,9 +55,19 @@ class CurrencyWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         allowed_fields = {
-            'description', 'discord_username', 'facebook_username', 'github_username', 'instagram_username',
-            'linkedin_username', 'logo', 'pinterest_username', 'reddit_username', 'tiktok_username', 'twitch_username',
-            'x_username', 'youtube_username'
+            'description',
+            'discord_username',
+            'facebook_username',
+            'github_username',
+            'instagram_username',
+            'linkedin_username',
+            'logo',
+            'pinterest_username',
+            'reddit_username',
+            'tiktok_username',
+            'twitch_username',
+            'x_username',
+            'youtube_username',
         }
         validated_data = {k: v for k, v in validated_data.items() if k in allowed_fields}
 

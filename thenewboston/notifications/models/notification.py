@@ -20,7 +20,7 @@ class Notification(CreatedModified):
         apply_on_commit(
             lambda notification=self: NotificationConsumer.stream_notification(
                 message_type=MessageType.CREATE_NOTIFICATION,
-                notification_data=NotificationReadSerializer(notification).data
+                notification_data=NotificationReadSerializer(notification).data,
             )
         )
 

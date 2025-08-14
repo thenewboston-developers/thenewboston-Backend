@@ -17,14 +17,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # Third party
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
     'storages',
-
     # Apps
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.currencies.apps.CurrenciesConfig',

@@ -29,13 +29,13 @@ class CurrencyBalanceListView(generics.ListAPIView):
                 rank=Window(expression=Rank(), order_by=F('balance').desc()),
                 percentage=ExpressionWrapper(
                     Cast(F('balance'), DecimalField(max_digits=20, decimal_places=4)) * 100.0 / total_minted,
-                    output_field=DecimalField(max_digits=10, decimal_places=4)
-                )
+                    output_field=DecimalField(max_digits=10, decimal_places=4),
+                ),
             )
         else:
             queryset = queryset.annotate(
                 rank=Window(expression=Rank(), order_by=F('balance').desc()),
-                percentage=Value(0, output_field=DecimalField(max_digits=10, decimal_places=4))
+                percentage=Value(0, output_field=DecimalField(max_digits=10, decimal_places=4)),
             )
 
         return queryset.order_by('-balance')

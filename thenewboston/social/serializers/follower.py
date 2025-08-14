@@ -29,17 +29,18 @@ class FollowerReadSerializer(serializers.ModelSerializer):
 
 
 class FollowerCreateSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Follower
         fields = ('following',)
 
     def create(self, validated_data):
         request = self.context.get('request')
-        follower = super().create({
-            **validated_data,
-            'follower': request.user,
-        })
+        follower = super().create(
+            {
+                **validated_data,
+                'follower': request.user,
+            }
+        )
         return follower
 
     def validate(self, data):

@@ -20,9 +20,7 @@ from ..serializers.withdraw import WithdrawSerializer
 from ..utils.wallet import get_default_wallet
 
 
-class WalletViewSet(
-    mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
-):
+class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = WalletFilter
     pagination_class = CustomPageNumberPagination
@@ -43,8 +41,9 @@ class WalletViewSet(
         minimum_balance = TRANSACTION_FEE + 1
 
         if wallet.deposit_balance < minimum_balance:
-            return Response({'error': f'Minimum balance of {minimum_balance} required.'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': f'Minimum balance of {minimum_balance} required.'}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         block = wire_funds(
             amount=wallet.deposit_balance - TRANSACTION_FEE,
@@ -67,9 +66,7 @@ class WalletViewSet(
             return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            deposit_balance = fetch_balance(
-                account_number=wallet.deposit_account_number, domain=wallet.currency.domain
-            )
+            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.currency.domain)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -77,9 +74,7 @@ class WalletViewSet(
         wallet.save()
 
         response_data = {
-            'wallet': WalletReadSerializer(wallet, context={
-                'request': request
-            }).data,
+            'wallet': WalletReadSerializer(wallet, context={'request': request}).data,
             'wire': WireSerializer(wire).data,
         }
 
@@ -90,9 +85,7 @@ class WalletViewSet(
         wallet = self.get_object()
 
         try:
-            deposit_balance = fetch_balance(
-                account_number=wallet.deposit_account_number, domain=wallet.currency.domain
-            )
+            deposit_balance = fetch_balance(account_number=wallet.deposit_account_number, domain=wallet.currency.domain)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -153,9 +146,7 @@ class WalletViewSet(
             return Response({'error': 'Invalid block'}, status=status.HTTP_400_BAD_REQUEST)
 
         response_data = {
-            'wallet': WalletReadSerializer(wallet, context={
-                'request': request
-            }).data,
+            'wallet': WalletReadSerializer(wallet, context={'request': request}).data,
             'wire': WireSerializer(wire).data,
         }
 

@@ -8,7 +8,6 @@ from ..models.block import Block
 
 
 class BlockSerializer(ValidateFieldsMixin, ModelSerializer):
-
     class Meta:
         model = Block
         fields = '__all__'

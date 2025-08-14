@@ -24,9 +24,13 @@ class TransferListView(APIView):
         transfers = []
 
         # Get posts where user sent or received funds
-        posts = Post.objects.filter(
-            Q(owner=user) | Q(recipient=user), price_amount__isnull=False, price_currency_id=currency_id
-        ).select_related('owner', 'recipient', 'price_currency').order_by('-created_date')
+        posts = (
+            Post.objects.filter(
+                Q(owner=user) | Q(recipient=user), price_amount__isnull=False, price_currency_id=currency_id
+            )
+            .select_related('owner', 'recipient', 'price_currency')
+            .order_by('-created_date')
+        )
 
         for post in posts:
             is_sent = post.owner == user
@@ -37,14 +41,16 @@ class TransferListView(APIView):
                 'currency': post.price_currency_id,
                 'timestamp': post.created_date,
                 'content': post.content,
-                'counterparty': post.recipient if is_sent else post.owner
+                'counterparty': post.recipient if is_sent else post.owner,
             }
             transfers.append(transfer)
 
         # Get comments where user sent funds
-        comments = Comment.objects.filter(owner=user, price_amount__isnull=False, price_currency_id=currency_id
-                                          ).select_related('owner', 'post__owner',
-                                                           'price_currency').order_by('-created_date')
+        comments = (
+            Comment.objects.filter(owner=user, price_amount__isnull=False, price_currency_id=currency_id)
+            .select_related('owner', 'post__owner', 'price_currency')
+            .order_by('-created_date')
+        )
 
         for comment in comments:
             transfer = {
@@ -54,14 +60,17 @@ class TransferListView(APIView):
                 'currency': comment.price_currency_id,
                 'timestamp': comment.created_date,
                 'content': comment.content,
-                'counterparty': comment.post.owner
+                'counterparty': comment.post.owner,
             }
             transfers.append(transfer)
 
         # Get comments where user received funds (as post owner)
-        received_comments = Comment.objects.filter(
-            post__owner=user, price_amount__isnull=False, price_currency_id=currency_id
-        ).exclude(owner=user).select_related('owner', 'price_currency').order_by('-created_date')
+        received_comments = (
+            Comment.objects.filter(post__owner=user, price_amount__isnull=False, price_currency_id=currency_id)
+            .exclude(owner=user)
+            .select_related('owner', 'price_currency')
+            .order_by('-created_date')
+        )
 
         for comment in received_comments:
             transfer = {
@@ -71,7 +80,7 @@ class TransferListView(APIView):
                 'currency': comment.price_currency_id,
                 'timestamp': comment.created_date,
                 'content': comment.content,
-                'counterparty': comment.owner
+                'counterparty': comment.owner,
             }
             transfers.append(transfer)
 

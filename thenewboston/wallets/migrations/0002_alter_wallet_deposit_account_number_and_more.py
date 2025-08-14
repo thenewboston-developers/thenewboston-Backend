@@ -6,7 +6,6 @@ import thenewboston.general.validators
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('wallets', '0001_initial'),
     ]
@@ -19,7 +18,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 max_length=64,
                 null=True,
-                validators=[thenewboston.general.validators.HexStringValidator(64)]
+                validators=[thenewboston.general.validators.HexStringValidator(64)],
             ),
         ),
         migrations.AlterField(
@@ -34,7 +33,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 max_length=64,
                 null=True,
-                validators=[thenewboston.general.validators.HexStringValidator(64)]
+                validators=[thenewboston.general.validators.HexStringValidator(64)],
             ),
         ),
     ]

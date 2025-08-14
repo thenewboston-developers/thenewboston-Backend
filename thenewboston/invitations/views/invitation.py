@@ -23,8 +23,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
 
         if instance.recipient is not None:
-            return Response({'detail': 'Cannot delete an invitation that has a recipient.'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Cannot delete an invitation that has a recipient.'}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         self.perform_destroy(instance)
 

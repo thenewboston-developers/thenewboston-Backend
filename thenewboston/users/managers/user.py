@@ -5,7 +5,6 @@ from thenewboston.general.managers import CustomQuerySet
 
 
 class UserManager(BaseUserManager.from_queryset(CustomQuerySet)):  # type: ignore
-
     def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)

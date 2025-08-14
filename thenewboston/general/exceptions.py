@@ -1,5 +1,4 @@
-from django.core.exceptions import NON_FIELD_ERRORS
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError as DjangoValidationError
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.fields import get_error_detail
 from rest_framework.views import exception_handler

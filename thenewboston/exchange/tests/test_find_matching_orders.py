@@ -52,17 +52,22 @@ def test_find_matching_orders(bucky, dmitry, tnb_currency, yyy_currency, zzz_cur
     assert find_matching_orders(0, 1, [sell_order_other_1, buy_order_1]) is None
 
     # Sell price higher than buy price - no match
-    assert find_matching_orders(
-        0, 1, [make_sell_order(dmitry, tnb_currency, yyy_currency, price=110), buy_order_1]
-    ) is None
+    assert (
+        find_matching_orders(0, 1, [make_sell_order(dmitry, tnb_currency, yyy_currency, price=110), buy_order_1])
+        is None
+    )
 
     # Valid sell comes after valid buy - indices reversed
     assert find_matching_orders(1, 0, [buy_order_1, sell_order_1]) is None
 
     # Repeated valid matches, first one should be returned
-    assert find_matching_orders(0, 4,
-                                [sell_order_1, sell_order_2, buy_order_other_1, buy_order_1, buy_order_2]) == [0, 4]
+    assert find_matching_orders(0, 4, [sell_order_1, sell_order_2, buy_order_other_1, buy_order_1, buy_order_2]) == [
+        0,
+        4,
+    ]
 
     # Identical sell and buy pairs and price match
-    assert find_matching_orders(0, 1, [sell_order_2,
-                                       make_buy_order(bucky, tnb_currency, yyy_currency, price=100)]) == [0, 1]
+    assert find_matching_orders(0, 1, [sell_order_2, make_buy_order(bucky, tnb_currency, yyy_currency, price=100)]) == [
+        0,
+        1,
+    ]

@@ -8,7 +8,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies: List[Tuple[str, str]] = []
@@ -33,11 +32,15 @@ class Migration(migrations.Migration):
                 (
                     'fill_status',
                     models.CharField(
-                        choices=[('OPEN', 'Open'), ('PARTIALLY_FILLED', 'Partially Filled'), ('FILLED', 'Filled'),
-                                 ('CANCELLED', 'Cancelled')],
+                        choices=[
+                            ('OPEN', 'Open'),
+                            ('PARTIALLY_FILLED', 'Partially Filled'),
+                            ('FILLED', 'Filled'),
+                            ('CANCELLED', 'Cancelled'),
+                        ],
                         default='OPEN',
-                        max_length=16
-                    )
+                        max_length=16,
+                    ),
                 ),
             ],
             options={
@@ -58,16 +61,16 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name='buy_trades',
-                        to='exchange.exchangeorder'
-                    )
+                        to='exchange.exchangeorder',
+                    ),
                 ),
                 (
                     'sell_order',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name='sell_trades',
-                        to='exchange.exchangeorder'
-                    )
+                        to='exchange.exchangeorder',
+                    ),
                 ),
             ],
             options={

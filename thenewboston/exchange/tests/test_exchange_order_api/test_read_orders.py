@@ -32,66 +32,68 @@ def test_list_exchange_orders(authenticated_api_client, api_client, bucky, dmitr
 
     response = authenticated_api_client.get('/api/exchange-orders')
     assert (response.status_code, response.json()) == (
-        200, {
-            'count':
-                2,
-            'next':
-                None,
-            'previous':
-                None,
-            'results': [{
-                'id': bucky_order2.id,
-                'created_date': to_iso_format(bucky_order2.created_date),
-                'modified_date': to_iso_format(bucky_order2.modified_date),
-                'side': -1,
-                'quantity': 3,
-                'price': 75,
-                'filled_quantity': 0,
-                'status': 1,
-                'owner': bucky.id,
-                'asset_pair': {
-                    'id': asset_pair.id,
-                    'primary_currency': {
-                        'id': tnb_currency.id,
-                        'ticker': tnb_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+        200,
+        {
+            'count': 2,
+            'next': None,
+            'previous': None,
+            'results': [
+                {
+                    'id': bucky_order2.id,
+                    'created_date': to_iso_format(bucky_order2.created_date),
+                    'modified_date': to_iso_format(bucky_order2.modified_date),
+                    'side': -1,
+                    'quantity': 3,
+                    'price': 75,
+                    'filled_quantity': 0,
+                    'status': 1,
+                    'owner': bucky.id,
+                    'asset_pair': {
+                        'id': asset_pair.id,
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'ticker': tnb_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'ticker': yyy_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
+                        },
                     },
-                    'secondary_currency': {
-                        'id': yyy_currency.id,
-                        'ticker': yyy_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                    }
-                }
-            }, {
-                'id': bucky_order1.id,
-                'created_date': to_iso_format(bucky_order1.created_date),
-                'modified_date': to_iso_format(bucky_order1.modified_date),
-                'side': 1,
-                'quantity': 5,
-                'price': 50,
-                'filled_quantity': 0,
-                'status': 1,
-                'owner': bucky.id,
-                'asset_pair': {
-                    'id': asset_pair.id,
-                    'primary_currency': {
-                        'id': tnb_currency.id,
-                        'ticker': tnb_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                },
+                {
+                    'id': bucky_order1.id,
+                    'created_date': to_iso_format(bucky_order1.created_date),
+                    'modified_date': to_iso_format(bucky_order1.modified_date),
+                    'side': 1,
+                    'quantity': 5,
+                    'price': 50,
+                    'filled_quantity': 0,
+                    'status': 1,
+                    'owner': bucky.id,
+                    'asset_pair': {
+                        'id': asset_pair.id,
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'ticker': tnb_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'ticker': yyy_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
+                        },
                     },
-                    'secondary_currency': {
-                        'id': yyy_currency.id,
-                        'ticker': yyy_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                    }
-                }
-            }]
-        }
+                },
+            ],
+        },
     )
 
     response = authenticated_api_client.get(f'/api/exchange-orders/{bucky_order1.id}')
     assert (response.status_code, response.json()) == (
-        200, {
+        200,
+        {
             'id': bucky_order1.id,
             'created_date': to_iso_format(bucky_order1.created_date),
             'modified_date': to_iso_format(bucky_order1.modified_date),
@@ -112,24 +114,22 @@ def test_list_exchange_orders(authenticated_api_client, api_client, bucky, dmitr
                     'id': yyy_currency.id,
                     'ticker': yyy_currency.ticker,
                     'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                }
-            }
-        }
+                },
+            },
+        },
     )
 
     response = authenticated_api_client.get(f'/api/exchange-orders/{dmitry_order.id}')
     assert (response.status_code, response.json()) == (404, {'detail': 'No ExchangeOrder matches the given query.'})
 
     response = api_client.get('/api/exchange-orders')
-    assert (response.status_code, response.json()
-            ) == (401, {
-                'message': 'Authentication credentials were not provided.',
-                'code': 'not_authenticated'
-            })
+    assert (response.status_code, response.json()) == (
+        401,
+        {'message': 'Authentication credentials were not provided.', 'code': 'not_authenticated'},
+    )
 
     response = api_client.get(f'/api/exchange-orders/{bucky_order1.id}')
-    assert (response.status_code, response.json()
-            ) == (401, {
-                'message': 'Authentication credentials were not provided.',
-                'code': 'not_authenticated'
-            })
+    assert (response.status_code, response.json()) == (
+        401,
+        {'message': 'Authentication credentials were not provided.', 'code': 'not_authenticated'},
+    )

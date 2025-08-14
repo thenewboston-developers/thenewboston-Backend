@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('wallets', '0002_alter_wallet_deposit_account_number_and_more'),
     ]

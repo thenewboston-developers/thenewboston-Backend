@@ -21,7 +21,6 @@ class TrackerMixin:
 
 
 class CustomModel(models.Model):
-
     objects = CustomManager()
 
     class Meta:

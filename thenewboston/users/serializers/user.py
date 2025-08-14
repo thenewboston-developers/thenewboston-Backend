@@ -15,24 +15,47 @@ User = get_user_model()
 
 
 class UserReadSerializer(BaseModelSerializer):
-
     class Meta:
         model = User
         fields = (
-            'avatar', 'banner', 'bio', 'discord_username', 'facebook_username', 'github_username', 'id',
-            'instagram_username', 'is_staff', 'linkedin_username', 'pinterest_username', 'reddit_username',
-            'tiktok_username', 'twitch_username', 'username', 'x_username', 'youtube_username'
+            'avatar',
+            'banner',
+            'bio',
+            'discord_username',
+            'facebook_username',
+            'github_username',
+            'id',
+            'instagram_username',
+            'is_staff',
+            'linkedin_username',
+            'pinterest_username',
+            'reddit_username',
+            'tiktok_username',
+            'twitch_username',
+            'username',
+            'x_username',
+            'youtube_username',
         )
 
 
 class UserUpdateSerializer(BaseModelSerializer):
-
     class Meta:
         model = User
         fields = (
-            'avatar', 'banner', 'bio', 'discord_username', 'facebook_username', 'github_username',
-            'instagram_username', 'linkedin_username', 'pinterest_username', 'reddit_username', 'tiktok_username',
-            'twitch_username', 'x_username', 'youtube_username'
+            'avatar',
+            'banner',
+            'bio',
+            'discord_username',
+            'facebook_username',
+            'github_username',
+            'instagram_username',
+            'linkedin_username',
+            'pinterest_username',
+            'reddit_username',
+            'tiktok_username',
+            'twitch_username',
+            'x_username',
+            'youtube_username',
         )
 
     def update(self, instance, validated_data):

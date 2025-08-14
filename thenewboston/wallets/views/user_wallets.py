@@ -19,24 +19,28 @@ class UserWalletListView(generics.ListAPIView):
         user_id = self.kwargs.get('user_id')
 
         total_users_subquery = (
-            Wallet.objects.filter(currency=OuterRef('currency'),
-                                  balance__gt=0).values('currency').annotate(total=Count('owner', distinct=True)
-                                                                             ).values('total')
+            Wallet.objects.filter(currency=OuterRef('currency'), balance__gt=0)
+            .values('currency')
+            .annotate(total=Count('owner', distinct=True))
+            .values('total')
         )
 
         rank_subquery = (
-            Wallet.objects.filter(currency=OuterRef('currency'),
-                                  balance__gt=OuterRef('balance')).values('currency').annotate(
-                                      rank=Count('owner', distinct=True)
-                                  ).values('rank')  # noqa: E126
+            Wallet.objects.filter(currency=OuterRef('currency'), balance__gt=OuterRef('balance'))
+            .values('currency')
+            .annotate(rank=Count('owner', distinct=True))
+            .values('rank')  # noqa: E126
         )
 
-        queryset = Wallet.objects.filter(owner_id=user_id, balance__gt=0).select_related(
-            'currency', 'currency__owner'
-        ).annotate(
-            rank=Coalesce(Subquery(rank_subquery, output_field=models.IntegerField()), Value(0)) + 1,
-            total_users=Coalesce(Subquery(total_users_subquery, output_field=models.IntegerField()), Value(1))
-        ).order_by('-balance')
+        queryset = (
+            Wallet.objects.filter(owner_id=user_id, balance__gt=0)
+            .select_related('currency', 'currency__owner')
+            .annotate(
+                rank=Coalesce(Subquery(rank_subquery, output_field=models.IntegerField()), Value(0)) + 1,
+                total_users=Coalesce(Subquery(total_users_subquery, output_field=models.IntegerField()), Value(1)),
+            )
+            .order_by('-balance')
+        )
 
         return queryset
 

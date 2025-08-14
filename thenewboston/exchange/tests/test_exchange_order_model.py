@@ -15,15 +15,16 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
 
     with (
         patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock,
-        patch('thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order') as
-        stream_exchange_order_mock,
+        patch(
+            'thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order'
+        ) as stream_exchange_order_mock,
     ):
         buy_order = make_buy_order(
             owner=bucky,
             primary_currency=tnb_currency,
             secondary_currency=yyy_currency,  # reserves from this currency wallet
             quantity=2,
-            price=105
+            price=105,
         )
 
     assert Wallet.objects.count() == 2  # no new wallet created
@@ -55,7 +56,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                     'twitch_username': None,
                     'username': 'bucky',
                     'x_username': None,
-                    'youtube_username': None
+                    'youtube_username': None,
                 },
                 'discord_username': None,
                 'facebook_username': None,
@@ -73,7 +74,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                 'description': None,
                 'domain': 'yyy.net',
                 'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                'ticker': 'YYY'
+                'ticker': 'YYY',
             },
             'created_date': to_iso_format(bucky_yyy_wallet.created_date),
             'deposit_account_number': None,
@@ -81,7 +82,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
             'id': bucky_yyy_wallet.id,
             'modified_date': to_iso_format(bucky_yyy_wallet.modified_date),
             'owner': bucky_yyy_wallet.owner_id,
-        }
+        },
     )
 
     asset_pair = AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency)
@@ -108,7 +109,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                     'id': yyy_currency.id,
                     'ticker': yyy_currency.ticker,
                     'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                }
+                },
             },
         },
         primary_currency_id=asset_pair.primary_currency_id,
@@ -117,15 +118,16 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
 
     with (
         patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock,
-        patch('thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order') as
-        stream_exchange_order_mock,
+        patch(
+            'thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order'
+        ) as stream_exchange_order_mock,
     ):
         sell_order = make_sell_order(
             owner=dmitry,
             primary_currency=tnb_currency,  # reserves from this currency wallet
             secondary_currency=yyy_currency,
             quantity=3,
-            price=101
+            price=101,
         )
 
     assert Wallet.objects.count() == 2  # no new wallet created
@@ -157,7 +159,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                     'twitch_username': None,
                     'username': 'bucky',
                     'x_username': None,
-                    'youtube_username': None
+                    'youtube_username': None,
                 },
                 'discord_username': None,
                 'facebook_username': None,
@@ -175,7 +177,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                 'description': None,
                 'domain': 'thenewboston.net',
                 'logo': 'http://localhost:8000/media/images/tnb_currency.png',
-                'ticker': 'TNB'
+                'ticker': 'TNB',
             },
             'created_date': to_iso_format(dmitry_tnb_wallet.created_date),
             'deposit_account_number': None,
@@ -183,7 +185,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
             'id': dmitry_tnb_wallet.id,
             'modified_date': to_iso_format(dmitry_tnb_wallet.modified_date),
             'owner': dmitry_tnb_wallet.owner_id,
-        }
+        },
     )
 
     stream_exchange_order_mock.assert_called_once_with(
@@ -209,7 +211,7 @@ def test_exchange_order_creation(bucky, dmitry, dmitry_tnb_wallet, tnb_currency,
                     'id': yyy_currency.id,
                     'ticker': yyy_currency.ticker,
                     'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                }
+                },
             },
         },
         primary_currency_id=asset_pair.primary_currency_id,

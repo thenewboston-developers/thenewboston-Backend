@@ -1,29 +1,21 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: isort
-        name: isort (python)
-  - repo: https://github.com/google/yapf
-    rev: v0.40.2
+      - id: check-toml
+        alias: common
+      - id: end-of-file-fixer
+        alias: common
+      - id: trailing-whitespace
+        alias: common
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.8
     hooks:
-      - id: yapf
-        additional_dependencies: [ toml ]
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.16.1'
-    hooks:
-      - id: mypy
-        additional_dependencies: [ types-requests, types-PyYAML, types-toml ]
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-bugbear
-          - flake8-builtins
-          - flake8-coding
-          - flake8-isort
-          - flake8-polyfill
-          - flake8-quotes
+      - id: ruff
+        name: 'ruff fix imports'
+        args: ["--select", "I", "--fix"]
+      - id: ruff
+        name: 'ruff (standard)'
+      - id: ruff-format

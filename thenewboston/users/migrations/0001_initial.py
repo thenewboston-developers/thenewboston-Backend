@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -25,8 +24,8 @@ class Migration(migrations.Migration):
                     models.BooleanField(
                         default=False,
                         help_text='Designates that this user has all permissions without explicitly assigning them.',
-                        verbose_name='superuser status'
-                    )
+                        verbose_name='superuser status',
+                    ),
                 ),
                 (
                     'username',
@@ -36,8 +35,8 @@ class Migration(migrations.Migration):
                         max_length=150,
                         unique=True,
                         validators=[django.contrib.auth.validators.UnicodeUsernameValidator()],
-                        verbose_name='username'
-                    )
+                        verbose_name='username',
+                    ),
                 ),
                 ('first_name', models.CharField(blank=True, max_length=150, verbose_name='first name')),
                 ('last_name', models.CharField(blank=True, max_length=150, verbose_name='last name')),
@@ -47,17 +46,16 @@ class Migration(migrations.Migration):
                     models.BooleanField(
                         default=False,
                         help_text='Designates whether the user can log into this admin site.',
-                        verbose_name='staff status'
-                    )
+                        verbose_name='staff status',
+                    ),
                 ),
                 (
                     'is_active',
                     models.BooleanField(
                         default=True,
-                        help_text=
-                        'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
-                        verbose_name='active'
-                    )
+                        help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
+                        verbose_name='active',
+                    ),
                 ),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
                 ('avatar', models.ImageField(blank=True, upload_to='images/')),
@@ -65,13 +63,12 @@ class Migration(migrations.Migration):
                     'groups',
                     models.ManyToManyField(
                         blank=True,
-                        help_text=
-                        'The groups this user belongs to. A user will get all permissions granted to each of their groups.',
+                        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
                         related_name='user_set',
                         related_query_name='user',
                         to='auth.group',
-                        verbose_name='groups'
-                    )
+                        verbose_name='groups',
+                    ),
                 ),
                 (
                     'user_permissions',
@@ -81,8 +78,8 @@ class Migration(migrations.Migration):
                         related_name='user_set',
                         related_query_name='user',
                         to='auth.permission',
-                        verbose_name='user permissions'
-                    )
+                        verbose_name='user permissions',
+                    ),
                 ),
             ],
             options={

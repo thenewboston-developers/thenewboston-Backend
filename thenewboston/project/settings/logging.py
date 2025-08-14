@@ -2,9 +2,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'standard': {
-            'format': '%(asctime)s %(levelname)s %(name)s %(message)s'
-        },
+        'standard': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
     },
     'handlers': {
         'console': {
@@ -18,7 +16,8 @@ LOGGING = {
         logger_name: {
             'level': 'WARNING',
             'propagate': True,
-        } for logger_name in (
+        }
+        for logger_name in (
             # Too verbose loggers
             'asyncio',
             'django',
@@ -31,5 +30,5 @@ LOGGING = {
     'root': {
         'level': 'DEBUG',
         'handlers': ['console'],
-    }
+    },
 }

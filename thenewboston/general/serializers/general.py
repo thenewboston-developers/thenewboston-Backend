@@ -6,7 +6,6 @@ from ..fields import FixedField
 
 
 class ValidateFieldsMixin:
-
     def validate(self, attrs):
         """
         Make front-end developers life easier when they make a typo in an
@@ -23,8 +22,9 @@ class ValidateFieldsMixin:
         if unknown_fields := initial_fields_set - set(self.fields):
             raise ValidationError(f'Unknown field(s): {", ".join(sorted(unknown_fields))}')
 
-        all_readonly_fields = {field_name for field_name, field in self.fields.items() if field.read_only
-                               } | set(getattr(self.Meta, 'read_only_fields', ()))
+        all_readonly_fields = {field_name for field_name, field in self.fields.items() if field.read_only} | set(
+            getattr(self.Meta, 'read_only_fields', ())
+        )
         if readonly_fields := initial_fields_set & all_readonly_fields:
             raise ValidationError(f'Readonly field(s): {", ".join(sorted(readonly_fields))}')
 
@@ -40,7 +40,6 @@ class ValidateFieldsMixin:
 
 
 class CreateOnlyCurrentUserDefault(CurrentUserDefault):
-
     def __call__(self, serializer_field):
         if serializer_field.parent.instance is not None:  # Parent instance exists: means it is an update
             raise SkipField()

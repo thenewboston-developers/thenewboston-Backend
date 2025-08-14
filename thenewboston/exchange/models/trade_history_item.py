@@ -28,7 +28,6 @@ def calculate_change_percent(current_price, past_price):
 
 
 class TradeHistoryItemManager(CustomManager):
-
     def update_for_currency_pair(self, asset_pair_id):
         from .trade import Trade
 
@@ -46,28 +45,25 @@ class TradeHistoryItemManager(CustomManager):
 
         asset_pair = AssetPair.objects.get(id=asset_pair_id)
         defaults = {
-            'price':
-                current_price,
-            'change_1h':
-                calculate_change_percent(
-                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=1), now=now)
-                ) or 0,
-            'change_24h':
-                calculate_change_percent(
-                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24), now=now)
-                ) or 0,
-            'change_7d':
-                calculate_change_percent(
-                    current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24 * 7), now=now)
-                ) or 0,
-            'volume_24h':
-                Trade.objects.filter_by_asset_pair(asset_pair_id).filter(created_date__gte=now - timedelta(hours=24)
-                                                                         ).aggregate(volume=Sum('filled_quantity')
-                                                                                     )['volume'] or 0,
-            'market_cap':
-                current_price * get_total_amount_minted(asset_pair.primary_currency_id),
-            'sparkline':
-                sparkline,
+            'price': current_price,
+            'change_1h': calculate_change_percent(
+                current_price, get_past_price(asset_pair_id, recency=timedelta(hours=1), now=now)
+            )
+            or 0,
+            'change_24h': calculate_change_percent(
+                current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24), now=now)
+            )
+            or 0,
+            'change_7d': calculate_change_percent(
+                current_price, get_past_price(asset_pair_id, recency=timedelta(hours=24 * 7), now=now)
+            )
+            or 0,
+            'volume_24h': Trade.objects.filter_by_asset_pair(asset_pair_id)
+            .filter(created_date__gte=now - timedelta(hours=24))
+            .aggregate(volume=Sum('filled_quantity'))['volume']
+            or 0,
+            'market_cap': current_price * get_total_amount_minted(asset_pair.primary_currency_id),
+            'sparkline': sparkline,
         }
         self.update_or_create(asset_pair_id=asset_pair_id, defaults=defaults)
 

@@ -14,7 +14,6 @@ class WhitepaperReadSerializer(serializers.ModelSerializer):
 
 
 class WhitepaperWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Whitepaper
         fields = ('currency', 'content')
@@ -26,10 +25,7 @@ class WhitepaperWriteSerializer(serializers.ModelSerializer):
         if currency.owner != request.user:
             raise serializers.ValidationError('You must be the currency owner to create a whitepaper.')
 
-        return super().create({
-            **validated_data,
-            'owner': request.user,
-        })
+        return super().create({**validated_data, 'owner': request.user})
 
     def update(self, instance, validated_data):
         request = self.context.get('request')

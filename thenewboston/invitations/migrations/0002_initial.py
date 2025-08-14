@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -21,7 +20,7 @@ class Migration(migrations.Migration):
             field=models.OneToOneField(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name='invitation_limit',
-                to=settings.AUTH_USER_MODEL
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
         migrations.AddField(
@@ -30,7 +29,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name='invitations_created',
-                to=settings.AUTH_USER_MODEL
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
         migrations.AddField(
@@ -41,7 +40,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name='invitation_received',
-                to=settings.AUTH_USER_MODEL
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
     ]

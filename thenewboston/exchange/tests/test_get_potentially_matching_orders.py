@@ -160,9 +160,7 @@ def test_get_potentially_matching_orders__ordering_fallback_to_id(trade_at, buck
     assert not ExchangeOrder.objects.exists()
 
     sell_order_1 = make_sell_order(dmitry, tnb_currency, yyy_currency, price=90)
-    sell_order_2 = make_sell_order(
-        dmitry, tnb_currency, yyy_currency, price=90, created_date=sell_order_1.created_date
-    )
+    sell_order_2 = make_sell_order(dmitry, tnb_currency, yyy_currency, price=90, created_date=sell_order_1.created_date)
     assert sell_order_1.created_date == sell_order_2.created_date
     assert sell_order_1.id < sell_order_2.id
 
@@ -189,7 +187,10 @@ def test_get_potentially_matching_orders__multiple_currency_pairs(
     sell_order_tnb_zzz = make_sell_order(dmitry, tnb_currency, zzz_currency, price=190)
 
     assert get_potentially_matching_orders(trade_at) == [
-        sell_order_tnb_yyy, sell_order_tnb_zzz, buy_order_tnb_zzz, buy_order_tnb_yyy
+        sell_order_tnb_yyy,
+        sell_order_tnb_zzz,
+        buy_order_tnb_zzz,
+        buy_order_tnb_yyy,
     ]
 
 
@@ -268,7 +269,10 @@ def test_get_potentially_matching_orders__time_priority(trade_at, bucky, dmitry,
     )
 
     assert get_potentially_matching_orders(trade_at) == [
-        sell_order_earlier, sell_order_later, buy_order_later, buy_order_earlier
+        sell_order_earlier,
+        sell_order_later,
+        buy_order_later,
+        buy_order_earlier,
     ]
 
 

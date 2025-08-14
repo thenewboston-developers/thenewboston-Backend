@@ -3,12 +3,11 @@ from rest_framework.serializers import CurrentUserDefault, HiddenField, Validati
 from thenewboston.exchange.models.exchange_order import ExchangeOrderStatus
 from thenewboston.general.serializers import BaseModelSerializer
 
-from ..models import ExchangeOrder
 from .asset_pair import AssetPairTinySerializer
+from ..models import ExchangeOrder
 
 
 class ExchangeOrderReadSerializer(BaseModelSerializer):
-
     asset_pair = AssetPairTinySerializer()
 
     class Meta:
@@ -29,7 +28,6 @@ class ExchangeOrderCreateSerializer(BaseModelSerializer):
 
 
 class ExchangeOrderUpdateSerializer(BaseModelSerializer):
-
     class Meta:
         model = ExchangeOrder
         fields = ('asset_pair', 'side', 'quantity', 'price', 'status')

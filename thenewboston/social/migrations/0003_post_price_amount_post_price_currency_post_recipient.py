@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('currencies', '0005_alter_currency_domain_mint'),
         ('social', '0002_initial'),
@@ -34,7 +33,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name='received_posts',
-                to=settings.AUTH_USER_MODEL
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
     ]

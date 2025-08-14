@@ -4,11 +4,12 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('social', '0003_post_price_amount_post_price_currency_post_recipient'),
     ]
 
     operations = [
-        migrations.DeleteModel(name='PostReaction',),
+        migrations.DeleteModel(
+            name='PostReaction',
+        ),
     ]

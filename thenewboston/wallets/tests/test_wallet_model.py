@@ -42,7 +42,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                     'twitch_username': None,
                     'username': 'bucky',
                     'x_username': None,
-                    'youtube_username': None
+                    'youtube_username': None,
                 },
                 'discord_username': None,
                 'facebook_username': None,
@@ -60,7 +60,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                 'description': None,
                 'domain': 'thenewboston.net',
                 'logo': 'http://localhost:8000/media/images/tnb_currency.png',
-                'ticker': 'TNB'
+                'ticker': 'TNB',
             },
             'created_date': to_iso_format(bucky_tnb_wallet.created_date),
             'deposit_account_number': None,
@@ -68,7 +68,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
             'id': bucky_tnb_wallet.id,
             'modified_date': to_iso_format(bucky_tnb_wallet.modified_date),
             'owner': bucky_tnb_wallet.owner_id,
-        }
+        },
     )
 
     with patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock:
@@ -101,7 +101,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                     'twitch_username': None,
                     'username': 'bucky',
                     'x_username': None,
-                    'youtube_username': None
+                    'youtube_username': None,
                 },
                 'discord_username': None,
                 'facebook_username': None,
@@ -119,7 +119,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
                 'description': None,
                 'domain': 'thenewboston.net',
                 'logo': 'http://localhost:8000/media/images/tnb_currency.png',
-                'ticker': 'TNB'
+                'ticker': 'TNB',
             },
             'created_date': to_iso_format(bucky_tnb_wallet.created_date),
             'deposit_account_number': None,
@@ -127,7 +127,7 @@ def test_wallet_change_balance(bucky_tnb_wallet):
             'id': bucky_tnb_wallet.id,
             'modified_date': to_iso_format(bucky_tnb_wallet.modified_date),
             'owner': bucky_tnb_wallet.owner_id,
-        }
+        },
     )
 
     with patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock:

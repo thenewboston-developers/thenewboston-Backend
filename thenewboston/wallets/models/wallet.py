@@ -12,7 +12,6 @@ from thenewboston.general.validators import HexStringValidator
 
 
 class WalletQuerySet(CustomQuerySet):
-
     def get_or_create(self, defaults=None, _for_update=False, **kwargs):
         # TODO(dmu) MEDIUM: Consider overriding create() as well
         defaults = defaults.copy() if defaults else {}
@@ -49,16 +48,12 @@ class WalletManager(CustomManager.from_queryset(WalletQuerySet)):  # type: ignor
 
 
 class Wallet(AdjustableTimestampsModel):
-
     # TODO(dmu) HIGH: Make sure balance update always uses select from update
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     currency = models.ForeignKey('currencies.Currency', on_delete=models.CASCADE)
     balance = models.PositiveBigIntegerField(default=0)
     deposit_account_number = models.CharField(
-        max_length=ACCOUNT_NUMBER_LENGTH,
-        validators=(HexStringValidator(ACCOUNT_NUMBER_LENGTH),),
-        null=True,
-        blank=True
+        max_length=ACCOUNT_NUMBER_LENGTH, validators=(HexStringValidator(ACCOUNT_NUMBER_LENGTH),), null=True, blank=True
     )
     deposit_balance = models.PositiveBigIntegerField(default=0, null=True, blank=True)
     deposit_signing_key = models.CharField(
@@ -92,8 +87,9 @@ class Wallet(AdjustableTimestampsModel):
         from ..serializers.wallet import WalletReadSerializer
 
         apply_on_commit(
-            lambda wallet=self: WalletConsumer.
-            stream_wallet(message_type=MessageType.UPDATE_WALLET, wallet_data=WalletReadSerializer(wallet).data)
+            lambda wallet=self: WalletConsumer.stream_wallet(
+                message_type=MessageType.UPDATE_WALLET, wallet_data=WalletReadSerializer(wallet).data
+            )
         )
 
     def _adjust_timestamps(self, was_adding, had_changes):

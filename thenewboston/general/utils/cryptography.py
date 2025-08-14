@@ -3,8 +3,7 @@ from typing import NamedTuple
 from uuid import UUID
 
 from nacl.exceptions import CryptoError
-from nacl.signing import SigningKey as NaClSigningKey
-from nacl.signing import VerifyKey
+from nacl.signing import SigningKey as NaClSigningKey, VerifyKey
 
 from .types import hexstr
 
@@ -15,7 +14,6 @@ class KeyPair(NamedTuple):
 
 
 class CustomEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if isinstance(obj, UUID):
             return str(obj)

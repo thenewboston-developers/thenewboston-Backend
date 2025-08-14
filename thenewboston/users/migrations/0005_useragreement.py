@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('users', '0004_user_banner'),
     ]
@@ -25,8 +24,8 @@ class Migration(migrations.Migration):
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name='agreement',
-                        to=settings.AUTH_USER_MODEL
-                    )
+                        to=settings.AUTH_USER_MODEL,
+                    ),
                 ),
             ],
             options={

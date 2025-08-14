@@ -18,7 +18,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'balance': 1000,
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
     buy_order = make_buy_order(bucky, tnb_currency, yyy_currency, price=101, quantity=2)
@@ -35,18 +35,19 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'balance': 1000 - 2 * 101,
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
-        200, {
+        200,
+        {
             'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 2,
             'price': 101,
-            'status': 100
-        }
+            'status': 100,
+        },
     )
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
@@ -73,7 +74,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'balance': 1000,  # the balance is restored
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
     # Idempotency test: cancel the same order again
@@ -82,13 +83,14 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     before_update_modified_date = buy_order.modified_date
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
-        200, {
+        200,
+        {
             'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 2,
             'price': 101,
-            'status': 100
-        }
+            'status': 100,
+        },
     )
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
@@ -114,7 +116,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'balance': 1000,  # the balance is restored
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
 
@@ -126,14 +128,10 @@ def test_cancel_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
     bucky_tnb_wallet.refresh_from_db()
     assert bucky_tnb_wallet.balance == 1000 - 2
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100})
-    assert (response.status_code, response.json()
-            ) == (200, {
-                'asset_pair': order.asset_pair_id,
-                'side': -1,
-                'quantity': 2,
-                'price': 101,
-                'status': 100
-            })
+    assert (response.status_code, response.json()) == (
+        200,
+        {'asset_pair': order.asset_pair_id, 'side': -1, 'quantity': 2, 'price': 101, 'status': 100},
+    )
     order.refresh_from_db()
     assert order.status == 100  # CANCELLED
     bucky_tnb_wallet.refresh_from_db()
@@ -152,7 +150,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
         'balance': 1000,
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
     buy_order = make_buy_order(bucky, tnb_currency, yyy_currency, price=101, quantity=5)
@@ -166,7 +164,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
         'balance': 1000 - 5 * 101,
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
     buy_order.fill_order(2)  # Partially fill the order with 2 units
@@ -187,13 +185,14 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
     assert (response.status_code, response.json()) == (
-        200, {
+        200,
+        {
             'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
             'side': 1,
             'quantity': 5,
             'price': 101,
-            'status': 100
-        }
+            'status': 100,
+        },
     )
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
@@ -219,7 +218,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
         'balance': 1000 - 5 * 101 + 3 * 101,  # the balance is restored
         'deposit_account_number': None,
         'deposit_balance': 0,
-        'deposit_signing_key': None
+        'deposit_signing_key': None,
     }
 
 

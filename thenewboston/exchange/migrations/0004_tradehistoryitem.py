@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('currencies', '0008_whitepaper'),
         ('exchange', '0003_remove_exchangeorder_order_type_and_more'),
@@ -31,24 +30,24 @@ class Migration(migrations.Migration):
                         base_field=models.PositiveBigIntegerField(blank=True, null=True),
                         blank=True,
                         default=list,
-                        size=None
-                    )
+                        size=None,
+                    ),
                 ),
                 (
                     'primary_currency',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name='primary_trade_history_items',
-                        to='currencies.currency'
-                    )
+                        to='currencies.currency',
+                    ),
                 ),
                 (
                     'secondary_currency',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name='secondary_trade_history_items',
-                        to='currencies.currency'
-                    )
+                        to='currencies.currency',
+                    ),
                 ),
             ],
             options={
