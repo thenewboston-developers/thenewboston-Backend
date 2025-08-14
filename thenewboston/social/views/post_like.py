@@ -52,14 +52,12 @@ class PostActionViewSet(GenericViewSet):
             owner=post.owner,
             payload={
                 'post_id': post.id,
-                'liker': UserReadSerializer(liker, context={
-                    'request': request
-                }).data,
+                'liker': UserReadSerializer(liker, context={'request': request}).data,
                 'notification_type': NotificationType.POST_LIKE.value,
                 'post_preview': truncate_text(post.content),
                 'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
-            }
+            },
         )
 
         notification_data = NotificationReadSerializer(notification, context={'request': request}).data

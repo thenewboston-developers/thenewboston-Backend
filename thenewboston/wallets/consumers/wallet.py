@@ -4,7 +4,6 @@ from channels.layers import get_channel_layer
 
 
 class WalletConsumer(JsonWebsocketConsumer):
-
     def connect(self):
         """
         Accept the incoming connection, retrieve the user ID from the URL route, construct a unique group name, and
@@ -42,7 +41,4 @@ class WalletConsumer(JsonWebsocketConsumer):
         Send wallet update details to the client. The event is expected to contain the 'payload' with wallet details
         and 'type' indicating the action.
         """
-        self.send_json({
-            'type': event['type'],
-            'wallet': event['payload'],
-        })
+        self.send_json({'type': event['type'], 'wallet': event['payload']})

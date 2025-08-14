@@ -10,8 +10,8 @@ from thenewboston.general.tests.misc import model_to_dict_with_id
 from thenewboston.general.utils.datetime import to_iso_format
 from thenewboston.wallets.models import Wallet
 
-from ..models import AssetPair, Trade
 from .factories.exchange_order import make_buy_order, make_sell_order
+from ..models import AssetPair, Trade
 
 
 @parametrize_cases(
@@ -59,8 +59,16 @@ from .factories.exchange_order import make_buy_order, make_sell_order
     ),
 )
 def test_make_trade_successfully_creates_trade(
-    bucky, bucky_yyy_wallet, yyy_currency, dmitry, dmitry_tnb_wallet, tnb_currency, buy_quantity, buy_price,
-    sell_quantity, sell_price
+    bucky,
+    bucky_yyy_wallet,
+    yyy_currency,
+    dmitry,
+    dmitry_tnb_wallet,
+    tnb_currency,
+    buy_quantity,
+    buy_price,
+    sell_quantity,
+    sell_price,
 ):
     # TODO(dmu) LOW: We may want to move some calculated values to parameters similar to how it is done in
     #                `test_make_trade_with_partly_filled_orders`
@@ -99,11 +107,13 @@ def test_make_trade_successfully_creates_trade(
 
     with (
         patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock,
-        patch('thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order') as
-        stream_exchange_order_mock,
-        patch('thenewboston.notifications.consumers.notification.NotificationConsumer.stream_notification') as
-        stream_notification_mock, patch('thenewboston.exchange.consumers.trade.TradeConsumer.stream_trade') as
-        stream_trade_mock
+        patch(
+            'thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order'
+        ) as stream_exchange_order_mock,
+        patch(
+            'thenewboston.notifications.consumers.notification.NotificationConsumer.stream_notification'
+        ) as stream_notification_mock,
+        patch('thenewboston.exchange.consumers.trade.TradeConsumer.stream_trade') as stream_trade_mock,
     ):
         make_trade(sell_order, buy_order, trade_at)
 
@@ -134,7 +144,7 @@ def test_make_trade_successfully_creates_trade(
     assert Wallet.objects.count() == 4  # two new wallets created by the trade
 
     bucky_yyy_wallet.refresh_from_db()
-    expected_bucky_yyy_wallet_balance = (   # reserved amount
+    expected_bucky_yyy_wallet_balance = (  # reserved amount
         1000 - expected_filled_quantity * sell_price - (buy_quantity - expected_filled_quantity) * buy_price
     )
     assert bucky_yyy_wallet.balance == expected_bucky_yyy_wallet_balance
@@ -148,7 +158,7 @@ def test_make_trade_successfully_creates_trade(
         'deposit_signing_key': ANY_STR,
         'id': buy_order_credit_wallet.id,
         'modified_date': trade_at,
-        'owner': bucky.id
+        'owner': bucky.id,
     }
 
     dmitry_tnb_wallet.refresh_from_db()
@@ -174,69 +184,71 @@ def test_make_trade_successfully_creates_trade(
             'buy_order': buy_order.id,
             'sell_order': sell_order.id,
         },
-        ticker='TNB'
+        ticker='TNB',
     )
 
-    stream_exchange_order_mock.assert_has_calls([
-        call(
-            message_type=MessageType.UPDATE_EXCHANGE_ORDER,
-            order_data={
-                'id': buy_order.id,
-                'created_date': to_iso_format(buy_order.created_date),
-                'modified_date': to_iso_format(buy_order.modified_date),
-                'side': 1,
-                'quantity': buy_quantity,
-                'price': buy_price,
-                'filled_quantity': expected_filled_quantity,
-                'status': expected_buy_order_status,
-                'owner': bucky.id,
-                'asset_pair': {
-                    'id': asset_pair.id,
-                    'primary_currency': {
-                        'id': tnb_currency.id,
-                        'ticker': tnb_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+    stream_exchange_order_mock.assert_has_calls(
+        [
+            call(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER,
+                order_data={
+                    'id': buy_order.id,
+                    'created_date': to_iso_format(buy_order.created_date),
+                    'modified_date': to_iso_format(buy_order.modified_date),
+                    'side': 1,
+                    'quantity': buy_quantity,
+                    'price': buy_price,
+                    'filled_quantity': expected_filled_quantity,
+                    'status': expected_buy_order_status,
+                    'owner': bucky.id,
+                    'asset_pair': {
+                        'id': asset_pair.id,
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'ticker': tnb_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'ticker': yyy_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
+                        },
                     },
-                    'secondary_currency': {
-                        'id': yyy_currency.id,
-                        'ticker': yyy_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                    }
                 },
-            },
-            primary_currency_id=asset_pair.primary_currency_id,
-            secondary_currency_id=asset_pair.secondary_currency_id,
-        ),
-        call(
-            message_type=MessageType.UPDATE_EXCHANGE_ORDER,
-            order_data={
-                'id': sell_order.id,
-                'created_date': to_iso_format(sell_order.created_date),
-                'modified_date': to_iso_format(sell_order.modified_date),
-                'side': -1,
-                'quantity': sell_quantity,
-                'price': sell_price,
-                'filled_quantity': expected_filled_quantity,
-                'status': expected_sell_order_status,
-                'owner': dmitry.id,
-                'asset_pair': {
-                    'id': asset_pair.id,
-                    'primary_currency': {
-                        'id': tnb_currency.id,
-                        'ticker': tnb_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                primary_currency_id=asset_pair.primary_currency_id,
+                secondary_currency_id=asset_pair.secondary_currency_id,
+            ),
+            call(
+                message_type=MessageType.UPDATE_EXCHANGE_ORDER,
+                order_data={
+                    'id': sell_order.id,
+                    'created_date': to_iso_format(sell_order.created_date),
+                    'modified_date': to_iso_format(sell_order.modified_date),
+                    'side': -1,
+                    'quantity': sell_quantity,
+                    'price': sell_price,
+                    'filled_quantity': expected_filled_quantity,
+                    'status': expected_sell_order_status,
+                    'owner': dmitry.id,
+                    'asset_pair': {
+                        'id': asset_pair.id,
+                        'primary_currency': {
+                            'id': tnb_currency.id,
+                            'ticker': tnb_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/tnb_currency.png',
+                        },
+                        'secondary_currency': {
+                            'id': yyy_currency.id,
+                            'ticker': yyy_currency.ticker,
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
+                        },
                     },
-                    'secondary_currency': {
-                        'id': yyy_currency.id,
-                        'ticker': yyy_currency.ticker,
-                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                    }
                 },
-            },
-            primary_currency_id=asset_pair.primary_currency_id,
-            secondary_currency_id=asset_pair.secondary_currency_id,
-        ),
-    ])
+                primary_currency_id=asset_pair.primary_currency_id,
+                secondary_currency_id=asset_pair.secondary_currency_id,
+            ),
+        ]
+    )
 
     expected_stream_notification_mock_calls = []
     if expected_buy_order_status == 3:
@@ -256,17 +268,17 @@ def test_make_trade_successfully_creates_trade(
                         'primary_currency': {
                             'id': tnb_currency.id,
                             'logo': 'http://localhost:8000/media/images/tnb_currency.png',
-                            'ticker': 'TNB'
+                            'ticker': 'TNB',
                         },
                         'secondary_currency': {
                             'id': yyy_currency.id,
                             'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                            'ticker': 'YYY'
-                        }
+                            'ticker': 'YYY',
+                        },
                     },
                     'is_read': False,
                     'owner': bucky.id,
-                }
+                },
             )
         )
 
@@ -287,17 +299,17 @@ def test_make_trade_successfully_creates_trade(
                         'primary_currency': {
                             'id': tnb_currency.id,
                             'logo': 'http://localhost:8000/media/images/tnb_currency.png',
-                            'ticker': 'TNB'
+                            'ticker': 'TNB',
                         },
                         'secondary_currency': {
                             'id': yyy_currency.id,
                             'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                            'ticker': 'YYY'
-                        }
+                            'ticker': 'YYY',
+                        },
                     },
                     'is_read': False,
                     'owner': dmitry.id,
-                }
+                },
             )
         )
 
@@ -306,59 +318,61 @@ def test_make_trade_successfully_creates_trade(
     if buy_price == sell_price:
         stream_wallet_mock.assert_not_called()
     else:
-        stream_wallet_mock.assert_has_calls([
-            call(
-                message_type=MessageType.UPDATE_WALLET,
-                wallet_data={
-                    'balance': expected_bucky_yyy_wallet_balance,  # balance after overpayment is returned
-                    'currency': {
-                        'id': yyy_currency.id,
-                        'owner': {
-                            'avatar': None,
-                            'banner': None,
-                            'bio': '',
+        stream_wallet_mock.assert_has_calls(
+            [
+                call(
+                    message_type=MessageType.UPDATE_WALLET,
+                    wallet_data={
+                        'balance': expected_bucky_yyy_wallet_balance,  # balance after overpayment is returned
+                        'currency': {
+                            'id': yyy_currency.id,
+                            'owner': {
+                                'avatar': None,
+                                'banner': None,
+                                'bio': '',
+                                'discord_username': None,
+                                'facebook_username': None,
+                                'github_username': None,
+                                'id': bucky.id,
+                                'instagram_username': None,
+                                'is_staff': False,
+                                'linkedin_username': None,
+                                'pinterest_username': None,
+                                'reddit_username': None,
+                                'tiktok_username': None,
+                                'twitch_username': None,
+                                'username': 'bucky',
+                                'x_username': None,
+                                'youtube_username': None,
+                            },
                             'discord_username': None,
                             'facebook_username': None,
                             'github_username': None,
-                            'id': bucky.id,
                             'instagram_username': None,
-                            'is_staff': False,
                             'linkedin_username': None,
                             'pinterest_username': None,
                             'reddit_username': None,
                             'tiktok_username': None,
                             'twitch_username': None,
-                            'username': 'bucky',
                             'x_username': None,
-                            'youtube_username': None
+                            'youtube_username': None,
+                            'created_date': to_iso_format(yyy_currency.created_date),
+                            'modified_date': to_iso_format(yyy_currency.modified_date),
+                            'description': None,
+                            'domain': 'yyy.net',
+                            'logo': 'http://localhost:8000/media/images/yyy_currency.png',
+                            'ticker': 'YYY',
                         },
-                        'discord_username': None,
-                        'facebook_username': None,
-                        'github_username': None,
-                        'instagram_username': None,
-                        'linkedin_username': None,
-                        'pinterest_username': None,
-                        'reddit_username': None,
-                        'tiktok_username': None,
-                        'twitch_username': None,
-                        'x_username': None,
-                        'youtube_username': None,
-                        'created_date': to_iso_format(yyy_currency.created_date),
-                        'modified_date': to_iso_format(yyy_currency.modified_date),
-                        'description': None,
-                        'domain': 'yyy.net',
-                        'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                        'ticker': 'YYY'
+                        'created_date': to_iso_format(bucky_yyy_wallet.created_date),
+                        'deposit_account_number': None,
+                        'deposit_balance': 0,
+                        'id': bucky_yyy_wallet.id,
+                        'modified_date': to_iso_format(bucky_yyy_wallet.modified_date),
+                        'owner': bucky_yyy_wallet.owner_id,
                     },
-                    'created_date': to_iso_format(bucky_yyy_wallet.created_date),
-                    'deposit_account_number': None,
-                    'deposit_balance': 0,
-                    'id': bucky_yyy_wallet.id,
-                    'modified_date': to_iso_format(bucky_yyy_wallet.modified_date),
-                    'owner': bucky_yyy_wallet.owner_id,
-                }
-            ),
-        ])
+                ),
+            ]
+        )
 
 
 @parametrize_cases(
@@ -368,7 +382,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=0,
         expected_buy_order_status=3,
         expected_sell_order_status=2,
-        expected_filled_quantity=3
+        expected_filled_quantity=3,
     ),
     Case(
         'Buy order partly filled',
@@ -376,7 +390,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=0,
         expected_buy_order_status=3,
         expected_sell_order_status=2,
-        expected_filled_quantity=2
+        expected_filled_quantity=2,
     ),
     Case(
         'Sell order partly filled',
@@ -384,7 +398,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=1,
         expected_buy_order_status=3,
         expected_sell_order_status=2,
-        expected_filled_quantity=3
+        expected_filled_quantity=3,
     ),
     Case(
         'Both orders partly filled',
@@ -392,7 +406,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=1,
         expected_buy_order_status=3,
         expected_sell_order_status=2,
-        expected_filled_quantity=2
+        expected_filled_quantity=2,
     ),
     Case(
         'Sell order filled, so both order get filled',
@@ -400,7 +414,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=4,
         expected_buy_order_status=3,
         expected_sell_order_status=3,
-        expected_filled_quantity=3
+        expected_filled_quantity=3,
     ),
     Case(
         'Sell order filled, so buy order stays partly filled',
@@ -408,7 +422,7 @@ def test_make_trade_successfully_creates_trade(
         sell_filled_quantity=5,
         expected_buy_order_status=2,
         expected_sell_order_status=3,
-        expected_filled_quantity=2
+        expected_filled_quantity=2,
     ),
 )
 def test_make_trade_with_partly_filled_orders(
@@ -473,7 +487,7 @@ def test_make_trade_with_partly_filled_orders(
         patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet'),
         patch('thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order'),
         patch('thenewboston.notifications.consumers.notification.NotificationConsumer.stream_notification'),
-        patch('thenewboston.exchange.consumers.trade.TradeConsumer.stream_trade')
+        patch('thenewboston.exchange.consumers.trade.TradeConsumer.stream_trade'),
     ):
         make_trade(sell_order, buy_order, trade_at)
 
@@ -493,9 +507,9 @@ def test_make_trade_with_partly_filled_orders(
 
     buy_order.refresh_from_db()
     # The following assert is to help produce parameterization in case of changes in future
-    assert expected_buy_order_status == 2 if expected_filled_quantity < (
-        buy_quantity - buy_filled_quantity
-    ) else 3  # PARTIALLY_FILLED or FILLED
+    assert (
+        expected_buy_order_status == 2 if expected_filled_quantity < (buy_quantity - buy_filled_quantity) else 3
+    )  # PARTIALLY_FILLED or FILLED
     assert buy_order.status == expected_buy_order_status
     assert buy_order.filled_quantity == expected_filled_quantity + buy_filled_quantity
     assert buy_order.unfilled_quantity == buy_quantity - expected_filled_quantity - buy_filled_quantity
@@ -503,9 +517,9 @@ def test_make_trade_with_partly_filled_orders(
     sell_order.refresh_from_db()
 
     # The following assert is to help produce parameterization in case of changes in future
-    assert expected_sell_order_status == 2 if expected_filled_quantity < (
-        sell_quantity - sell_filled_quantity
-    ) else 3  # PARTIALLY_FILLED or FILLED
+    assert (
+        expected_sell_order_status == 2 if expected_filled_quantity < (sell_quantity - sell_filled_quantity) else 3
+    )  # PARTIALLY_FILLED or FILLED
     assert sell_order.status == expected_sell_order_status
     assert sell_order.filled_quantity == expected_filled_quantity + sell_filled_quantity
     assert sell_order.unfilled_quantity == sell_quantity - expected_filled_quantity - sell_filled_quantity
@@ -514,10 +528,13 @@ def test_make_trade_with_partly_filled_orders(
     assert Wallet.objects.count() == 4  # two new wallets created by the trade
 
     bucky_yyy_wallet.refresh_from_db()
-    expected_bucky_yyy_wallet_balance = (   # reserved amount
-        1000 - expected_filled_quantity * sell_price - (
+    expected_bucky_yyy_wallet_balance = (  # reserved amount
+        1000
+        - expected_filled_quantity * sell_price
+        - (
             buy_quantity - expected_filled_quantity  # We do not subtract `buy_filled_quantity` on purpose here
-        ) * buy_price
+        )
+        * buy_price
     )
     assert bucky_yyy_wallet.balance == expected_bucky_yyy_wallet_balance
     buy_order_credit_wallet = Wallet.objects.get(owner=bucky, currency=tnb_currency)

@@ -5,7 +5,6 @@ from uuid import UUID
 
 
 class Any:
-
     def __init__(self, *, type_=None, regex=None):
         self.type = type_
         self.regex = regex if isinstance(regex, (re.Pattern, NoneType)) else re.compile(regex)
@@ -21,8 +20,8 @@ class Any:
 
     def __repr__(self):
         return (
-            f"Any(type_={'None' if self.type is None else self.type.__name__}, "
-            f"regex={'None' if self.regex is None else self.regex.pattern})"
+            f'Any(type_={"None" if self.type is None else self.type.__name__}, '
+            f'regex={"None" if self.regex is None else self.regex.pattern})'
         )
 
     def __str__(self):
@@ -30,7 +29,6 @@ class Any:
 
 
 class AnyUUIDStr:
-
     def __eq__(self, other):
         try:
             UUID(other)
@@ -41,7 +39,6 @@ class AnyUUIDStr:
 
 
 class AnyDatetimeStr:
-
     def __eq__(self, other):
         if not isinstance(other, str):
             return False

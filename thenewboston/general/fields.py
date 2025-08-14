@@ -3,7 +3,6 @@ from rest_framework.serializers import ModelSerializer
 
 
 class FixedField(Field):
-
     def __init__(self, serializer_class, *, default, serializer_kwargs=None, **kwargs):
         self._child_serializer_class = serializer_class
         self._child_serializer_kwargs = serializer_kwargs or {}

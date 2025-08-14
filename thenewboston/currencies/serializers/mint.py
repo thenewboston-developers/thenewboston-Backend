@@ -9,7 +9,6 @@ from ..models import Currency, Mint
 
 
 class MintReadSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Mint
         fields = '__all__'
@@ -37,8 +36,7 @@ class MintWriteSerializer(serializers.ModelSerializer):
         total_minted = Mint.objects.filter(currency=currency).aggregate(total=Sum('amount'))['total'] or 0
         if total_minted + amount > MAX_MINT_AMOUNT:
             raise serializers.ValidationError(
-                f'Total minted amount would exceed maximum of {MAX_MINT_AMOUNT:,}. '
-                f'Current total: {total_minted:,}'
+                f'Total minted amount would exceed maximum of {MAX_MINT_AMOUNT:,}. Current total: {total_minted:,}'
             )
 
         mint = super().create({**validated_data, 'owner': request.user})

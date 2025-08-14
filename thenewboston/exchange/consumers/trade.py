@@ -4,7 +4,6 @@ from channels.layers import get_channel_layer
 
 
 class TradeConsumer(JsonWebsocketConsumer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subscribed_tickers = set()
@@ -18,10 +17,7 @@ class TradeConsumer(JsonWebsocketConsumer):
         Send trade creation details to the client. The event is expected to contain the 'payload' with trade details
         and 'type' indicating the action.
         """
-        self.send_json({
-            'trade': event['payload'],
-            'type': event['type'],
-        })
+        self.send_json({'trade': event['payload'], 'type': event['type']})
 
     def disconnect(self, close_code):
         """Remove the client from all subscribed ticker groups on disconnection."""

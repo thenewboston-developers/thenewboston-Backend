@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class TradeQuerySet(CustomQuerySet):
-
     def filter_by_asset_pair(self, asset_pair_id):
         # TODO(dmu) LOW: We can optimize performance by storing the asset pair in the Trade model
         return self.filter(buy_order__asset_pair_id=asset_pair_id)
@@ -60,8 +59,8 @@ class Trade(AdjustableTimestampsModel):
             apply_on_commit(
                 # TODO(dmu) LOW: Add comment explaining why `self.sell_order.asset_pair.primary_currency` ticker
                 #                is used not, but not `self.buy_order.asset_pair.primary_currency`
-                lambda trade=self, ticker=self.sell_order.asset_pair.primary_currency.ticker: TradeConsumer.
-                stream_trade(
+                lambda trade=self,
+                ticker=self.sell_order.asset_pair.primary_currency.ticker: TradeConsumer.stream_trade(
                     message_type=MessageType.CREATE_TRADE, trade_data=TradeSerializer(trade).data, ticker=ticker
                 )
             )

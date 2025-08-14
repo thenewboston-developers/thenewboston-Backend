@@ -28,8 +28,19 @@ class PostReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = (
-            'comments', 'content', 'created_date', 'id', 'image', 'modified_date', 'owner', 'price_amount',
-            'price_currency', 'recipient', 'like_count', 'is_liked', 'tip_amounts'
+            'comments',
+            'content',
+            'created_date',
+            'id',
+            'image',
+            'modified_date',
+            'owner',
+            'price_amount',
+            'price_currency',
+            'recipient',
+            'like_count',
+            'is_liked',
+            'tip_amounts',
         )
         read_only_fields = (
             'comments',
@@ -70,10 +81,12 @@ class PostReadSerializer(serializers.ModelSerializer):
                 currency = currencies.get(item['price_currency'])
 
                 if currency:
-                    tip_amounts.append({
-                        'currency': CurrencyReadSerializer(currency, context=self.context).data,
-                        'total_amount': item['total_amount']
-                    })
+                    tip_amounts.append(
+                        {
+                            'currency': CurrencyReadSerializer(currency, context=self.context).data,
+                            'total_amount': item['total_amount'],
+                        }
+                    )
 
         return tip_amounts
 
@@ -110,10 +123,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
             transfer_coins(sender_wallet=sender_wallet, recipient_wallet=recipient_wallet, amount=price_amount)
 
-        post = super().create({
-            **validated_data,
-            'owner': request.user,
-        })
+        post = super().create({**validated_data, 'owner': request.user})
 
         if price_amount is not None and price_currency is not None and recipient is not None:
             self.notify_coin_transfer(post=post, request=request)
@@ -126,9 +136,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
             owner=post.recipient,
             payload={
                 'notification_type': NotificationType.POST_COIN_TRANSFER.value,
-                'owner': UserReadSerializer(post.owner, context={
-                    'request': request
-                }).data,
+                'owner': UserReadSerializer(post.owner, context={'request': request}).data,
                 'content': post.content,
                 'post_id': post.id,
                 'price_amount': post.price_amount,
@@ -137,7 +145,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'post_preview': truncate_text(post.content),
                 'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
-            }
+            },
         )
 
     def update(self, instance, validated_data):

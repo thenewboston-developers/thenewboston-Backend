@@ -25,7 +25,6 @@ class WalletReadSerializer(serializers.ModelSerializer):
 
 
 class WalletWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Wallet
         fields = ('id', 'currency', 'balance')
@@ -35,12 +34,14 @@ class WalletWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         key_pair = generate_key_pair()
 
-        wallet = super().create({
-            **validated_data,
-            'owner': request.user,
-            'deposit_account_number': key_pair.public,
-            'deposit_signing_key': key_pair.private,
-        })
+        wallet = super().create(
+            {
+                **validated_data,
+                'owner': request.user,
+                'deposit_account_number': key_pair.public,
+                'deposit_signing_key': key_pair.private,
+            }
+        )
 
         return wallet
 

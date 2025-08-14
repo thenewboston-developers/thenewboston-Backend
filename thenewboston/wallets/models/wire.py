@@ -27,4 +27,5 @@ class Wire(Block):
         super().clean()
         if self.currency and not self.currency.domain:
             from django.core.exceptions import ValidationError
+
             raise ValidationError('Wires are not supported for internal currencies.')

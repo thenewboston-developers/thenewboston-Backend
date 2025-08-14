@@ -6,7 +6,6 @@ from ..models import Notification
 
 
 class NotificationConsumer(JsonWebsocketConsumer):
-
     def connect(self):
         """
         Accept the incoming connection, retrieve the user ID from the URL route, construct a unique group name, and
@@ -24,11 +23,9 @@ class NotificationConsumer(JsonWebsocketConsumer):
         """
         total_unread_count = Notification.objects.filter(owner_id=self.user_id, is_read=False).count()
 
-        self.send_json({
-            'notification': event['payload'],
-            'type': event['type'],
-            'total_unread_count': total_unread_count,
-        })
+        self.send_json(
+            {'notification': event['payload'], 'type': event['type'], 'total_unread_count': total_unread_count}
+        )
 
     def disconnect(self, close_code):
         """Remove the client from the group on disconnection."""

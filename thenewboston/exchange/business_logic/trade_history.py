@@ -14,8 +14,11 @@ logger = logging.getLogger(__name__)
 def update_trade_history():
     asset_pair_ids = set(TradeHistoryItem.objects.values_list('asset_pair_id', flat=True))
     asset_pair_ids |= set(
-        Trade.objects.filter(created_date__gte=timezone.now() -
-                             UPDATE_PERIOD,).values_list('buy_order__asset_pair_id', flat=True).distinct()
+        Trade.objects.filter(
+            created_date__gte=timezone.now() - UPDATE_PERIOD,
+        )
+        .values_list('buy_order__asset_pair_id', flat=True)
+        .distinct()
     )
     for asset_pair_id in asset_pair_ids:
         try:

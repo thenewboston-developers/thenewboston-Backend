@@ -9,8 +9,16 @@ admin.site.register(AssetPair)
 @admin.register(ExchangeOrder)
 class ExchangeOrderAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'owner', 'asset_pair', 'side', 'quantity', 'price', 'filled_quantity', 'status', 'created_date',
-        'modified_date'
+        'id',
+        'owner',
+        'asset_pair',
+        'side',
+        'quantity',
+        'price',
+        'filled_quantity',
+        'status',
+        'created_date',
+        'modified_date',
     )
     list_filter = ('side', 'status', 'asset_pair')
     # no set arithmetics to keep the field order
@@ -42,7 +50,15 @@ class TradeAdmin(admin.ModelAdmin):
 @admin.register(TradeHistoryItem)
 class TradeHistoryItemAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'asset_pair', 'price', 'change_1h', 'change_24h', 'change_7d', 'volume_24h', 'market_cap', 'sparkline',
-        'modified_date'
+        'id',
+        'asset_pair',
+        'price',
+        'change_1h',
+        'change_24h',
+        'change_7d',
+        'volume_24h',
+        'market_cap',
+        'sparkline',
+        'modified_date',
     )
     ordering = ('asset_pair__primary_currency__ticker', 'asset_pair__secondary_currency__ticker')

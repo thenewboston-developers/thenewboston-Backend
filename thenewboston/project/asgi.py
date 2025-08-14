@@ -15,7 +15,9 @@ websocket_application = URLRouter(websocket_urlpatterns)
 if settings.SENTRY_DSN:
     websocket_application = SentryAsgiMiddleware(websocket_application)
 
-application = ProtocolTypeRouter({
-    'http': asgi_application,
-    'websocket': websocket_application,
-})
+application = ProtocolTypeRouter(
+    {
+        'http': asgi_application,
+        'websocket': websocket_application,
+    }
+)

@@ -34,11 +34,9 @@ class MintChartDataView(generics.ListAPIView):
 
         for mint in mints:
             cumulative_total += mint.amount
-            data_points.append({
-                'timestamp': mint.created_date,
-                'amount_minted': mint.amount,
-                'cumulative_total': cumulative_total
-            })
+            data_points.append(
+                {'timestamp': mint.created_date, 'amount_minted': mint.amount, 'cumulative_total': cumulative_total}
+            )
 
         serializer = self.get_serializer(data={'data_points': data_points, 'currency': currency.id})
         serializer.is_valid(raise_exception=True)

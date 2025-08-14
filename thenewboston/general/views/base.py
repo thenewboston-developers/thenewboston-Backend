@@ -6,7 +6,6 @@ UPDATE_METHODS = frozenset(('PATCH', 'PUT'))
 
 
 class GetCurrentUserMixin:
-
     def get_current_user(self):
         user = self.request.user
         if not user or user.is_anonymous:
@@ -37,7 +36,6 @@ class SerializerClassesMixin:
 
 
 class CustomGenericViewSet(LimitToUserMixin, SerializerClassesMixin, GenericViewSet):
-
     def get_queryset(self):
         queryset = super().get_queryset()
 

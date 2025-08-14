@@ -25,13 +25,10 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 2})  # PARTIAL_FILLED
-    assert (response.status_code,
-            response.json()) == (400, {
-                'status': [{
-                    'message': 'Transition is not allowed.',
-                    'code': 'invalid'
-                }]
-            })
+    assert (response.status_code, response.json()) == (
+        400,
+        {'status': [{'message': 'Transition is not allowed.', 'code': 'invalid'}]},
+    )
     order.refresh_from_db()
     assert model_to_dict_with_id(order) == {
         'id': order.id,
@@ -47,13 +44,10 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 3})
-    assert (response.status_code,
-            response.json()) == (400, {
-                'status': [{
-                    'message': 'Transition is not allowed.',
-                    'code': 'invalid'
-                }]
-            })
+    assert (response.status_code, response.json()) == (
+        400,
+        {'status': [{'message': 'Transition is not allowed.', 'code': 'invalid'}]},
+    )
     order.refresh_from_db()
     assert model_to_dict_with_id(order) == {
         'id': order.id,
@@ -84,13 +78,10 @@ def test_cannot_move_order_to_unpermitted_status(authenticated_api_client, bucky
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100})
-    assert (response.status_code, response.json(
-    )) == (400, {
-        'status': [{
-            'message': 'Cannot cancel an order that is in final status.',
-            'code': 'invalid'
-        }]
-    })
+    assert (response.status_code, response.json()) == (
+        400,
+        {'status': [{'message': 'Cannot cancel an order that is in final status.', 'code': 'invalid'}]},
+    )
     order.refresh_from_db()
     assert model_to_dict_with_id(order) == {
         'id': order.id,

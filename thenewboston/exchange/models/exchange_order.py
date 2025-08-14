@@ -3,7 +3,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from django.db.models import (
-    PROTECT, ForeignKey, IntegerChoices, PositiveBigIntegerField, PositiveSmallIntegerField, SmallIntegerField
+    PROTECT,
+    ForeignKey,
+    IntegerChoices,
+    PositiveBigIntegerField,
+    PositiveSmallIntegerField,
+    SmallIntegerField,
 )
 from django.utils.translation import gettext_lazy as _
 from model_utils import FieldTracker
@@ -55,7 +60,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
     filled_quantity = PositiveBigIntegerField(default=0)
     status = PositiveSmallIntegerField(
         choices=ExchangeOrderStatus.choices,
-        default=ExchangeOrderStatus.OPEN.value  # type: ignore
+        default=ExchangeOrderStatus.OPEN.value,  # type: ignore
     )
 
     tracker = FieldTracker()
@@ -65,8 +70,9 @@ class ExchangeOrder(AdjustableTimestampsModel):
             # We are intentionally blind to re-entering the status, assume that in the that case we are just
             # not changing the status. Otherwise, we would need to make this validation on API level which would
             # complicate the implementation without any real benefit.
-            self.has_changed('status') and self.status == ExchangeOrderStatus.CANCELLED.value and
-            self.tracker.previous('status') in FINAL_STATUSES
+            self.has_changed('status')
+            and self.status == ExchangeOrderStatus.CANCELLED.value
+            and self.tracker.previous('status') in FINAL_STATUSES
         ):
             # TODO(dmu) HIGH: Implement a true state machine, so only particular transitions are allowed
             raise ValidationError({'status': 'Cannot cancel an order that is in final status.'})
@@ -119,7 +125,7 @@ class ExchangeOrder(AdjustableTimestampsModel):
                 'price': self.price,
                 'primary_currency': CurrencyTinySerializer(asset_pair.primary_currency).data,
                 'secondary_currency': CurrencyTinySerializer(asset_pair.secondary_currency).data,
-            }
+            },
         ).save(should_stream=True)
 
     def stream(self):
@@ -128,8 +134,9 @@ class ExchangeOrder(AdjustableTimestampsModel):
 
         asset_pair = self.asset_pair
         apply_on_commit(
-            lambda order=self, primary_currency_id=asset_pair.primary_currency_id, secondary_currency_id=asset_pair.
-            secondary_currency_id: ExchangeOrderConsumer.stream_exchange_order(
+            lambda order=self,
+            primary_currency_id=asset_pair.primary_currency_id,
+            secondary_currency_id=asset_pair.secondary_currency_id: ExchangeOrderConsumer.stream_exchange_order(
                 message_type=MessageType.UPDATE_EXCHANGE_ORDER,
                 order_data=ExchangeOrderReadSerializer(order).data,
                 # TODO(dmu) LOW: Refactor, so we pass the order to stream_exchange_order() which is used to

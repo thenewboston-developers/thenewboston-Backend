@@ -42,7 +42,6 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('exchange', '0002_initial'),
     ]

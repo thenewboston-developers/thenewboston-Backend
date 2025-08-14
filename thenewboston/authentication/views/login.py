@@ -8,7 +8,6 @@ from ..serializers.login import LoginSerializer
 
 
 class LoginView(APIView):
-
     @staticmethod
     def post(request):
         serializer = LoginSerializer(data=request.data)

@@ -8,7 +8,6 @@ import thenewboston.general.validators
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -25,19 +24,19 @@ class Migration(migrations.Migration):
                     'sender',
                     models.CharField(
                         max_length=64, validators=[thenewboston.general.validators.HexStringValidator(64)]
-                    )
+                    ),
                 ),
                 (
                     'signature',
                     models.CharField(
                         max_length=128, validators=[thenewboston.general.validators.HexStringValidator(128)]
-                    )
+                    ),
                 ),
                 (
                     'recipient',
                     models.CharField(
                         max_length=64, validators=[thenewboston.general.validators.HexStringValidator(64)]
-                    )
+                    ),
                 ),
                 ('amount', models.PositiveBigIntegerField()),
                 ('transaction_fee', models.PositiveBigIntegerField()),
@@ -58,14 +57,14 @@ class Migration(migrations.Migration):
                     'deposit_account_number',
                     models.CharField(
                         max_length=64, validators=[thenewboston.general.validators.HexStringValidator(64)]
-                    )
+                    ),
                 ),
                 ('deposit_balance', models.PositiveBigIntegerField(default=0)),
                 (
                     'deposit_signing_key',
                     models.CharField(
                         max_length=64, validators=[thenewboston.general.validators.HexStringValidator(64)]
-                    )
+                    ),
                 ),
                 ('currency', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='currencies.currency')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
@@ -82,13 +81,13 @@ class Migration(migrations.Migration):
                         parent_link=True,
                         primary_key=True,
                         serialize=False,
-                        to='wallets.block'
-                    )
+                        to='wallets.block',
+                    ),
                 ),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
                 (
                     'wire_type',
-                    models.CharField(choices=[('DEPOSIT', 'Deposit'), ('WITHDRAW', 'Withdraw')], max_length=8)
+                    models.CharField(choices=[('DEPOSIT', 'Deposit'), ('WITHDRAW', 'Withdraw')], max_length=8),
                 ),
                 ('currency', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='currencies.currency')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),

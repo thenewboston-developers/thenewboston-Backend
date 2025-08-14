@@ -23,8 +23,13 @@ from thenewboston.wallets.models import Wallet
 
 from ..models import OrderProcessingLock, Trade
 from ..models.exchange_order import (
-    NEW_ORDER_EVENT, ORDER_PROCESSING_LOCK_ID, SOMEWHAT_FILLED_STATUSES, UNFILLED_STATUSES, ExchangeOrder,
-    ExchangeOrderSide, ExchangeOrderStatus
+    NEW_ORDER_EVENT,
+    ORDER_PROCESSING_LOCK_ID,
+    SOMEWHAT_FILLED_STATUSES,
+    UNFILLED_STATUSES,
+    ExchangeOrder,
+    ExchangeOrderSide,
+    ExchangeOrderStatus,
 )
 
 GET_MESSAGE_ITERATION_TIMEOUT_SECONDS = 1
@@ -93,9 +98,7 @@ def make_trade(sell_order, buy_order, trade_at):
     assert buy_order.status in SOMEWHAT_FILLED_STATUSES
 
     assert sell_order.unfilled_quantity == 0 or buy_order.unfilled_quantity == 0
-    assert (
-        sell_order.status == ExchangeOrderStatus.FILLED.value or buy_order.status == ExchangeOrderStatus.FILLED.value
-    )
+    assert sell_order.status == ExchangeOrderStatus.FILLED.value or buy_order.status == ExchangeOrderStatus.FILLED.value
 
     overpayment_amount = overpay_price * filled_quantity
 
@@ -135,17 +138,21 @@ def make_trade(sell_order, buy_order, trade_at):
 def get_potentially_matching_orders(trade_at=None):
     trade_at = trade_at or timezone.now()
     subquery = (
-        ExchangeOrder.objects.filter(status__in=UNFILLED_STATUSES, created_date__lte=trade_at).annotate(
+        ExchangeOrder.objects.filter(status__in=UNFILLED_STATUSES, created_date__lte=trade_at)
+        .annotate(
             best_sell_price=Window(expression=Min('price', filter=Q(side=SELL)), partition_by='asset_pair_id'),
             best_buy_price=Window(expression=Max('price', filter=Q(side=BUY)), partition_by='asset_pair_id'),
-        ).filter(Q(side=BUY, price__gte=F('best_sell_price')) |
-                 Q(side=SELL, price__lte=F('best_buy_price'))).only('pk')
+        )
+        .filter(Q(side=BUY, price__gte=F('best_sell_price')) | Q(side=SELL, price__lte=F('best_buy_price')))
+        .only('pk')
     )
     return list(
         # We need it to be subquery for two related reasons:
         # 1. We need it to run as single query on the database for consistency and race condition prevention
         # 2. We need it to lock only on potentially matching, not on all orders in the database
-        ExchangeOrder.objects.filter(pk__in=subquery).with_advisory_lock(ORDER_PROCESSING_LOCK_ID).annotate(
+        ExchangeOrder.objects.filter(pk__in=subquery)
+        .with_advisory_lock(ORDER_PROCESSING_LOCK_ID)
+        .annotate(
             # Make SELL and BUY orders currencies go in reverse direction, so we can iterate one from top
             # and the other one from bottom
             sort_asset_pair_id=Case(
@@ -158,7 +165,8 @@ def get_potentially_matching_orders(trade_at=None):
                 When(side=BUY, then=ExpressionWrapper(-ExtractEpoch(F('created_date')), output_field=FloatField())),
                 output_field=FloatField(),
             ),
-        ).order_by(
+        )
+        .order_by(
             'side',  # SELL will be first, then BUY
             'sort_asset_pair_id',
             'price',  # lowest ask first (best sell goes first), then highest bid (best buy goes last)
@@ -328,8 +336,9 @@ def run_single_iteration():
         assert isinstance(potentially_matching_orders, list)
         # Advisory locks are automatically released on database connection close, but as long as we are running
         # we need to maintain the cleanup
-        ExchangeOrder.objects.advisory_unlock_by_pks({order.id for order in potentially_matching_orders} -
-                                                     unlocked_order_ids, ORDER_PROCESSING_LOCK_ID)
+        ExchangeOrder.objects.advisory_unlock_by_pks(
+            {order.id for order in potentially_matching_orders} - unlocked_order_ids, ORDER_PROCESSING_LOCK_ID
+        )
 
     # `has_more_matches` may be True for `settings.ONE_TRADE_PER_ITERATION = True`. It is used in the outer loop
     # to continue processing orders until there are no more matches
@@ -361,8 +370,7 @@ def order_processing_lock(force=False):
         lock = OrderProcessingLock.objects.select_for_update().get_or_none()
         if lock and not force and lock.acquired_at:
             raise ThenewbostonRuntimeError(
-                f'Order processing lock is already acquired at {lock.acquired_at.isoformat()} '
-                f'(extra: {lock.extra})'
+                f'Order processing lock is already acquired at {lock.acquired_at.isoformat()} (extra: {lock.extra})'
             )
 
         now = timezone.now()
@@ -397,7 +405,6 @@ def order_processing_lock(force=False):
 
 
 class OrderProcessingEngine:
-
     def __init__(self, hook_signals=True):
         self.is_running = False
 

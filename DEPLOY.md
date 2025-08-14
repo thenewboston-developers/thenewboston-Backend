@@ -96,7 +96,7 @@ ssh ubuntu@thenewboston.network
 
 sudo vim /etc/thenewboston/.env
 ```
-   
+
 10. Install docker as described at https://docs.docker.com/engine/install/ on thenewboston.network
 11. Setup and check docker installation:
 
@@ -107,7 +107,7 @@ exit
 
 ssh ubuntu@thenewboston.network
 
-# Known working versions described in the comments below 
+# Known working versions described in the comments below
 docker --version # Docker version 26.0.1, build d260a54
 
 # (!!!) At least Docker Compose version v2.24.0 is required

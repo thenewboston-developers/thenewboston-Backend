@@ -49,14 +49,16 @@ class TradePriceChartDataView(generics.ListAPIView):
         interval_minutes = self.get_interval_minutes(time_range)
 
         if not trades:
-            return Response({
-                'candlesticks': [],
-                'interval_minutes': interval_minutes,
-                'start_time': timezone.now(),
-                'end_time': timezone.now(),
-                'primary_currency': asset_pair.primary_currency_id,
-                'secondary_currency': asset_pair.secondary_currency_id
-            })
+            return Response(
+                {
+                    'candlesticks': [],
+                    'interval_minutes': interval_minutes,
+                    'start_time': timezone.now(),
+                    'end_time': timezone.now(),
+                    'primary_currency': asset_pair.primary_currency_id,
+                    'secondary_currency': asset_pair.secondary_currency_id,
+                }
+            )
 
         now = timezone.now()
         first_trade = trades[0]
@@ -84,15 +86,17 @@ class TradePriceChartDataView(generics.ListAPIView):
             while current_interval_index < interval_index and last_close_price is not None:
                 interval_start = start_time + timedelta(minutes=current_interval_index * interval_minutes)
                 interval_end = interval_start + interval_delta
-                candlesticks.append({
-                    'start': interval_start,
-                    'end': interval_end,
-                    'open': last_close_price,
-                    'high': last_close_price,
-                    'low': last_close_price,
-                    'close': last_close_price,
-                    'volume': 0
-                })
+                candlesticks.append(
+                    {
+                        'start': interval_start,
+                        'end': interval_end,
+                        'open': last_close_price,
+                        'high': last_close_price,
+                        'low': last_close_price,
+                        'close': last_close_price,
+                        'volume': 0,
+                    }
+                )
                 current_interval_index += 1
 
             # Process the current interval with actual trades
@@ -105,7 +109,7 @@ class TradePriceChartDataView(generics.ListAPIView):
                 'high': max(trade.price for trade in interval_trades),
                 'low': min(trade.price for trade in interval_trades),
                 'close': interval_trades[-1].price,
-                'volume': sum(trade.filled_quantity for trade in interval_trades)
+                'volume': sum(trade.filled_quantity for trade in interval_trades),
             }
             candlesticks.append(ohlc_data)
             last_close_price = ohlc_data['close']
@@ -119,15 +123,17 @@ class TradePriceChartDataView(generics.ListAPIView):
 
             interval_end = interval_start + interval_delta
             if last_close_price is not None:
-                candlesticks.append({
-                    'start': interval_start,
-                    'end': interval_end,
-                    'open': last_close_price,
-                    'high': last_close_price,
-                    'low': last_close_price,
-                    'close': last_close_price,
-                    'volume': 0
-                })
+                candlesticks.append(
+                    {
+                        'start': interval_start,
+                        'end': interval_end,
+                        'open': last_close_price,
+                        'high': last_close_price,
+                        'low': last_close_price,
+                        'close': last_close_price,
+                        'volume': 0,
+                    }
+                )
 
             current_interval_index += 1
 
@@ -138,7 +144,7 @@ class TradePriceChartDataView(generics.ListAPIView):
                 'start_time': start_time,
                 'end_time': now,
                 'primary_currency': asset_pair.primary_currency_id,
-                'secondary_currency': asset_pair.secondary_currency_id
+                'secondary_currency': asset_pair.secondary_currency_id,
             }
         )
         serializer.is_valid(raise_exception=True)

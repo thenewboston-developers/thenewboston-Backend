@@ -45,16 +45,14 @@ class CommentViewSet(viewsets.ModelViewSet):
             owner=post.owner,
             payload={
                 'post_id': post.id,
-                'commenter': UserReadSerializer(comment.owner, context={
-                    'request': request
-                }).data,
+                'commenter': UserReadSerializer(comment.owner, context={'request': request}).data,
                 'comment': comment.content,
                 'notification_type': NotificationType.POST_COMMENT.value,
                 'post_preview': truncate_text(post.content),
                 'comment_preview': truncate_text(comment.content),
                 'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
-            }
+            },
         )
 
         notification_data = NotificationReadSerializer(notification, context={'request': request}).data

@@ -12,7 +12,9 @@ from thenewboston.general.views.base import UPDATE_METHODS, CustomGenericViewSet
 from ..models import AssetPair, ExchangeOrder
 from ..models.exchange_order import ORDER_PROCESSING_LOCK_ID, UNFILLED_STATUSES, ExchangeOrderSide
 from ..serializers.exchange_order import (
-    ExchangeOrderCreateSerializer, ExchangeOrderReadSerializer, ExchangeOrderUpdateSerializer
+    ExchangeOrderCreateSerializer,
+    ExchangeOrderReadSerializer,
+    ExchangeOrderUpdateSerializer,
 )
 
 
@@ -24,7 +26,7 @@ class ExchangeOrderViewSet(
     PatchOnlyUpdateModelMixin,
     RetrieveModelMixin,
     ListModelMixin,
-    CustomGenericViewSet
+    CustomGenericViewSet,
 ):
     # We are using declarative style to define serializer classes, queryset, etc., to follow DRF conventions
     serializer_class = ExchangeOrderReadSerializer
@@ -56,35 +58,43 @@ class ExchangeOrderViewSet(
 
         if asset_pair_id:
             if primary_currency_id or secondary_currency_id:
-                return Response({
-                    'error': 'Either asset_pair or primary_currency and secondary_currency parameters must be provided'
-                },
-                                status=status.HTTP_400_BAD_REQUEST)  # noqa: E126
+                return Response(
+                    {
+                        'error': 'Either asset_pair or primary_currency and secondary_currency parameters must be provided'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )  # noqa: E126
         elif not primary_currency_id or not secondary_currency_id:
             # TODO(dmu) MEDIUM: Mimic DRF format error response
-            return Response({'error': 'Both primary_currency and secondary_currency parameters are required'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Both primary_currency and secondary_currency parameters are required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         else:
             asset_pair = AssetPair.objects.get_or_none(
                 primary_currency_id=primary_currency_id, secondary_currency_id=secondary_currency_id
             )
             if not asset_pair:
-                return Response({'error': 'Asset pair for primary_currency and secondary_currency not found'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'error': 'Asset pair for primary_currency and secondary_currency not found'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             asset_pair_id = asset_pair.id
 
         filter_kwargs = {'asset_pair_id': asset_pair_id, 'status__in': UNFILLED_STATUSES}
-        buy_orders = ExchangeOrder.objects.filter(
-            side=ExchangeOrderSide.BUY.value, **filter_kwargs
-        ).order_by('-price')[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
-        sell_orders = ExchangeOrder.objects.filter(
-            side=ExchangeOrderSide.SELL.value, **filter_kwargs
-        ).order_by('price')[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
-        return Response({
-            'sell_orders': ExchangeOrderReadSerializer(sell_orders, many=True).data,
-            'buy_orders': ExchangeOrderReadSerializer(buy_orders, many=True).data,
-        })
+        buy_orders = ExchangeOrder.objects.filter(side=ExchangeOrderSide.BUY.value, **filter_kwargs).order_by('-price')[
+            :50
+        ]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
+        sell_orders = ExchangeOrder.objects.filter(side=ExchangeOrderSide.SELL.value, **filter_kwargs).order_by(
+            'price'
+        )[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
+        return Response(
+            {
+                'sell_orders': ExchangeOrderReadSerializer(sell_orders, many=True).data,
+                'buy_orders': ExchangeOrderReadSerializer(buy_orders, many=True).data,
+            }
+        )
 
     def create(self, *args, **kwargs):
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"

@@ -38,14 +38,12 @@ class CommentReadSerializer(serializers.ModelSerializer):
 
 
 class CommentUpdateSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Comment
         fields = ('content',)
 
 
 class CommentWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Comment
         fields = ('content', 'post', 'price_amount', 'price_currency')
@@ -69,10 +67,7 @@ class CommentWriteSerializer(serializers.ModelSerializer):
 
             transfer_coins(sender_wallet=commenter_wallet, recipient_wallet=poster_wallet, amount=price_amount)
 
-        post = super().create({
-            **validated_data,
-            'owner': request.user,
-        })
+        post = super().create({**validated_data, 'owner': request.user})
 
         return post
 

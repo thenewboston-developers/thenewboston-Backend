@@ -7,8 +7,10 @@ from django.db import migrations, models
 def populate_exchange_order_asset_pair(apps, schema_editor):
     ExchangeOrder = apps.get_model('exchange', 'ExchangeOrder')
     AssetPair = apps.get_model('exchange', 'AssetPair')
-    asset_pairs = {(asset_pair.primary_currency_id, asset_pair.secondary_currency_id): asset_pair
-                   for asset_pair in AssetPair.objects.all()}
+    asset_pairs = {
+        (asset_pair.primary_currency_id, asset_pair.secondary_currency_id): asset_pair
+        for asset_pair in AssetPair.objects.all()
+    }
     for order in ExchangeOrder.objects.all().iterator():
         order.asset_pair = asset_pairs[(order.primary_currency_id, order.secondary_currency_id)]
         order.save()
@@ -25,8 +27,10 @@ def reverse_exchange_order_asset_pair(apps, schema_editor):
 def populate_trade_history_item_asset_pair(apps, schema_editor):
     TradeHistoryItem = apps.get_model('exchange', 'TradeHistoryItem')
     AssetPair = apps.get_model('exchange', 'AssetPair')
-    asset_pairs = {(asset_pair.primary_currency_id, asset_pair.secondary_currency_id): asset_pair
-                   for asset_pair in AssetPair.objects.all()}
+    asset_pairs = {
+        (asset_pair.primary_currency_id, asset_pair.secondary_currency_id): asset_pair
+        for asset_pair in AssetPair.objects.all()
+    }
     for item in TradeHistoryItem.objects.all().iterator():
         item.asset_pair = asset_pairs[(item.primary_currency_id, item.secondary_currency_id)]
         item.save()
@@ -41,7 +45,6 @@ def reverse_trade_history_item_asset_pair(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('exchange', '0004_tradehistoryitem'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -83,7 +86,7 @@ class Migration(migrations.Migration):
                 on_delete=models.CASCADE,
                 related_name='trade_history_items',
                 to='exchange.assetpair',
-                unique=True
+                unique=True,
             ),
         ),
         migrations.AlterField(
@@ -93,7 +96,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=models.CASCADE,
                 related_name='primary_trade_history_items',
-                to='currencies.currency'
+                to='currencies.currency',
             ),
         ),
         migrations.AlterField(
@@ -103,7 +106,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=models.CASCADE,
                 related_name='secondary_trade_history_items',
-                to='currencies.currency'
+                to='currencies.currency',
             ),
         ),
         migrations.RunPython(

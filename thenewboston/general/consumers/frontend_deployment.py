@@ -23,7 +23,4 @@ class FrontendDeploymentConsumer(JsonWebsocketConsumer):
         async_to_sync(channel_layer.group_send)(cls.GROUP_NAME, deployment_event)
 
     def update_frontend_deployment(self, event):
-        self.send_json({
-            'frontend_deployment': event['payload'],
-            'type': event['type'],
-        })
+        self.send_json({'frontend_deployment': event['payload'], 'type': event['type']})

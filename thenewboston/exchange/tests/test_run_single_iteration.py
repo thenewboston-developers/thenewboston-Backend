@@ -359,40 +359,62 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
     assert buy_order_2.filled_quantity == 3
     assert not has_advisory_locks()
 
-    expected_trades = [{
-        'id': ANY_INT,
-        'created_date': ANY_DATETIME,
-        'modified_date': ANY_DATETIME,
-        'buy_order': buy_order_2.id,
-        'sell_order': sell_order_3.id,
-        'filled_quantity': 3,
-        'price': 8,
-        'overpayment_amount': 9
-    }]
+    expected_trades = [
+        {
+            'id': ANY_INT,
+            'created_date': ANY_DATETIME,
+            'modified_date': ANY_DATETIME,
+            'buy_order': buy_order_2.id,
+            'sell_order': sell_order_3.id,
+            'filled_quantity': 3,
+            'price': 8,
+            'overpayment_amount': 9,
+        }
+    ]
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
     asset_pair = AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency)
-    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
-        'id':
-            ANY_INT,
-        'asset_pair':
-            asset_pair.id,
-        'price':
-            8,
-        'change_1h':
-            0.0,
-        'change_24h':
-            0.0,
-        'change_7d':
-            0.0,
-        'volume_24h':
-            3,
-        'market_cap':
-            800000,
-        'sparkline': [
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None, None, 8
-        ]
-    }]
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [
+        {
+            'id': ANY_INT,
+            'asset_pair': asset_pair.id,
+            'price': 8,
+            'change_1h': 0.0,
+            'change_24h': 0.0,
+            'change_7d': 0.0,
+            'volume_24h': 3,
+            'market_cap': 800000,
+            'sparkline': [
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                8,
+            ],
+        }
+    ]
 
     # Call 2
     with override_settings(ONE_TRADE_PER_ITERATION=True):
@@ -414,39 +436,61 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
     assert buy_order_2.filled_quantity == 3
     assert not has_advisory_locks()
 
-    expected_trades.append({
-        'id': ANY_INT,
-        'created_date': ANY_DATETIME,
-        'modified_date': ANY_DATETIME,
-        'buy_order': buy_order_1.id,
-        'sell_order': sell_order_3.id,
-        'filled_quantity': 7,
-        'price': 8,
-        'overpayment_amount': 14
-    })
+    expected_trades.append(
+        {
+            'id': ANY_INT,
+            'created_date': ANY_DATETIME,
+            'modified_date': ANY_DATETIME,
+            'buy_order': buy_order_1.id,
+            'sell_order': sell_order_3.id,
+            'filled_quantity': 7,
+            'price': 8,
+            'overpayment_amount': 14,
+        }
+    )
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
-    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
-        'id':
-            ANY_INT,
-        'asset_pair':
-            asset_pair.id,
-        'price':
-            8,
-        'change_1h':
-            0.0,
-        'change_24h':
-            0.0,
-        'change_7d':
-            0.0,
-        'volume_24h':
-            10,
-        'market_cap':
-            800000,
-        'sparkline': [
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None, None, 8
-        ]
-    }]
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [
+        {
+            'id': ANY_INT,
+            'asset_pair': asset_pair.id,
+            'price': 8,
+            'change_1h': 0.0,
+            'change_24h': 0.0,
+            'change_7d': 0.0,
+            'volume_24h': 10,
+            'market_cap': 800000,
+            'sparkline': [
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                8,
+            ],
+        }
+    ]
 
     # Call 3
     with override_settings(ONE_TRADE_PER_ITERATION=True):
@@ -469,62 +513,104 @@ def test_multiple_calls(bucky, dmitry, tnb_currency, yyy_currency):
     assert buy_order_2.filled_quantity == 3
     assert not has_advisory_locks()
 
-    expected_trades.append({
-        'id': ANY_INT,
-        'created_date': ANY_DATETIME,
-        'modified_date': ANY_DATETIME,
-        'buy_order': buy_order_1.id,
-        'sell_order': sell_order_2.id,
-        'filled_quantity': 5,
-        'price': 9,
-        'overpayment_amount': 5
-    })
+    expected_trades.append(
+        {
+            'id': ANY_INT,
+            'created_date': ANY_DATETIME,
+            'modified_date': ANY_DATETIME,
+            'buy_order': buy_order_1.id,
+            'sell_order': sell_order_2.id,
+            'filled_quantity': 5,
+            'price': 9,
+            'overpayment_amount': 5,
+        }
+    )
     assert [model_to_dict_with_id(trade) for trade in Trade.objects.order_by('created_date')] == expected_trades
-    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
-        'id':
-            ANY_INT,
-        'asset_pair':
-            asset_pair.id,
-        'price':
-            9,
-        'change_1h':
-            0.0,
-        'change_24h':
-            0.0,
-        'change_7d':
-            0.0,
-        'volume_24h':
-            15,
-        'market_cap':
-            900000,
-        'sparkline': [
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None, None, 9
-        ]
-    }]
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [
+        {
+            'id': ANY_INT,
+            'asset_pair': asset_pair.id,
+            'price': 9,
+            'change_1h': 0.0,
+            'change_24h': 0.0,
+            'change_7d': 0.0,
+            'volume_24h': 15,
+            'market_cap': 900000,
+            'sparkline': [
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                9,
+            ],
+        }
+    ]
 
     TradeHistoryItem.objects.all().delete()
     assert not TradeHistoryItem.objects.exists()
     update_trade_history()
-    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [{
-        'id':
-            ANY_INT,
-        'asset_pair':
-            asset_pair.id,
-        'price':
-            9,
-        'change_1h':
-            0.0,
-        'change_24h':
-            0.0,
-        'change_7d':
-            0.0,
-        'volume_24h':
-            15,
-        'market_cap':
-            900000,
-        'sparkline': [
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None, None, 9
-        ]
-    }]
+    assert [model_to_dict_with_id(item) for item in TradeHistoryItem.objects.order_by('asset_pair_id')] == [
+        {
+            'id': ANY_INT,
+            'asset_pair': asset_pair.id,
+            'price': 9,
+            'change_1h': 0.0,
+            'change_24h': 0.0,
+            'change_7d': 0.0,
+            'volume_24h': 15,
+            'market_cap': 900000,
+            'sparkline': [
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                9,
+            ],
+        }
+    ]

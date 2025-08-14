@@ -60,8 +60,17 @@ def test_forbidden_patterns():
 
 def test_reserved_words():
     reserved = [
-        'admin', 'Admin', 'ADMIN', 'support', 'Support', 'moderator', 'Moderator', 'thenewboston', 'TheNewBoston',
-        'ia', 'IA'
+        'admin',
+        'Admin',
+        'ADMIN',
+        'support',
+        'Support',
+        'moderator',
+        'Moderator',
+        'thenewboston',
+        'TheNewBoston',
+        'ia',
+        'IA',
     ]
 
     for username in reserved:
@@ -75,11 +84,7 @@ def test_case_insensitive_uniqueness():
     User.objects.create_user(username='Bucky', password='testpass123')
 
     serializer = UserWriteSerializer(
-        data={
-            'username': 'bucky',
-            'password': 'ValidPass123!',
-            'invitation_code': 'test_code'
-        }
+        data={'username': 'bucky', 'password': 'ValidPass123!', 'invitation_code': 'test_code'}
     )
 
     assert not serializer.is_valid()
@@ -88,11 +93,7 @@ def test_case_insensitive_uniqueness():
 
     for username in ['BUCKY', 'BuCkY', 'bUcKy']:
         serializer = UserWriteSerializer(
-            data={
-                'username': username,
-                'password': 'ValidPass123!',
-                'invitation_code': 'test_code'
-            }
+            data={'username': username, 'password': 'ValidPass123!', 'invitation_code': 'test_code'}
         )
         assert not serializer.is_valid()
         assert 'username' in serializer.errors

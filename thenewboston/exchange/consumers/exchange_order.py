@@ -6,7 +6,6 @@ from ..models import AssetPair
 
 
 class ExchangeOrderConsumer(JsonWebsocketConsumer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subscribed_asset_pairs = set()
@@ -19,10 +18,7 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         """
         Send order creation details to the client. The event is expected to contain the 'payload' with order details.
         """
-        self.send_json({
-            'exchange_order': event['payload'],
-            'type': event['type'],
-        })
+        self.send_json({'exchange_order': event['payload'], 'type': event['type']})
 
     def disconnect(self, close_code):
         """Remove the client from all subscribed asset pair groups on disconnection."""
@@ -101,7 +97,4 @@ class ExchangeOrderConsumer(JsonWebsocketConsumer):
         """
         Send order update details to the client. The event is expected to contain the 'payload' with order details.
         """
-        self.send_json({
-            'exchange_order': event['payload'],
-            'type': event['type'],
-        })
+        self.send_json({'exchange_order': event['payload'], 'type': event['type']})

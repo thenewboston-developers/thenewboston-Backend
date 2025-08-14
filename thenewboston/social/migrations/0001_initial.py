@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies: List[Tuple[str, str]] = []
@@ -58,7 +57,7 @@ class Migration(migrations.Migration):
                     'post',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE, related_name='user_reactions', to='social.post'
-                    )
+                    ),
                 ),
             ],
             options={

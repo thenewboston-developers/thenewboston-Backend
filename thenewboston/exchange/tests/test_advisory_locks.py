@@ -5,7 +5,9 @@ from django.utils import timezone
 from thenewboston.exchange.models import ExchangeOrder
 from thenewboston.exchange.models.exchange_order import ORDER_PROCESSING_LOCK_ID
 from thenewboston.exchange.order_processing.engine import (
-    get_potentially_matching_orders, match_orders, run_single_iteration
+    get_potentially_matching_orders,
+    match_orders,
+    run_single_iteration,
 )
 
 from .base import has_advisory_locks, is_advisory_lock_set
@@ -32,14 +34,10 @@ def test_order_update_creates_advisory_lock(authenticated_api_client, bucky, tnb
     assert not ExchangeOrder.objects.exists()
     buy_order = make_buy_order(bucky, tnb_currency, yyy_currency, price=100)
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
-    assert (response.status_code, response.json()
-            ) == (200, {
-                'asset_pair': buy_order.asset_pair_id,
-                'side': 1,
-                'quantity': 1,
-                'price': 100,
-                'status': 100
-            })
+    assert (response.status_code, response.json()) == (
+        200,
+        {'asset_pair': buy_order.asset_pair_id, 'side': 1, 'quantity': 1, 'price': 100, 'status': 100},
+    )
 
     # Because each test opens a transaction before the API request the lock is not released
     assert is_advisory_lock_set(ORDER_PROCESSING_LOCK_ID, buy_order.id)

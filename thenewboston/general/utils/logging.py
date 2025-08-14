@@ -6,7 +6,6 @@ from itertools import chain
 
 
 class log:
-
     def __init__(
         self,
         name=None,

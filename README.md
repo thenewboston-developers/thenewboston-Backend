@@ -2,7 +2,7 @@
 
 **SECTIONS**
 1. [Initial Project Setup](#initial-project-setup)
-2. [Essential Developer Guidelines](#essential-developer-guidelines) 
+2. [Essential Developer Guidelines](#essential-developer-guidelines)
 
 
 # Initial Project Setup
@@ -37,7 +37,7 @@ cp thenewboston/project/settings/templates/settings.unittests.py ./local/setting
 
 5. Install / upgrade docker as described at https://docs.docker.com/engine/install/
 ```bash
-# Known working versions described in the comments below 
+# Known working versions described in the comments below
 
 docker --version # Docker version 26.0.1, build d260a54
 

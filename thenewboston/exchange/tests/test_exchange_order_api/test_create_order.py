@@ -43,25 +43,27 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         'asset_pair': asset_pair_id,
         'side': 1,  # buy
         'quantity': 2,
-        'price': 101
+        'price': 101,
     }
     with (
         patch('thenewboston.wallets.consumers.wallet.WalletConsumer.stream_wallet') as stream_wallet_mock,
-        patch('thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order') as
-        stream_exchange_order_mock,
+        patch(
+            'thenewboston.exchange.consumers.exchange_order.ExchangeOrderConsumer.stream_exchange_order'
+        ) as stream_exchange_order_mock,
     ):
         response = authenticated_api_client.post('/api/exchange-orders', payload)
 
     response_json = response.json()
     assert (response.status_code, response_json) == (
-        201, {
+        201,
+        {
             'id': ANY_INT,
             'asset_pair': asset_pair_id,
             'side': 1,
             'quantity': 2,
             'price': 101,
             'status': 1,
-        }
+        },
     )
     order = ExchangeOrder.objects.get(id=response_json['id'])
     after_trade_at = trade_at + timedelta(microseconds=1)
@@ -114,7 +116,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
                     'twitch_username': None,
                     'username': 'bucky',
                     'x_username': None,
-                    'youtube_username': None
+                    'youtube_username': None,
                 },
                 'discord_username': None,
                 'facebook_username': None,
@@ -132,7 +134,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
                 'description': None,
                 'domain': 'yyy.net',
                 'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                'ticker': 'YYY'
+                'ticker': 'YYY',
             },
             'created_date': to_iso_format(bucky_yyy_wallet.created_date),
             'deposit_account_number': None,
@@ -140,7 +142,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
             'id': bucky_yyy_wallet.id,
             'modified_date': to_iso_format(bucky_yyy_wallet.modified_date),
             'owner': bucky_yyy_wallet.owner_id,
-        }
+        },
     )
 
     stream_exchange_order_mock.assert_called_once_with(
@@ -166,7 +168,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
                     'id': yyy_currency.id,
                     'ticker': yyy_currency.ticker,
                     'logo': 'http://localhost:8000/media/images/yyy_currency.png',
-                }
+                },
             },
         },
         primary_currency_id=order.asset_pair.primary_currency_id,
@@ -202,19 +204,20 @@ def test_create_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
         'asset_pair': asset_pair_id,
         'side': -1,  # sell
         'quantity': 2,
-        'price': 101
+        'price': 101,
     }
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     response_json = response.json()
     assert (response.status_code, response_json) == (
-        201, {
+        201,
+        {
             'id': ANY_INT,
             'asset_pair': asset_pair_id,
             'side': -1,
             'quantity': 2,
             'price': 101,
             'status': 1,
-        }
+        },
     )
     order = ExchangeOrder.objects.get(id=response_json['id'])
     after_trade_at = trade_at + timedelta(microseconds=1)
@@ -256,16 +259,13 @@ def test_create_order_for_someone_else(authenticated_api_client, dmitry, tnb_cur
         'asset_pair': asset_pair.id,
         'side': 1,  # buy
         'quantity': 2,
-        'price': 101
+        'price': 101,
     }
     response = authenticated_api_client.post('/api/exchange-orders', payload)
-    assert (response.status_code, response.json()
-            ) == (400, {
-                'non_field_errors': [{
-                    'message': 'Readonly field(s): owner',
-                    'code': 'invalid'
-                }]
-            })
+    assert (response.status_code, response.json()) == (
+        400,
+        {'non_field_errors': [{'message': 'Readonly field(s): owner', 'code': 'invalid'}]},
+    )
     assert not ExchangeOrder.objects.exists()
 
 
@@ -281,12 +281,8 @@ def test_create_order__not_enough_balance(
     payload = {'asset_pair': asset_pair_id, 'side': 1, 'quantity': 1, 'price': 1001}
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     assert (response.status_code, response.json()) == (
-        400, {
-            'non_field_errors': [{
-                'message': 'Total of 1001 exceeds YYY wallet balance of 1000',
-                'code': 'invalid'
-            }]
-        }
+        400,
+        {'non_field_errors': [{'message': 'Total of 1001 exceeds YYY wallet balance of 1000', 'code': 'invalid'}]},
     )
 
     # We use a different balance to make sure the correct wallet is checked
@@ -295,12 +291,8 @@ def test_create_order__not_enough_balance(
     payload = {'asset_pair': asset_pair_id, 'side': -1, 'quantity': 1000, 'price': 2}
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     assert (response.status_code, response.json()) == (
-        400, {
-            'non_field_errors': [{
-                'message': 'Total of 1000 exceeds TNB wallet balance of 999',
-                'code': 'invalid'
-            }]
-        }
+        400,
+        {'non_field_errors': [{'message': 'Total of 1000 exceeds TNB wallet balance of 999', 'code': 'invalid'}]},
     )
     assert not ExchangeOrder.objects.exists()
 
@@ -314,7 +306,7 @@ def test_publish_new_order_message(authenticated_api_client, tnb_currency, yyy_c
         'asset_pair': asset_pair.id,
         'side': 1,  # buy
         'quantity': 2,
-        'price': 101
+        'price': 101,
     }
 
     pubsub = get_redis_client().pubsub()
@@ -326,15 +318,10 @@ def test_publish_new_order_message(authenticated_api_client, tnb_currency, yyy_c
 
     try:
         response = authenticated_api_client.post('/api/exchange-orders', payload)
-        assert (response.status_code, response.json(
-        )) == (201, {
-            'id': ANY_INT,
-            'asset_pair': ANY_INT,
-            'side': 1,
-            'quantity': 2,
-            'price': 101,
-            'status': 1
-        })
+        assert (response.status_code, response.json()) == (
+            201,
+            {'id': ANY_INT, 'asset_pair': ANY_INT, 'side': 1, 'quantity': 2, 'price': 101, 'status': 1},
+        )
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0.01)
         assert message
         assert message.get('type') == 'message' and message.get('data') == 'new_order'

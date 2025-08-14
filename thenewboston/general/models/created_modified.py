@@ -21,7 +21,6 @@ class CreatedModified(CustomModel):
 
 
 class AdjustableTimestampsModel(TrackerMixin, CustomModel):
-
     # We are not using `CreatedModified` and defining our own fields here to be able to adjust the timestamps
     created_date = models.DateTimeField(default=timezone.now)
     modified_date = models.DateTimeField(default=timezone.now)

@@ -13,7 +13,6 @@ def identity_decorator(callable_):
 
 
 class NullObject:
-
     def __getattr__(self, name):
         return None
 
