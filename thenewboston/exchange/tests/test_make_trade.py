@@ -174,8 +174,6 @@ def test_make_trade_successfully_creates_trade(
         trade_data={
             'id': trade.id,
             'asset_pair': asset_pair.id,
-            'primary_currency': tnb_currency.id,
-            'secondary_currency': yyy_currency.id,
             'created_date': to_iso_format(trade_at),
             'modified_date': to_iso_format(trade_at),
             'filled_quantity': expected_filled_quantity,
