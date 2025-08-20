@@ -46,6 +46,9 @@ class FollowerCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
 
+        if request.user == data['following']:
+            raise serializers.ValidationError('You cannot follow yourself.')
+
         if Follower.objects.filter(follower=request.user, following=data['following']).exists():
             raise serializers.ValidationError('This relationship already exists.')
 
