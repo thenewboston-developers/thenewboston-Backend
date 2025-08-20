@@ -3,8 +3,13 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.enums import MessageType, NotificationType
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsObjectFollowerOrReadOnly
+from thenewboston.notifications.consumers import NotificationConsumer
+from thenewboston.notifications.models import Notification
+from thenewboston.notifications.serializers.notification import NotificationReadSerializer
+from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..filters.follower import FollowerFilter
 from ..models import Follower
@@ -18,10 +23,27 @@ class FollowerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsObjectFollowerOrReadOnly]
     queryset = Follower.objects.all()
 
+    @staticmethod
+    def notify_profile_owner(follower, request):
+        notification = Notification.objects.create(
+            owner=follower.following,
+            payload={
+                'follower': UserReadSerializer(follower.follower, context={'request': request}).data,
+                'notification_type': NotificationType.PROFILE_FOLLOW.value,
+            },
+        )
+
+        notification_data = NotificationReadSerializer(notification, context={'request': request}).data
+
+        NotificationConsumer.stream_notification(
+            message_type=MessageType.CREATE_NOTIFICATION, notification_data=notification_data
+        )
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         follower = serializer.save()
+        self.notify_profile_owner(follower, request)
         read_serializer = FollowerReadSerializer(follower, context={'request': request})
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
