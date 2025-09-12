@@ -14,6 +14,11 @@ class User(AbstractUser, SocialMediaMixin):
 
     objects = UserManager()
 
+    class Meta:
+        indexes = [
+            models.Index(models.functions.Lower('username'), fields=[], name='users_user_username_idx'),
+        ]
+
     def get_reward_wallet_for_currency(self, currency_id, with_for_update=True):
         query = Wallet.objects
         if with_for_update:

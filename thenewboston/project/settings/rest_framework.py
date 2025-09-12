@@ -15,4 +15,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': ('rest_framework.parsers.JSONParser',),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     'EXCEPTION_HANDLER': 'thenewboston.general.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '100/min',  # Default user throttle rate
+        'anon': '60/min',  # Default anonymous throttle rate
+    },
 }
