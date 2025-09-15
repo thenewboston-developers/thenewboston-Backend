@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
 
-from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT
+from thenewboston.general.constants import DEFAULT_INVITATION_LIMIT, INVITE_SYSTEM_ENABLED
 from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.general.utils.image import process_image, validate_image_max_dimensions
 from thenewboston.invitations.models import Invitation, InvitationLimit
@@ -100,7 +100,7 @@ class UserUpdateSerializer(BaseModelSerializer):
 
 class UserWriteSerializer(BaseModelSerializer):
     agree_to_terms = serializers.BooleanField(write_only=True)
-    invitation_code = serializers.CharField(write_only=True)
+    invitation_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(validators=[validate_password], write_only=True)
 
     class Meta:
@@ -109,29 +109,37 @@ class UserWriteSerializer(BaseModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('agree_to_terms')
-        invitation_code = validated_data.pop('invitation_code')
+        invitation_code = validated_data.pop('invitation_code', None)
         password = validated_data.pop('password')
         username = validated_data.get('username')
 
-        invitation = Invitation.objects.filter(code=invitation_code, recipient__isnull=True).first()
+        if INVITE_SYSTEM_ENABLED:
+            if not invitation_code:
+                raise serializers.ValidationError('Invitation code is required')
 
-        if not invitation:
-            raise serializers.ValidationError('Invalid or used invitation code')
+            invitation = Invitation.objects.filter(code=invitation_code, recipient__isnull=True).first()
+
+            if not invitation:
+                raise serializers.ValidationError('Invalid or used invitation code')
 
         user = User.objects.create_user(username=username, password=password)
         current_time = timezone.now()
         UserAgreement.objects.create(user=user, terms_agreed_at=current_time, privacy_policy_agreed_at=current_time)
 
-        invitation.recipient = user
-        invitation.save()
-        inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
+        if INVITE_SYSTEM_ENABLED and invitation_code:
+            invitation.recipient = user
+            invitation.save()
+            inviter_limit = InvitationLimit.objects.filter(owner=invitation.owner).first()
 
-        if inviter_limit:
-            recipient_limit = max(inviter_limit.amount - 1, 0)
-        else:
-            recipient_limit = DEFAULT_INVITATION_LIMIT - 1
+            if inviter_limit:
+                recipient_limit = max(inviter_limit.amount - 1, 0)
+            else:
+                recipient_limit = DEFAULT_INVITATION_LIMIT - 1
 
-        InvitationLimit.objects.create(owner=user, amount=recipient_limit)
+            InvitationLimit.objects.create(owner=user, amount=recipient_limit)
+        elif not INVITE_SYSTEM_ENABLED:
+            # Create default invitation limit for new users even when invite system is disabled
+            InvitationLimit.objects.create(owner=user, amount=DEFAULT_INVITATION_LIMIT)
 
         return user
 
