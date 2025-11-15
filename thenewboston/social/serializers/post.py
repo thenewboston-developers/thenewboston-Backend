@@ -21,6 +21,7 @@ class PostReadSerializer(serializers.ModelSerializer):
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
     price_currency = CurrencyTinySerializer(read_only=True)
+    mentioned_users = UserReadSerializer(many=True, read_only=True)
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     tip_amounts = serializers.SerializerMethodField()
@@ -33,6 +34,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'mentioned_users',
             'modified_date',
             'owner',
             'price_amount',
@@ -48,6 +50,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'mentioned_users',
             'modified_date',
             'owner',
             'price_amount',
@@ -93,15 +96,27 @@ class PostReadSerializer(serializers.ModelSerializer):
 
 class PostWriteSerializer(serializers.ModelSerializer):
     clear_image = serializers.BooleanField(write_only=True, required=False)
+    mentioned_user_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True
+    )
 
     class Meta:
         model = Post
-        fields = ('content', 'image', 'recipient', 'price_amount', 'price_currency', 'clear_image')
+        fields = (
+            'content',
+            'image',
+            'recipient',
+            'price_amount',
+            'price_currency',
+            'clear_image',
+            'mentioned_user_ids',
+        )
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
         validated_data.pop('clear_image', None)  # Remove clear_image if present (only for updates)
+        mentioned_user_ids = validated_data.pop('mentioned_user_ids', [])
         image = validated_data.get('image')
         recipient = validated_data.get('recipient')
         price_amount = validated_data.get('price_amount')
@@ -124,6 +139,12 @@ class PostWriteSerializer(serializers.ModelSerializer):
             transfer_coins(sender_wallet=sender_wallet, recipient_wallet=recipient_wallet, amount=price_amount)
 
         post = super().create({**validated_data, 'owner': request.user})
+
+        # Set mentioned users (notifications will be sent from the view after transaction commits)
+        if mentioned_user_ids:
+            post.mentioned_users.set(mentioned_user_ids)
+            # Store mentioned_user_ids so the view can access them
+            post._mentioned_user_ids = mentioned_user_ids
 
         if price_amount is not None and price_currency is not None and recipient is not None:
             self.notify_coin_transfer(post=post, request=request)

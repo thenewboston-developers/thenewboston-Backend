@@ -12,6 +12,7 @@ from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Comment
 from ..serializers.comment import CommentReadSerializer, CommentUpdateSerializer, CommentWriteSerializer
+from ..utils.mentions import notify_mentioned_users_in_comment
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -24,8 +25,18 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = serializer.save()
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
+        # Send mention notifications after transaction commits
+        if hasattr(comment, '_mentioned_user_ids'):
+            notify_mentioned_users_in_comment(
+                comment=comment, mentioned_user_ids=comment._mentioned_user_ids, request=request
+            )
+
+        # Only send comment notification if post owner wasn't mentioned
+        # (to avoid duplicate notifications when post owner is mentioned)
         if comment.post.owner != comment.owner:
-            self.notify_post_owner(comment=comment, request=request)
+            post_owner_was_mentioned = comment.mentioned_users.filter(id=comment.post.owner.id).exists()
+            if not post_owner_was_mentioned:
+                self.notify_post_owner(comment=comment, request=request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 

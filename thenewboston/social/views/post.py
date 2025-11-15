@@ -11,6 +11,7 @@ from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from ..filters.post import PostFilter
 from ..models import Post
 from ..serializers.post import PostReadSerializer, PostWriteSerializer
+from ..utils.mentions import notify_mentioned_users_in_post
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -26,6 +27,10 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         post = serializer.save()
         read_serializer = PostReadSerializer(post, context={'request': request})
+
+        # Send mention notifications after transaction commits
+        if hasattr(post, '_mentioned_user_ids'):
+            notify_mentioned_users_in_post(post=post, mentioned_user_ids=post._mentioned_user_ids, request=request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
