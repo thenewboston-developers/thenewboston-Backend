@@ -77,10 +77,10 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         post = serializer.save()
 
-        new_mentions = getattr(post, '_new_mention_ids', None)
-        if new_mentions:
+        new_mention_ids = getattr(post, '_new_mention_ids', None)
+        if new_mention_ids:
             transaction.on_commit(
-                lambda post=post, mentioned_user_ids=new_mentions: notify_mentioned_users_in_post(
+                lambda post=post, mentioned_user_ids=new_mention_ids: notify_mentioned_users_in_post(
                     post=post, mentioned_user_ids=mentioned_user_ids, request=request
                 )
             )
