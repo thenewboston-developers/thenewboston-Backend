@@ -29,7 +29,6 @@ class PostViewSet(viewsets.ModelViewSet):
         post = serializer.save()
         read_serializer = PostReadSerializer(post, context={'request': request})
 
-        # Send mention notifications after transaction commits so unread counts are accurate
         mentioned_user_ids = getattr(post, '_new_mention_ids', None)
         if mentioned_user_ids:
             transaction.on_commit(

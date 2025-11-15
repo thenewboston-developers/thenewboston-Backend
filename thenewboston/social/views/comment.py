@@ -26,7 +26,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = serializer.save()
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
-        # Send mention notifications after transaction commits so unread counts are accurate
         new_mentions = getattr(comment, '_new_mention_ids', None)
         if new_mentions:
             transaction.on_commit(
@@ -35,8 +34,6 @@ class CommentViewSet(viewsets.ModelViewSet):
                 )
             )
 
-        # Only send comment notification if post owner wasn't mentioned
-        # (to avoid duplicate notifications when post owner is mentioned)
         if comment.post.owner != comment.owner:
             post_owner_was_mentioned = comment.mentioned_users.filter(id=comment.post.owner.id).exists()
             if not post_owner_was_mentioned:

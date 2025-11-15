@@ -15,10 +15,6 @@ MENTION_PATTERN = re.compile(r'@(\w+)')
 
 
 def extract_usernames_from_text(content: str) -> Set[str]:
-    """
-    Return a set of lowercase usernames mentioned in the provided content.
-    """
-
     if not content:
         return set()
 
@@ -26,10 +22,6 @@ def extract_usernames_from_text(content: str) -> Set[str]:
 
 
 def validate_mentioned_user_ids(*, content: str, mentioned_user_ids: Sequence[int]) -> List[int]:
-    """
-    Ensure the mentioned_user_ids all exist and that their usernames are present in the content.
-    """
-
     if mentioned_user_ids is None:
         return []
 
@@ -67,10 +59,6 @@ def validate_mentioned_user_ids(*, content: str, mentioned_user_ids: Sequence[in
 
 
 def derive_mentioned_user_ids(content: str) -> List[int]:
-    """
-    Attempt to resolve mentioned usernames in the content to existing user IDs.
-    """
-
     usernames = list(extract_usernames_from_text(content))
     if not usernames:
         return []
@@ -88,10 +76,6 @@ def derive_mentioned_user_ids(content: str) -> List[int]:
 
 
 def sync_mentioned_users(*, instance, content: str, mentioned_user_ids: Optional[Sequence[int]]):
-    """
-    Update the instance.mentioned_users relation and attach new mention ids for notification handling.
-    """
-
     if mentioned_user_ids is None:
         validated_ids = derive_mentioned_user_ids(content)
     else:
@@ -110,16 +94,7 @@ def sync_mentioned_users(*, instance, content: str, mentioned_user_ids: Optional
 
 
 def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
-    """
-    Create notifications for users mentioned in a post.
-
-    Args:
-        post: The Post instance containing mentions
-        mentioned_user_ids: List of user IDs to notify
-        request: The HTTP request object for context
-    """
     for user_id in mentioned_user_ids:
-        # Skip notifying the post owner (don't notify yourself)
         if user_id == post.owner.id:
             continue
 
@@ -143,18 +118,9 @@ def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
 
 
 def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
-    """
-    Create notifications for users mentioned in a comment.
-
-    Args:
-        comment: The Comment instance containing mentions
-        mentioned_user_ids: List of user IDs to notify
-        request: The HTTP request object for context
-    """
     post = comment.post
 
     for user_id in mentioned_user_ids:
-        # Skip notifying the comment owner (don't notify yourself)
         if user_id == comment.owner.id:
             continue
 
