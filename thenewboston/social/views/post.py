@@ -1,3 +1,4 @@
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -28,9 +29,14 @@ class PostViewSet(viewsets.ModelViewSet):
         post = serializer.save()
         read_serializer = PostReadSerializer(post, context={'request': request})
 
-        # Send mention notifications after transaction commits
-        if hasattr(post, '_mentioned_user_ids'):
-            notify_mentioned_users_in_post(post=post, mentioned_user_ids=post._mentioned_user_ids, request=request)
+        # Send mention notifications after transaction commits so unread counts are accurate
+        mentioned_user_ids = getattr(post, '_mentioned_user_ids', None)
+        if mentioned_user_ids:
+            transaction.on_commit(
+                lambda post=post, mentioned_user_ids=mentioned_user_ids: notify_mentioned_users_in_post(
+                    post=post, mentioned_user_ids=mentioned_user_ids, request=request
+                )
+            )
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 

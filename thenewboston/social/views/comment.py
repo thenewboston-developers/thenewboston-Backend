@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,10 +26,13 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = serializer.save()
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
-        # Send mention notifications after transaction commits
-        if hasattr(comment, '_mentioned_user_ids'):
-            notify_mentioned_users_in_comment(
-                comment=comment, mentioned_user_ids=comment._mentioned_user_ids, request=request
+        # Send mention notifications after transaction commits so unread counts are accurate
+        mentioned_user_ids = getattr(comment, '_mentioned_user_ids', None)
+        if mentioned_user_ids:
+            transaction.on_commit(
+                lambda comment=comment, mentioned_user_ids=mentioned_user_ids: notify_mentioned_users_in_comment(
+                    comment=comment, mentioned_user_ids=mentioned_user_ids, request=request
+                )
             )
 
         # Only send comment notification if post owner wasn't mentioned
