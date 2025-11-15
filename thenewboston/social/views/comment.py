@@ -18,7 +18,7 @@ from ..utils.mentions import notify_mentioned_users_in_comment
 
 class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Comment.objects.all()
+    queryset = Comment.objects.all().prefetch_related('mentioned_users')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -27,10 +27,10 @@ class CommentViewSet(viewsets.ModelViewSet):
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         # Send mention notifications after transaction commits so unread counts are accurate
-        mentioned_user_ids = getattr(comment, '_mentioned_user_ids', None)
-        if mentioned_user_ids:
+        new_mentions = getattr(comment, '_new_mention_ids', None)
+        if new_mentions:
             transaction.on_commit(
-                lambda comment=comment, mentioned_user_ids=mentioned_user_ids: notify_mentioned_users_in_comment(
+                lambda comment=comment, mentioned_user_ids=new_mentions: notify_mentioned_users_in_comment(
                     comment=comment, mentioned_user_ids=mentioned_user_ids, request=request
                 )
             )
@@ -82,6 +82,15 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
+
+        new_mentions = getattr(comment, '_new_mention_ids', None)
+        if new_mentions:
+            transaction.on_commit(
+                lambda comment=comment, new_mentions=new_mentions: notify_mentioned_users_in_comment(
+                    comment=comment, mentioned_user_ids=new_mentions, request=request
+                )
+            )
+
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         return Response(read_serializer.data)

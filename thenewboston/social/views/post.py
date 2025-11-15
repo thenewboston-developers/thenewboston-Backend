@@ -30,7 +30,7 @@ class PostViewSet(viewsets.ModelViewSet):
         read_serializer = PostReadSerializer(post, context={'request': request})
 
         # Send mention notifications after transaction commits so unread counts are accurate
-        mentioned_user_ids = getattr(post, '_mentioned_user_ids', None)
+        mentioned_user_ids = getattr(post, '_new_mention_ids', None)
         if mentioned_user_ids:
             transaction.on_commit(
                 lambda post=post, mentioned_user_ids=mentioned_user_ids: notify_mentioned_users_in_post(
@@ -50,7 +50,14 @@ class PostViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         if self.action in ['retrieve', 'list']:
             queryset = queryset.prefetch_related(
-                'comments__owner', 'comments__price_currency', 'likes', 'owner', 'price_currency', 'recipient'
+                'comments__mentioned_users',
+                'comments__owner',
+                'comments__price_currency',
+                'likes',
+                'mentioned_users',
+                'owner',
+                'price_currency',
+                'recipient',
             )
 
         return queryset
@@ -69,6 +76,15 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         post = serializer.save()
+
+        new_mentions = getattr(post, '_new_mention_ids', None)
+        if new_mentions:
+            transaction.on_commit(
+                lambda post=post, mentioned_user_ids=new_mentions: notify_mentioned_users_in_post(
+                    post=post, mentioned_user_ids=mentioned_user_ids, request=request
+                )
+            )
+
         read_serializer = PostReadSerializer(post, context={'request': request})
 
         return Response(read_serializer.data)
