@@ -1,3 +1,4 @@
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -11,6 +12,7 @@ from thenewboston.general.permissions import IsObjectOwnerOrReadOnly
 from ..filters.post import PostFilter
 from ..models import Post
 from ..serializers.post import PostReadSerializer, PostWriteSerializer
+from ..utils.mentions import notify_mentioned_users_in_post
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -27,6 +29,14 @@ class PostViewSet(viewsets.ModelViewSet):
         post = serializer.save()
         read_serializer = PostReadSerializer(post, context={'request': request})
 
+        mentioned_user_ids = getattr(post, '_new_mention_ids', None)
+        if mentioned_user_ids:
+            transaction.on_commit(
+                lambda post=post, mentioned_user_ids=mentioned_user_ids: notify_mentioned_users_in_post(
+                    post=post, mentioned_user_ids=mentioned_user_ids, request=request
+                )
+            )
+
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def get_serializer_class(self):
@@ -39,7 +49,14 @@ class PostViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         if self.action in ['retrieve', 'list']:
             queryset = queryset.prefetch_related(
-                'comments__owner', 'comments__price_currency', 'likes', 'owner', 'price_currency', 'recipient'
+                'comments__mentioned_users',
+                'comments__owner',
+                'comments__price_currency',
+                'likes',
+                'mentioned_users',
+                'owner',
+                'price_currency',
+                'recipient',
             )
 
         return queryset
@@ -58,6 +75,15 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         post = serializer.save()
+
+        new_mention_ids = getattr(post, '_new_mention_ids', None)
+        if new_mention_ids:
+            transaction.on_commit(
+                lambda post=post, mentioned_user_ids=new_mention_ids: notify_mentioned_users_in_post(
+                    post=post, mentioned_user_ids=mentioned_user_ids, request=request
+                )
+            )
+
         read_serializer = PostReadSerializer(post, context={'request': request})
 
         return Response(read_serializer.data)

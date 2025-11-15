@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,11 +13,12 @@ from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Comment
 from ..serializers.comment import CommentReadSerializer, CommentUpdateSerializer, CommentWriteSerializer
+from ..utils.mentions import notify_mentioned_users_in_comment
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Comment.objects.all()
+    queryset = Comment.objects.all().prefetch_related('mentioned_users')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -24,8 +26,18 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = serializer.save()
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
+        new_mentions = getattr(comment, '_new_mention_ids', None)
+        if new_mentions:
+            transaction.on_commit(
+                lambda comment=comment, mentioned_user_ids=new_mentions: notify_mentioned_users_in_comment(
+                    comment=comment, mentioned_user_ids=mentioned_user_ids, request=request
+                )
+            )
+
         if comment.post.owner != comment.owner:
-            self.notify_post_owner(comment=comment, request=request)
+            post_owner_was_mentioned = comment.mentioned_users.filter(id=comment.post.owner.id).exists()
+            if not post_owner_was_mentioned:
+                self.notify_post_owner(comment=comment, request=request)
 
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -67,6 +79,15 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=partial)
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
+
+        new_mentions = getattr(comment, '_new_mention_ids', None)
+        if new_mentions:
+            transaction.on_commit(
+                lambda comment=comment, new_mentions=new_mentions: notify_mentioned_users_in_comment(
+                    comment=comment, mentioned_user_ids=new_mentions, request=request
+                )
+            )
+
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
         return Response(read_serializer.data)

@@ -14,6 +14,7 @@ from thenewboston.wallets.models import Wallet
 
 from ..models import Post, PostLike
 from ..serializers.comment import CommentReadSerializer
+from ..utils.mentions import sync_mentioned_users
 
 
 class PostReadSerializer(serializers.ModelSerializer):
@@ -21,6 +22,7 @@ class PostReadSerializer(serializers.ModelSerializer):
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
     price_currency = CurrencyTinySerializer(read_only=True)
+    mentioned_users = UserReadSerializer(many=True, read_only=True)
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     tip_amounts = serializers.SerializerMethodField()
@@ -33,6 +35,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'mentioned_users',
             'modified_date',
             'owner',
             'price_amount',
@@ -48,6 +51,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'mentioned_users',
             'modified_date',
             'owner',
             'price_amount',
@@ -93,15 +97,28 @@ class PostReadSerializer(serializers.ModelSerializer):
 
 class PostWriteSerializer(serializers.ModelSerializer):
     clear_image = serializers.BooleanField(write_only=True, required=False)
+    mentioned_user_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True
+    )
 
     class Meta:
         model = Post
-        fields = ('content', 'image', 'recipient', 'price_amount', 'price_currency', 'clear_image')
+        fields = (
+            'content',
+            'image',
+            'recipient',
+            'price_amount',
+            'price_currency',
+            'clear_image',
+            'mentioned_user_ids',
+        )
 
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get('request')
         validated_data.pop('clear_image', None)  # Remove clear_image if present (only for updates)
+        raw_mentioned_user_ids = validated_data.pop('mentioned_user_ids', [])
+        mentions_provided = 'mentioned_user_ids' in self.initial_data
         image = validated_data.get('image')
         recipient = validated_data.get('recipient')
         price_amount = validated_data.get('price_amount')
@@ -124,6 +141,8 @@ class PostWriteSerializer(serializers.ModelSerializer):
             transfer_coins(sender_wallet=sender_wallet, recipient_wallet=recipient_wallet, amount=price_amount)
 
         post = super().create({**validated_data, 'owner': request.user})
+        mention_ids = raw_mentioned_user_ids if mentions_provided else None
+        sync_mentioned_users(instance=post, content=post.content, mentioned_user_ids=mention_ids)
 
         if price_amount is not None and price_currency is not None and recipient is not None:
             self.notify_coin_transfer(post=post, request=request)
@@ -163,9 +182,13 @@ class PostWriteSerializer(serializers.ModelSerializer):
         validated_data.pop('recipient', None)
         validated_data.pop('price_amount', None)
         validated_data.pop('price_currency', None)
+        mentioned_user_ids = validated_data.pop('mentioned_user_ids', serializers.empty)
         clear_image = validated_data.pop('clear_image', False)
 
-        instance.content = validated_data.get('content', instance.content)
+        content = validated_data.get('content')
+
+        if content is not None:
+            instance.content = content
 
         if clear_image:
             instance.image = None
@@ -179,6 +202,15 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 instance.image = file
 
         instance.save()
+
+        if mentioned_user_ids is serializers.empty:
+            if 'content' not in validated_data:
+                return instance
+            mention_ids = None
+        else:
+            mention_ids = mentioned_user_ids
+
+        sync_mentioned_users(instance=instance, content=instance.content, mentioned_user_ids=mention_ids)
         return instance
 
     def validate(self, data):
