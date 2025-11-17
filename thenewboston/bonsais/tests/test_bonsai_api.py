@@ -44,8 +44,9 @@ def test_public_list_shows_only_published(api_client, tnb_currency):
     response = api_client.get('/api/bonsais')
 
     assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]['slug'] == 'published-bonsai'
+    assert response.data['count'] == 1
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['slug'] == 'published-bonsai'
 
 
 @pytest.mark.django_db
@@ -68,7 +69,8 @@ def test_staff_list_includes_drafts(api_client_bucky_staff, tnb_currency):
     response = api_client_bucky_staff.get('/api/bonsais')
 
     assert response.status_code == 200
-    assert {bonsai['slug'] for bonsai in response.data} == {'published-bonsai', 'draft-bonsai'}
+    assert response.data['count'] == 2
+    assert {bonsai['slug'] for bonsai in response.data['results']} == {'published-bonsai', 'draft-bonsai'}
 
 
 @pytest.mark.django_db

@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
+from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.permissions import IsAdminOrReadOnly
 
 from ..models import Bonsai
@@ -9,6 +10,7 @@ from ..serializers import BonsaiSerializer
 
 class BonsaiViewSet(viewsets.ModelViewSet):
     lookup_field = 'slug'
+    pagination_class = CustomPageNumberPagination
     permission_classes = [IsAdminOrReadOnly]
     queryset = Bonsai.objects.all().select_related('price_currency').prefetch_related('highlights', 'images')
     serializer_class = BonsaiSerializer
