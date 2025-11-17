@@ -1,9 +1,27 @@
+import json
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_bakery import baker
+from PIL import Image
 
 from thenewboston.bonsais.models import Bonsai
+
+
+def create_test_image_file(name='test.jpg', color=(255, 0, 0)):
+    buffer = BytesIO()
+    image = Image.new('RGB', (10, 10), color)
+    image.save(buffer, format='JPEG')
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.read(), content_type='image/jpeg')
+
+
+@pytest.fixture
+def temp_media_root(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    return tmp_path
 
 
 @pytest.mark.django_db
@@ -54,7 +72,9 @@ def test_staff_list_includes_drafts(api_client_bucky_staff, tnb_currency):
 
 
 @pytest.mark.django_db
-def test_staff_can_create_bonsai(api_client_bucky_staff, tnb_currency):
+def test_staff_can_create_bonsai(api_client_bucky_staff, tnb_currency, temp_media_root):
+    image_one_field = 'image_0'
+    image_two_field = 'image_1'
     payload = {
         'slug': 'ancient-pine',
         'name': 'Ancient Pine',
@@ -66,19 +86,25 @@ def test_staff_can_create_bonsai(api_client_bucky_staff, tnb_currency):
         'teaser': 'A windswept pine.',
         'description': 'Detailed description.',
         'price_amount': '4600.00',
-        'price_currency_id': tnb_currency.id,
+        'price_currency_id': str(tnb_currency.id),
         'status': Bonsai.Status.PUBLISHED,
-        'highlights': [
-            {'text': 'First highlight', 'order': 1},
-            {'text': 'Second highlight'},
-        ],
-        'images': [
-            {'url': 'https://example.com/1.jpg', 'order': 2},
-            {'url': 'https://example.com/2.jpg'},
-        ],
+        'highlights': json.dumps(
+            [
+                {'text': 'First highlight', 'order': 1},
+                {'text': 'Second highlight'},
+            ]
+        ),
+        'images': json.dumps(
+            [
+                {'image_field': image_one_field, 'order': 2},
+                {'image_field': image_two_field},
+            ]
+        ),
     }
+    payload[image_one_field] = create_test_image_file('1.jpg')
+    payload[image_two_field] = create_test_image_file('2.jpg')
 
-    response = api_client_bucky_staff.post('/api/bonsais', payload, format='json')
+    response = api_client_bucky_staff.post('/api/bonsais', payload, format='multipart')
 
     assert response.status_code == 201
     bonsai = Bonsai.objects.get(slug='ancient-pine')
@@ -88,7 +114,7 @@ def test_staff_can_create_bonsai(api_client_bucky_staff, tnb_currency):
 
 
 @pytest.mark.django_db
-def test_staff_can_update_nested_collections(api_client_bucky_staff, tnb_currency):
+def test_staff_can_update_nested_collections(api_client_bucky_staff, tnb_currency, temp_media_root):
     bonsai = baker.make(
         'bonsais.Bonsai',
         slug='mossy-maple',
@@ -98,22 +124,27 @@ def test_staff_can_update_nested_collections(api_client_bucky_staff, tnb_currenc
     )
     highlight = baker.make('bonsais.BonsaiHighlight', bonsai=bonsai, text='Old highlight', order=0)
     baker.make('bonsais.BonsaiHighlight', bonsai=bonsai, text='To remove', order=1)
-    baker.make('bonsais.BonsaiImage', bonsai=bonsai, url='https://example.com/old.jpg', order=0)
+    baker.make('bonsais.BonsaiImage', bonsai=bonsai, image=create_test_image_file('old.jpg'), order=0)
 
     payload = {
         'name': 'Updated Maple',
-        'price_currency_id': tnb_currency.id,
-        'highlights': [
-            {'id': highlight.id, 'text': 'Updated highlight text', 'order': 0},
-            {'text': 'Brand new highlight', 'order': 1},
-        ],
-        'images': [
-            {'url': 'https://example.com/new.jpg', 'order': 0},
-        ],
+        'price_currency_id': str(tnb_currency.id),
+        'highlights': json.dumps(
+            [
+                {'id': highlight.id, 'text': 'Updated highlight text', 'order': 0},
+                {'text': 'Brand new highlight', 'order': 1},
+            ]
+        ),
+        'images': json.dumps(
+            [
+                {'image_field': 'image_0', 'order': 0},
+            ]
+        ),
         'status': Bonsai.Status.PUBLISHED,
     }
+    payload['image_0'] = create_test_image_file('new.jpg')
 
-    response = api_client_bucky_staff.patch(f'/api/bonsais/{bonsai.slug}', payload, format='json')
+    response = api_client_bucky_staff.patch(f'/api/bonsais/{bonsai.slug}', payload, format='multipart')
 
     assert response.status_code == 200
     bonsai.refresh_from_db()
@@ -124,4 +155,4 @@ def test_staff_can_update_nested_collections(api_client_bucky_staff, tnb_currenc
         'Brand new highlight',
     ]
     assert bonsai.images.count() == 1
-    assert bonsai.images.first().url == 'https://example.com/new.jpg'
+    assert bonsai.images.first().image.name.startswith('bonsai_images/')

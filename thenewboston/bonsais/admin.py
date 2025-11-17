@@ -20,6 +20,6 @@ class BonsaiHighlightAdmin(admin.ModelAdmin):
 
 @admin.register(BonsaiImage)
 class BonsaiImageAdmin(admin.ModelAdmin):
-    list_display = ('bonsai', 'order', 'url')
+    list_display = ('bonsai', 'order', 'image')
     list_filter = ('bonsai',)
-    search_fields = ('bonsai__name', 'url')
+    search_fields = ('bonsai__name', 'image')

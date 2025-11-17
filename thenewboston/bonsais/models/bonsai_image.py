@@ -3,7 +3,7 @@ from django.db import models
 
 class BonsaiImage(models.Model):
     bonsai = models.ForeignKey('bonsais.Bonsai', related_name='images', on_delete=models.CASCADE)
-    url = models.URLField(max_length=500)
+    image = models.ImageField(upload_to='bonsai_images/', blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
