@@ -18,13 +18,23 @@ def api_client():
     return APIClient()
 
 
-@pytest.fixture
-def api_client_bucky(bucky):
-    api_client = APIClient()  # we create own instance of `APIClient`, so `api_client` authentication is kept intact
-    # TODO(dmu) LOW: Consider using `api_client.force_authenticate(bucky)`
-    token = _get_access_token(api_client, bucky)
+def _build_authenticated_client(user):
+    api_client = APIClient()
+    token = _get_access_token(api_client, user)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
     return api_client
+
+
+@pytest.fixture
+def api_client_bucky(bucky):
+    return _build_authenticated_client(bucky)
+
+
+@pytest.fixture
+def api_client_bucky_staff(bucky):
+    bucky.is_staff = True
+    bucky.save()
+    return _build_authenticated_client(bucky)
 
 
 @pytest.fixture

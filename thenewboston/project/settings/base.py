@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'storages',
     # Apps
     'thenewboston.authentication.apps.AuthenticationConfig',
+    'thenewboston.bonsais.apps.BonsaisConfig',
     'thenewboston.currencies.apps.CurrenciesConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general.apps.GeneralConfig',
