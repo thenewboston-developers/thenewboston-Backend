@@ -13,8 +13,8 @@ from ..models import Bonsai, BonsaiHighlight, BonsaiImage
 
 
 class BonsaiSerializer(serializers.ModelSerializer):
-    highlights = BonsaiHighlightSerializer(many=True, required=False, default=list)
-    images = BonsaiImageSerializer(many=True, read_only=True, default=list)
+    highlights = BonsaiHighlightSerializer(many=True, required=False)
+    images = BonsaiImageSerializer(many=True, read_only=True)
     price_currency = CurrencyTinySerializer(read_only=True)
     price_currency_id = serializers.PrimaryKeyRelatedField(
         queryset=Currency.objects.all(),
@@ -87,9 +87,8 @@ class BonsaiSerializer(serializers.ModelSerializer):
     @staticmethod
     def _ensure_mutable_data(data):
         if isinstance(data, QueryDict):
-            data = data.copy()
-            data._mutable = True
-        return data
+            return {key: (values if len(values) > 1 else values[0]) for key, values in data.lists()}
+        return data.copy() if isinstance(data, dict) else data
 
     def _prepare_nested_json(self, data, field_name):
         value = data.get(field_name, serializers.empty)
@@ -156,6 +155,8 @@ class BonsaiSerializer(serializers.ModelSerializer):
 
     def _upsert_related(self, bonsai, related_data, model, related_name, allowed_fields):
         existing_ids = []
+        is_image_field = 'image' in allowed_fields
+
         for index, item in enumerate(related_data):
             if not isinstance(item, dict):
                 continue
@@ -173,18 +174,25 @@ class BonsaiSerializer(serializers.ModelSerializer):
                 if not obj:
                     continue
                 update_fields = []
-                if 'image' in data:
-                    obj.image = data['image']
-                    update_fields.append('image')
+
+                # Update all allowed fields
+                for field in allowed_fields:
+                    if field in data:
+                        setattr(obj, field, data[field])
+                        update_fields.append(field)
+
                 if obj.order != order:
                     obj.order = order
                     update_fields.append('order')
+
                 if update_fields:
                     obj.save(update_fields=update_fields)
                 existing_ids.append(obj.id)
             else:
-                if 'image' not in data or not data['image']:
+                # For images, require the image field; for other models, skip this check
+                if is_image_field and ('image' not in data or not data['image']):
                     raise serializers.ValidationError({'images': 'Image file is required for new images.'})
+
                 data['order'] = order
                 obj = model.objects.create(bonsai=bonsai, **data)
                 existing_ids.append(obj.id)

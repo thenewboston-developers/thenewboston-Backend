@@ -4,9 +4,10 @@ from ..models import BonsaiHighlight
 
 
 class BonsaiHighlightSerializer(serializers.ModelSerializer):
-    order = serializers.IntegerField(required=False)
-
     class Meta:
         model = BonsaiHighlight
         fields = ('id', 'text', 'order')
-        read_only_fields = ('id',)
+        extra_kwargs = {
+            'id': {'read_only': True, 'required': False},
+            'order': {'required': False},
+        }
