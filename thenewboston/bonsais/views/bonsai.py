@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -20,7 +21,7 @@ class BonsaiViewSet(viewsets.ModelViewSet):
         lookup_value = self.kwargs.get(self.lookup_field)
         if lookup_value and str(lookup_value).isdigit():
             queryset = self.filter_queryset(self.get_queryset())
-            return queryset.get(pk=lookup_value)
+            return get_object_or_404(queryset, pk=lookup_value)
         return super().get_object()
 
     def get_queryset(self):
