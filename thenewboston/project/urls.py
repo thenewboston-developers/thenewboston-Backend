@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import thenewboston.authentication.urls
+import thenewboston.bonsais.urls
 import thenewboston.currencies.urls
 import thenewboston.exchange.urls
 import thenewboston.general.urls
@@ -21,6 +22,7 @@ API_PREFIX = 'api/'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(API_PREFIX, include(thenewboston.authentication.urls)),
+    path(API_PREFIX, include(thenewboston.bonsais.urls)),
     path(API_PREFIX, include(thenewboston.currencies.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.general.urls)),
