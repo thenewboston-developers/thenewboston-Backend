@@ -9,21 +9,21 @@ class Bonsai(CreatedModified):
         DRAFT = 'draft', 'Draft'
         PUBLISHED = 'published', 'Published'
 
-    slug = models.SlugField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True, db_index=True)
     name = models.CharField(max_length=255)
-    species = models.CharField(max_length=255)
-    genus = models.CharField(max_length=255, blank=True, default='')
-    cultivar = models.CharField(max_length=255, blank=True, default='')
-    style = models.CharField(max_length=255)
-    size = models.TextField()
-    origin = models.TextField()
-    pot = models.TextField()
+    species = models.CharField(max_length=255, blank=True)
+    genus = models.CharField(max_length=255, blank=True)
+    cultivar = models.CharField(max_length=255, blank=True)
+    style = models.CharField(max_length=255, blank=True)
+    size = models.TextField(blank=True)
+    origin = models.TextField(blank=True)
+    pot = models.TextField(blank=True)
     teaser = models.CharField(max_length=500)
     description = models.TextField()
     price_amount = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
     price_currency = models.ForeignKey('currencies.Currency', related_name='bonsais', on_delete=models.PROTECT)
     status = models.CharField(
-        max_length=20,
+        max_length=9,
         choices=Status.choices,
         default=Status.DRAFT,
         db_index=True,
