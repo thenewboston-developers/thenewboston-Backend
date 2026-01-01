@@ -118,6 +118,8 @@ def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
 
 
 def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
+    from ..serializers.comment import CommentReadSerializer
+
     post = comment.post
 
     for user_id in mentioned_user_ids:
@@ -130,7 +132,7 @@ def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
                 'post_id': post.id,
                 'comment_id': comment.id,
                 'mentioner': UserReadSerializer(comment.owner, context={'request': request}).data,
-                'comment': comment.content,
+                'comment': CommentReadSerializer(comment, context={'request': request}).data,
                 'notification_type': NotificationType.COMMENT_MENTION.value,
                 'post_preview': truncate_text(post.content),
                 'comment_preview': truncate_text(comment.content),
