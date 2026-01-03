@@ -58,7 +58,7 @@ class CommentViewSet(viewsets.ModelViewSet):
             payload={
                 'post_id': post.id,
                 'commenter': UserReadSerializer(comment.owner, context={'request': request}).data,
-                'comment': comment.content,
+                'comment': CommentReadSerializer(comment, context={'request': request}).data,
                 'notification_type': NotificationType.POST_COMMENT.value,
                 'post_preview': truncate_text(post.content),
                 'comment_preview': truncate_text(comment.content),

@@ -151,7 +151,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def notify_coin_transfer(post, request):
-        Notification.objects.create(
+        Notification(
             owner=post.recipient,
             payload={
                 'notification_type': NotificationType.POST_COIN_TRANSFER.value,
@@ -165,7 +165,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
                 'post_created': post.created_date.isoformat(),
             },
-        )
+        ).save(should_stream=True)
 
     def update(self, instance, validated_data):
         """
