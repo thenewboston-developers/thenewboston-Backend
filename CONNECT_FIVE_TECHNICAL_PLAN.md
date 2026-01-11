@@ -6,7 +6,7 @@ CONNECT_FIVE_BUSINESS_REQUIREMENTS.md. It is high-level but build-ready.
 ## 0. Scope and assumptions
 - Currency: TNB only (settings.DEFAULT_CURRENCY_TICKER).
 - Challenge is directed to a specific opponent (opponent_id). If open challenges are desired, confirm.
-- Challenger is Player A and moves first. Confirm if this should be randomized.
+- Starting player is chosen randomly when the match begins.
 - Draw definition: board is full and no connect-5 was created by the last move.
 - Special prices are fixed constants (need product values).
 
@@ -59,7 +59,7 @@ Transition rules and actors:
 
 ### 2.2 Match lifecycle
 States: ACTIVE, FINISHED_CONNECT5, FINISHED_TIMEOUT, DRAW, CANCELLED
-- Create: on challenge acceptance -> ACTIVE
+- Create: on challenge acceptance -> ACTIVE (randomize first player, set turn_started_at)
 - ACTIVE -> FINISHED_CONNECT5: system after a valid placement creates connect-5
 - ACTIVE -> FINISHED_TIMEOUT: system after clock <= 0
 - ACTIVE -> DRAW: system after valid move fills board with no winner
@@ -86,7 +86,7 @@ Accept challenge (opponent):
 2. Validate opponent wallet balance >= stake.
 3. Debit opponent wallet by stake amount.
 4. Update escrow contributions and prize_pool_total.
-5. Mark challenge ACCEPTED, create match ACTIVE.
+5. Mark challenge ACCEPTED, create match ACTIVE with random first player.
 
 Purchase Specials (either player, any time):
 1. Validate match ACTIVE.
@@ -208,6 +208,7 @@ Challenges:
   - Request: `opponent_id`, `stake_amount`, `max_spend_amount`, `time_limit_seconds`
   - Response: challenge summary (id, status, expires_at, stake, max_spend, time_limit)
   - Errors: 400 invalid values, 404 opponent not found, 422 insufficient funds
+  - Side effects: create Notification to opponent and stream via notifications websocket
 - GET `/api/connect-five/challenges?status=&mine=`
   - List challenges with pagination
 - POST `/api/connect-five/challenges/{id}/accept`
@@ -297,6 +298,11 @@ Preferred: websocket updates for match and challenge changes, with HTTP polling 
 - `connectFive.purchaseLimits.byMatchId` (max_spend, spent_total, remaining)
 
 ### 8.3 UI requirements
+- Add a left nav item labeled "Connect 5" that routes to `/connect-five`.
+- The `/connect-five` landing page lists incoming/outgoing challenges and games (active + historical).
+- Challenge recipient search should reuse `UserSearchInput` and `/api/users/search`.
+- After creating a challenge, redirect sender to the match detail page with a pending banner/message.
+- After accepting a challenge, redirect recipient to the match detail page and begin the match.
 - Toolbar shows SINGLE (unlimited) plus H2, V2, CROSS4, BOMB with counters.
 - Disable or grey out Specials with zero inventory.
 - Purchase modal displays prices, remaining spend, prize pool.
@@ -308,3 +314,6 @@ Preferred: websocket updates for match and challenge changes, with HTTP polling 
 - Log every state change in MatchEvent; include wallet ledger refs for disputes.
 - Provide admin scripts or management commands for manual settlement or refunds.
 - Alerts: log timeouts, unexpected state transitions, and escrow mismatches.
+- Graceful restarts: all authoritative state is persisted in DB (board, clocks, active player).
+  Clients reconnect via websockets and rehydrate from GET endpoints; clocks are recomputed
+  from turn_started_at. Sweepers are idempotent and re-check state before finishing a match.

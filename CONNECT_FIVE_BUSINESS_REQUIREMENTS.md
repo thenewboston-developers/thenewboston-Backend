@@ -81,6 +81,7 @@ When Player A creates a challenge, they must choose:
 
 * Only the active player may take a move action that changes the board.
 * Players alternate turns until the match ends via win, timeout, or draw.
+* The starting player is chosen randomly when the match begins.
 
 ### 5.2 Purchases
 
@@ -222,6 +223,21 @@ Toolbar options must include:
 
 * The UI should not show whether the opponent is currently shopping.
 
+### 8.6 Connect Five navigation and landing page
+
+* Add a left menu item called “Connect 5” that routes to `/connect-five`.
+* The Connect Five landing page must allow a user to:
+
+  * View their challenges (incoming and outgoing).
+  * Send a challenge.
+  * View their games (active and historical).
+* The challenge recipient picker should use the same search UX as “Search for recipient”
+  on `/wallets/home`.
+* After sending a challenge, redirect the sender to the game details page showing
+  “Challenge sent. Awaiting acceptance.”
+* After accepting a challenge, redirect the recipient to the same game details page and start the game.
+* When a challenge is sent, a notification is streamed to the recipient.
+
 ---
 
 ## 9. Acceptance Criteria
@@ -239,3 +255,8 @@ A v1 release is complete when:
 * Draws are supported and result in refunds to both players of stake plus their own Special spending.
 * The UI shows board state, both players’ time remaining, both players’ Special inventories, both players’ remaining spend amounts, and the total prize pool.
 * The UI supports tool selection, hover previews, and clear invalid-state feedback.
+* The starting player is chosen randomly when the match begins.
+* The Connect Five landing page exists at `/connect-five`, accessible from a left nav item labeled “Connect 5”, and shows challenges and games.
+* Sending a challenge uses the same recipient search UX as `/wallets/home`.
+* Challenge creation streams a notification to the recipient.
+* Sender and recipient are redirected to the game details page after sending or accepting, with a pending message for the sender.
