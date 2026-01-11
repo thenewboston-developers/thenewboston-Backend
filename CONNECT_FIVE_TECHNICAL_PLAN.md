@@ -5,15 +5,20 @@ CONNECT_FIVE_BUSINESS_REQUIREMENTS.md. It is high-level but build-ready.
 
 ## 0. Scope and assumptions
 - Currency: TNB only (settings.DEFAULT_CURRENCY_TICKER).
-- Challenge is directed to a specific opponent (opponent_id). If open challenges are desired, confirm.
+- Challenges are directed to a specific opponent only (no open challenges).
 - Starting player is chosen randomly when the match begins.
-- Draw definition: board is full and no connect-5 was created by the last move.
-- Special prices are fixed constants (need product values).
+- Draw definition: board is completely full (196 cells) and no connect-5 was created by the last move. No mutual draw agreement. No move limit.
+- Resignation is not supported.
+- Disconnection: clock continues running, no grace period, no special handling.
+- Stake amount: no minimum or maximum.
+- Max spend amount: no minimum or maximum.
+- Time limit: predefined options only (5, 10, 15, or 30 minutes).
+- Special prices (TNB): H2 = 4, V2 = 4, CROSS4 = 8, BOMB = 3.
 
 ## 1. App structure
 Create a new Django app at `thenewboston/connect_five` following current project layout:
 - `apps.py`, `admin.py`, `__init__.py`
-- `constants.py` (board size, connect length, special prices)
+- `constants.py` (BOARD_SIZE=14, CONNECT_LENGTH=5, TIME_LIMIT_CHOICES=[300, 600, 900, 1800], SPECIAL_PRICES={H2: 4, V2: 4, CROSS4: 8, BOMB: 3})
 - `enums.py` (challenge/match states, move types, event types)
 - `models/`
   - `challenge.py`
@@ -53,7 +58,7 @@ States: PENDING, ACCEPTED, EXPIRED, CANCELLED
 
 Transition rules and actors:
 - Only challenger can cancel PENDING challenge.
-- Only designated opponent (or any user if open challenges are allowed) can accept.
+- Only the designated opponent can accept.
 - System can expire only if still PENDING and now >= expires_at.
 - ACCEPTED is terminal; EXPIRED and CANCELLED are terminal.
 
@@ -180,7 +185,7 @@ CROSS4:
 - Use (x, y) as center (center is not filled).
 - Place at (x-1, y), (x+1, y), (x, y-1), (x, y+1).
 - All four target cells must be in bounds and empty.
-- Center cell can be empty or occupied (confirm with product).
+- Center cell may be empty or occupied (by either player's piece).
 
 BOMB:
 - Target (x, y) must contain opponent piece.
@@ -205,9 +210,9 @@ All state-changing endpoints require `Idempotency-Key` header.
 
 Challenges:
 - POST `/api/connect-five/challenges`
-  - Request: `opponent_id`, `stake_amount`, `max_spend_amount`, `time_limit_seconds`
+  - Request: `opponent_id`, `stake_amount`, `max_spend_amount`, `time_limit_seconds` (must be 300, 600, 900, or 1800)
   - Response: challenge summary (id, status, expires_at, stake, max_spend, time_limit)
-  - Errors: 400 invalid values, 404 opponent not found, 422 insufficient funds
+  - Errors: 400 invalid values (including invalid time_limit), 404 opponent not found, 422 insufficient funds
   - Side effects: create Notification to opponent and stream via notifications websocket
 - GET `/api/connect-five/challenges?status=&mine=`
   - List challenges with pagination
@@ -239,8 +244,8 @@ High-level model outline (names may vary):
 
 ConnectFiveChallenge:
 - challenger (FK users.User)
-- opponent (FK users.User, nullable)
-- stake_amount, max_spend_amount, time_limit_seconds
+- opponent (FK users.User, required - no open challenges)
+- stake_amount, max_spend_amount, time_limit_seconds (choice of 300/600/900/1800)
 - status, expires_at, accepted_at
 - match (OneToOne to ConnectFiveMatch, nullable)
 - created_date, modified_date

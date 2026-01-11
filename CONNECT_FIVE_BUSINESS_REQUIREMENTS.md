@@ -25,7 +25,9 @@ Build a 2-player, turn-based strategy game played on a 14x14 grid. Players place
 
 ### 2.4 Draws
 
-* Draws are possible.
+* A draw occurs only when the board is completely full (196 cells occupied) and no connect-5 was created by the last move.
+* There is no mutual draw agreement and no move limit.
+* Resignation is not supported.
 * If the match ends in a draw, all locked funds are refunded to both players (see Payouts).
 
 ---
@@ -40,9 +42,9 @@ Build a 2-player, turn-based strategy game played on a 14x14 grid. Players place
 
 When Player A creates a challenge, they must choose:
 
-* The required stake amount each player must put up to play (the “ante”).
-* A maximum additional amount each player is allowed to spend on Specials during the match (the “max spend”).
-* The total time each player has to make moves across the entire match (chess-style clock).
+* The required stake amount each player must put up to play (the "ante"). No minimum or maximum.
+* A maximum additional amount each player is allowed to spend on Specials during the match (the "max spend"). No minimum or maximum.
+* The total time each player has to make moves across the entire match (chess-style clock). Must be one of the predefined options: **5, 10, 15, or 30 minutes**.
 
 ### 3.3 Accept window
 
@@ -72,6 +74,12 @@ When Player A creates a challenge, they must choose:
 ### 4.2 Timeout
 
 * If a player runs out of total time, they lose the match immediately and the opponent wins.
+
+### 4.3 Disconnection
+
+* If a player disconnects mid-match, their clock continues to run.
+* There is no grace period or special handling for disconnections.
+* If a player's time runs out while disconnected, they lose by timeout.
 
 ---
 
@@ -116,25 +124,26 @@ The player cannot do both in the same turn.
 
 * Places one piece on an empty cell.
 
-#### 6.2.2 Two-piece horizontal
+#### 6.2.2 Two-piece horizontal (4 TNB)
 
 * Places two pieces in two empty adjacent cells side by side (horizontal).
 * Valid only if both target cells are empty.
 
-#### 6.2.3 Two-piece vertical
+#### 6.2.3 Two-piece vertical (4 TNB)
 
 * Places two pieces in two empty adjacent cells stacked vertically.
 * Valid only if both target cells are empty.
 
-#### 6.2.4 Four-piece cross
+#### 6.2.4 Four-piece cross (8 TNB)
 
 * Places four pieces around a center point:
 
   * One above, one below, one left, and one right of a chosen center cell.
 * The center cell is not filled by this Special.
+* The center cell may be empty or occupied (by either player's piece).
 * Valid only if all four placement cells are within the board and empty.
 
-#### 6.2.5 Bomb
+#### 6.2.5 Bomb (3 TNB)
 
 * Removes exactly one opponent piece from the board.
 * Valid only when targeting a cell occupied by the opponent.
