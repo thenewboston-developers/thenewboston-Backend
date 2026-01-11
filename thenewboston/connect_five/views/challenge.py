@@ -11,12 +11,10 @@ from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveMode
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from thenewboston.general.enums import MessageType, NotificationType
+from thenewboston.general.enums import NotificationType
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.views.base import CustomGenericViewSet
-from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models import Notification
-from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..constants import TIME_LIMIT_CHOICES
@@ -92,7 +90,7 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
             lock_stake(escrow=escrow, wallet=wallet, amount=stake_amount)
 
             challenge_data = ConnectFiveChallengeReadSerializer(challenge, context={'request': request}).data
-            notification = Notification.objects.create(
+            notification = Notification(
                 owner=opponent,
                 payload={
                     'challenger': UserReadSerializer(request.user, context={'request': request}).data,
@@ -105,11 +103,7 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
                     'time_limit_seconds': time_limit_seconds,
                 },
             )
-            notification_data = NotificationReadSerializer(notification, context={'request': request}).data
-            NotificationConsumer.stream_notification(
-                message_type=MessageType.CREATE_NOTIFICATION,
-                notification_data=notification_data,
-            )
+            notification.save(should_stream=True)
 
             stream_challenge_update(challenge=challenge, request=request, challenge_data=challenge_data)
 
