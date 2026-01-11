@@ -1,0 +1,14 @@
+BOARD_SIZE = 14
+CONNECT_LENGTH = 5
+TIME_LIMIT_CHOICES = (300, 600, 900, 1800)
+
+SPECIAL_PRICES = {
+    'H2': 4,
+    'V2': 4,
+    'CROSS4': 8,
+    'BOMB': 3,
+}
+
+
+def create_empty_board():
+    return [[0 for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     # Apps
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.bonsais.apps.BonsaisConfig',
+    'thenewboston.connect_five.apps.ConnectFiveConfig',
     'thenewboston.currencies.apps.CurrenciesConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general.apps.GeneralConfig',

@@ -26,11 +26,10 @@ Create a new Django app at `thenewboston/connect_five` following current project
   - `match_player.py` (per-player state and inventory)
   - `match_event.py` (audit log)
   - `escrow.py` (escrow + ledger entries)
-  - `idempotency.py`
 - `serializers/` (read/write for challenge, match, move, purchase, events)
 - `views/` (viewsets + actions for accept, cancel, move, purchase)
 - `urls.py` (SimpleRouter + custom actions)
-- `consumers/` (optional websocket consumer for match updates)
+- `consumers/` (websocket consumer for challenge + match updates)
 - `tasks.py` (challenge expiry + timeout sweeper)
 - `services/`
   - `rules.py` (move validation + win/draw detection)
@@ -41,9 +40,8 @@ Integration points:
 - Add `thenewboston.connect_five.apps.ConnectFiveConfig` to `INSTALLED_APPS`
   in `thenewboston/project/settings/base.py`.
 - Add routes in `thenewboston/project/urls.py` via `include(connect_five.urls)`.
-- Add websocket route in `thenewboston/project/routing.py` if realtime is used.
-- Add MessageType values in `thenewboston/general/enums.py` (and frontend
-  SocketDataType).
+- Add websocket route in `thenewboston/project/routing.py` for connect-five updates.
+- Add NotificationType for connect-five challenge notifications and MessageType entries for connect-five updates.
 - Add Celery beat schedule in `thenewboston/project/settings/celery.py`
   for challenge expiry and match timeout sweeps.
 
@@ -77,7 +75,7 @@ Transition rules and actors:
 
 ## 3. Money and escrow flow (TNB only)
 Use `Wallet` balances with explicit escrow and ledger entries to ensure auditability
-and idempotency.
+and transactional correctness.
 
 ### 3.1 Sequence of funds movement
 Create challenge (challenger):
@@ -120,15 +118,12 @@ Expire/cancel:
 - escrow is settled exactly once (win or draw/cancel)
 - all money operations are TNB only
 
-### 3.3 Idempotency for money operations
-Use `Idempotency-Key` header for all state-changing endpoints.
-Store request hash + response snapshot per user and endpoint:
-- If key exists with same request hash, return stored response.
-- If key exists with different hash, return 409 Conflict.
-
-Each wallet/escrow operation should also create a unique ledger entry
-(unique on action + match/challenge + idempotency_key) to prevent double debits/credits
-under retries or concurrent requests.
+### 3.3 Concurrency expectations
+- Use transactions + `select_for_update` for challenge acceptance, cancellation/expiry,
+  purchases, moves, and settlement.
+- Status checks and escrow status prevent double acceptance, refund, or settlement.
+- Active player checks and turn advancement prevent multiple moves in the same turn.
+- Purchase retries are not deduplicated and may charge multiple times.
 
 ## 4. Chess-style clocks and timeouts
 Authoritative time lives on the server. Store per match:
@@ -206,8 +201,6 @@ Multi-piece placements must be fully valid or fully rejected (no partial placeme
 - Bomb cannot create a draw because it removes a piece.
 
 ## 6. API contract (high level)
-All state-changing endpoints require `Idempotency-Key` header.
-
 Challenges:
 - POST `/api/connect-five/challenges`
   - Request: `opponent_id`, `stake_amount`, `max_spend_amount`, `time_limit_seconds` (must be 300, 600, 900, or 1800)
@@ -215,7 +208,9 @@ Challenges:
   - Errors: 400 invalid values (including invalid time_limit), 404 opponent not found, 422 insufficient funds
   - Side effects: create Notification to opponent and stream via notifications websocket
 - GET `/api/connect-five/challenges?status=&mine=`
-  - List challenges with pagination
+  - List challenges with pagination; `mine` supports `sent` or `received`
+- GET `/api/connect-five/challenges/{id}`
+  - Challenge detail (used by the game details page while awaiting acceptance)
 - POST `/api/connect-five/challenges/{id}/accept`
   - Response: match summary
   - Errors: 403 not allowed, 409 already accepted, 410 expired
@@ -245,6 +240,7 @@ High-level model outline (names may vary):
 ConnectFiveChallenge:
 - challenger (FK users.User)
 - opponent (FK users.User, required - no open challenges)
+- currency (FK currencies.Currency; TNB only)
 - stake_amount, max_spend_amount, time_limit_seconds (choice of 300/600/900/1800)
 - status, expires_at, accepted_at
 - match (OneToOne to ConnectFiveMatch, nullable)
@@ -257,6 +253,7 @@ ConnectFiveMatch:
 - active_player, turn_number, turn_started_at
 - clock_a_remaining_ms, clock_b_remaining_ms
 - prize_pool_total, max_spend_amount
+- time_limit_seconds (copied from challenge for UI and clock recompute)
 - board_state (JSONField, 14x14 ints)
 - finished_at, finish_reason
 
@@ -270,14 +267,13 @@ ConnectFiveMatchEvent (audit log):
 - match, actor (nullable for system)
 - event_type (move, purchase, timeout, settlement)
 - payload (JSON: coordinates, board delta, inventory delta)
-- idempotency_key, wallet_ledger_refs
 - created_date
 
 ConnectFiveEscrow + LedgerEntry:
 - match, currency (TNB)
 - player_a_contrib, player_b_contrib, total
 - status (locked, settled)
-- LedgerEntry: wallet, amount, direction, action, idempotency_key
+- LedgerEntry: wallet, amount, direction, action
 
 Board representation choice:
 - JSONField storing a 14x14 list of small ints (0 empty, 1/2 players).
@@ -286,13 +282,14 @@ Board representation choice:
 
 ## 8. Frontend integration notes
 
-### 8.1 Updates (polling vs realtime)
-Preferred: websocket updates for match and challenge changes, with HTTP polling as fallback.
-- Add consumer similar to wallets/exchange for:
+### 8.1 Updates (realtime)
+Use websockets for all challenge + match updates (no polling).
+- Add consumer similar to wallets/notifications for:
   - `update.connect_five_match`
-  - `create.connect_five_event`
   - `update.connect_five_challenge`
-- Frontend should open match socket only when viewing a match.
+- Open a connect-five websocket per user (alongside notifications + wallet).
+- Challenge notifications should include the serialized challenge payload so the
+  recipient UI can update immediately on `create.notification` events.
 
 ### 8.2 Redux store shape (high level)
 - `connectFive.challenges.byId`, `connectFive.matches.byId`
@@ -308,6 +305,7 @@ Preferred: websocket updates for match and challenge changes, with HTTP polling 
 - Challenge recipient search should reuse `UserSearchInput` and `/api/users/search`.
 - After creating a challenge, redirect sender to the match detail page with a pending banner/message.
 - After accepting a challenge, redirect recipient to the match detail page and begin the match.
+- Route suggestion: `/connect-five/games/:challengeId` (show pending challenge until a match is created).
 - Toolbar shows SINGLE (unlimited) plus H2, V2, CROSS4, BOMB with counters.
 - Disable or grey out Specials with zero inventory.
 - Purchase modal displays prices, remaining spend, prize pool.
@@ -316,9 +314,9 @@ Preferred: websocket updates for match and challenge changes, with HTTP polling 
 ## 9. Operational considerations
 - Challenge expiry and match timeout sweeps must be reliable (Celery beat).
 - Use `select_for_update` to avoid race conditions between sweeper and player actions.
-- Log every state change in MatchEvent; include wallet ledger refs for disputes.
+- Log every state change in MatchEvent for disputes.
 - Provide admin scripts or management commands for manual settlement or refunds.
 - Alerts: log timeouts, unexpected state transitions, and escrow mismatches.
 - Graceful restarts: all authoritative state is persisted in DB (board, clocks, active player).
   Clients reconnect via websockets and rehydrate from GET endpoints; clocks are recomputed
-  from turn_started_at. Sweepers are idempotent and re-check state before finishing a match.
+  from turn_started_at. Sweepers re-check state before finishing a match.
