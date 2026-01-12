@@ -50,6 +50,8 @@ class ConnectFiveMatch(CreatedModified):
 
     class Meta:
         ordering = ['-created_date']
+        verbose_name = 'Connect Five match'
+        verbose_name_plural = 'Connect Five matches'
 
     def __str__(self):
         return f'ConnectFiveMatch {self.pk} ({self.player_a_id} vs {self.player_b_id})'

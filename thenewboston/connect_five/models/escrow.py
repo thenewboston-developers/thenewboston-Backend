@@ -27,6 +27,8 @@ class ConnectFiveEscrow(CreatedModified):
 
     class Meta:
         ordering = ['-created_date']
+        verbose_name = 'Connect Five escrow'
+        verbose_name_plural = 'Connect Five escrows'
 
     def __str__(self):
         return f'ConnectFiveEscrow {self.pk} ({self.total})'
@@ -40,6 +42,10 @@ class ConnectFiveLedgerEntry(CreatedModified):
     amount = models.PositiveBigIntegerField()
     direction = models.CharField(max_length=6, choices=LedgerDirection.choices)
     action = models.CharField(max_length=32, choices=LedgerAction.choices)
+
+    class Meta:
+        verbose_name = 'Connect Five ledger entry'
+        verbose_name_plural = 'Connect Five ledger entries'
 
     def __str__(self):
         return f'ConnectFiveLedgerEntry {self.pk} ({self.action})'

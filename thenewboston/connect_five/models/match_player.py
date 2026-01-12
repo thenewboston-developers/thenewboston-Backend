@@ -14,6 +14,8 @@ class ConnectFiveMatchPlayer(CreatedModified):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['match', 'user'], name='unique_match_user')]
+        verbose_name = 'Connect Five match player'
+        verbose_name_plural = 'Connect Five match players'
 
     def __str__(self):
         return f'ConnectFiveMatchPlayer {self.pk} ({self.user_id})'

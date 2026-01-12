@@ -13,6 +13,8 @@ class ConnectFiveMatchEvent(CreatedModified):
 
     class Meta:
         ordering = ['created_date']
+        verbose_name = 'Connect Five match event'
+        verbose_name_plural = 'Connect Five match events'
 
     def __str__(self):
         return f'ConnectFiveMatchEvent {self.pk} ({self.event_type})'

@@ -26,6 +26,8 @@ class ConnectFiveChallenge(CreatedModified):
 
     class Meta:
         ordering = ['-created_date']
+        verbose_name = 'Connect Five challenge'
+        verbose_name_plural = 'Connect Five challenges'
 
     def __str__(self):
         return f'ConnectFiveChallenge {self.pk} ({self.challenger_id} vs {self.opponent_id})'
