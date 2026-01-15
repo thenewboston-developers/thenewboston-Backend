@@ -47,6 +47,7 @@ class ConnectFiveChallengeReadSerializer(BaseModelSerializer):
             'max_spend_amount',
             'modified_date',
             'opponent',
+            'rematch_for',
             'stake_amount',
             'status',
             'time_limit_seconds',

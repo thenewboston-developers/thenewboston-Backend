@@ -328,6 +328,7 @@ def test_make_trade_successfully_creates_trade(
                                 'avatar': None,
                                 'banner': None,
                                 'bio': '',
+                                'connect_five_elo': None,
                                 'discord_username': None,
                                 'facebook_username': None,
                                 'github_username': None,

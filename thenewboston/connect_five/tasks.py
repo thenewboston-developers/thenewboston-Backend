@@ -15,7 +15,11 @@ from .services.streaming import stream_challenge_update, stream_match_update
 def expire_connect_five_challenges_task():
     now = timezone.now()
     challenge_ids = (
-        ConnectFiveChallenge.objects.filter(status=ChallengeStatus.PENDING, expires_at__lte=now)
+        ConnectFiveChallenge.objects.filter(
+            status=ChallengeStatus.PENDING,
+            expires_at__lte=now,
+            rematch_for__isnull=True,
+        )
         .values_list('id', flat=True)
         .order_by('id')
     )

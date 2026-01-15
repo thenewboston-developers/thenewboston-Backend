@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -15,12 +16,15 @@ User = get_user_model()
 
 
 class UserReadSerializer(BaseModelSerializer):
+    connect_five_elo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
             'avatar',
             'banner',
             'bio',
+            'connect_five_elo',
             'discord_username',
             'facebook_username',
             'github_username',
@@ -36,6 +40,13 @@ class UserReadSerializer(BaseModelSerializer):
             'x_username',
             'youtube_username',
         )
+
+    @staticmethod
+    def get_connect_five_elo(obj):
+        try:
+            return obj.connect_five_stats.elo
+        except ObjectDoesNotExist:
+            return None
 
 
 class UserUpdateSerializer(BaseModelSerializer):
