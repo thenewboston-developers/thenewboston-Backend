@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -7,27 +8,49 @@ from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from thenewboston.general.enums import NotificationType
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.views.base import CustomGenericViewSet
+from thenewboston.notifications.models import Notification
+from thenewboston.users.serializers.user import UserReadSerializer
+from thenewboston.wallets.models import Wallet
 
 from ..constants import SPECIAL_PRICES
-from ..enums import MatchEventType, MatchStatus, MoveType, SpecialType
-from ..exceptions import GoneError
-from ..models import ConnectFiveEscrow, ConnectFiveMatch, ConnectFiveMatchEvent, ConnectFiveMatchPlayer
-from ..serializers import ConnectFiveMatchReadSerializer, ConnectFiveMoveSerializer, ConnectFivePurchaseSerializer
+from ..enums import ChallengeStatus, MatchEventType, MatchStatus, MoveType, SpecialType
+from ..exceptions import ConflictError, GoneError
+from ..models import (
+    ConnectFiveChallenge,
+    ConnectFiveEscrow,
+    ConnectFiveMatch,
+    ConnectFiveMatchEvent,
+    ConnectFiveMatchPlayer,
+)
+from ..serializers import (
+    ConnectFiveChallengeReadSerializer,
+    ConnectFiveMatchReadSerializer,
+    ConnectFiveMoveSerializer,
+    ConnectFivePurchaseSerializer,
+)
 from ..services.clocks import apply_elapsed_time, switch_turn, touch_turn
-from ..services.escrow import get_wallet_for_update, purchase_special
+from ..services.escrow import create_escrow, get_wallet_for_update, lock_stake, purchase_special
 from ..services.match import finish_match_connect5, finish_match_draw, finish_match_timeout
 from ..services.rules import apply_move, check_win, is_draw
-from ..services.streaming import stream_match_update
+from ..services.streaming import stream_challenge_update, stream_match_update
 
 
 class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated]
-    queryset = ConnectFiveMatch.objects.select_related('challenge', 'player_a', 'player_b', 'active_player').order_by(
-        '-created_date'
-    )
+    queryset = ConnectFiveMatch.objects.select_related(
+        'active_player',
+        'active_player__connect_five_stats',
+        'challenge',
+        'challenge__currency',
+        'player_a',
+        'player_a__connect_five_stats',
+        'player_b',
+        'player_b__connect_five_stats',
+    ).order_by('-created_date')
     serializer_class = ConnectFiveMatchReadSerializer
 
     def get_queryset(self):
@@ -229,6 +252,104 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
             return Response(response_data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='rematch')
+    def rematch(self, request, pk=None):
+        assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
+
+        with transaction.atomic():
+            match = (
+                ConnectFiveMatch.objects.select_for_update()
+                .select_related('challenge', 'challenge__currency', 'player_a', 'player_b')
+                .get(pk=pk)
+            )
+
+            if match.status not in {MatchStatus.DRAW, MatchStatus.FINISHED_CONNECT5, MatchStatus.FINISHED_TIMEOUT}:
+                raise ConflictError({'detail': 'Rematches are only available for completed matches.'})
+
+            if request.user.id not in {match.player_a_id, match.player_b_id}:
+                raise PermissionDenied({'detail': 'You are not a participant in this match.'})
+
+            if existing_rematch := _get_latest_rematch(match):
+                if existing_rematch.status == ChallengeStatus.PENDING:
+                    response_data = ConnectFiveChallengeReadSerializer(
+                        existing_rematch, context={'request': request}
+                    ).data
+                    return Response(response_data, status=status.HTTP_200_OK)
+                raise ConflictError({'detail': 'Rematch is no longer available.'})
+
+            opponent = match.player_b if request.user.id == match.player_a_id else match.player_a
+            currency = match.challenge.currency
+            stake_amount = match.challenge.stake_amount
+
+            try:
+                challenger_wallet = get_wallet_for_update(user=request.user, currency=currency)
+                opponent_wallet = get_wallet_for_update(user=opponent, currency=currency)
+            except ValidationError as error:
+                raise ConflictError({'detail': 'Insufficient funds for rematch.'}) from error
+
+            if challenger_wallet.balance < stake_amount or opponent_wallet.balance < stake_amount:
+                raise ConflictError({'detail': 'Insufficient funds for rematch.'})
+
+            challenge = ConnectFiveChallenge.objects.create(
+                challenger=request.user,
+                opponent=opponent,
+                currency=currency,
+                stake_amount=stake_amount,
+                max_spend_amount=match.max_spend_amount,
+                time_limit_seconds=match.time_limit_seconds,
+                status=ChallengeStatus.PENDING,
+                expires_at=timezone.now(),
+                rematch_for=match,
+            )
+            escrow = create_escrow(challenge=challenge)
+            lock_stake(escrow=escrow, wallet=challenger_wallet, amount=stake_amount)
+
+            response_data = ConnectFiveChallengeReadSerializer(challenge, context={'request': request}).data
+            notification = Notification(
+                owner=opponent,
+                payload={
+                    'challenger': UserReadSerializer(request.user, context={'request': request}).data,
+                    'challenge': response_data,
+                    'challenge_id': challenge.id,
+                    'expires_at': challenge.expires_at.isoformat(),
+                    'max_spend_amount': challenge.max_spend_amount,
+                    'notification_type': NotificationType.CONNECT_FIVE_CHALLENGE.value,
+                    'stake_amount': challenge.stake_amount,
+                    'time_limit_seconds': challenge.time_limit_seconds,
+                },
+            )
+            notification.save(should_stream=True)
+
+            stream_challenge_update(challenge=challenge, request=request, challenge_data=response_data)
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='rematch-status')
+    def rematch_status(self, request, pk=None):
+        match = ConnectFiveMatch.objects.select_related('challenge', 'challenge__currency', 'player_a', 'player_b').get(
+            pk=pk
+        )
+
+        if match.status not in {MatchStatus.DRAW, MatchStatus.FINISHED_CONNECT5, MatchStatus.FINISHED_TIMEOUT}:
+            raise ConflictError({'detail': 'Rematches are only available for completed matches.'})
+
+        if request.user.id not in {match.player_a_id, match.player_b_id}:
+            raise PermissionDenied({'detail': 'You are not a participant in this match.'})
+
+        latest_rematch = _get_latest_rematch(match)
+        has_funds = _has_rematch_funds(match)
+        response_data = {
+            'can_rematch': not latest_rematch and has_funds,
+            'challenge': (
+                ConnectFiveChallengeReadSerializer(latest_rematch, context={'request': request}).data
+                if latest_rematch
+                else None
+            ),
+            'insufficient_funds': not has_funds,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
 
 def _get_inventory_field(move_type):
     mapping = {
@@ -242,3 +363,29 @@ def _get_inventory_field(move_type):
         SpecialType.V2: 'inventory_v2',
     }
     return mapping.get(move_type)
+
+
+def _get_latest_rematch(match):
+    return (
+        ConnectFiveChallenge.objects.filter(
+            rematch_for=match,
+        )
+        .select_related('challenger', 'currency', 'opponent')
+        .order_by('-created_date')
+        .first()
+    )
+
+
+def _has_rematch_funds(match):
+    stake_amount = match.challenge.stake_amount
+    wallets = {
+        wallet.owner_id: wallet
+        for wallet in Wallet.objects.filter(
+            currency=match.challenge.currency,
+            owner__in=[match.player_a_id, match.player_b_id],
+        )
+    }
+    if match.player_a_id not in wallets or match.player_b_id not in wallets:
+        return False
+
+    return wallets[match.player_a_id].balance >= stake_amount and wallets[match.player_b_id].balance >= stake_amount

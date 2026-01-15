@@ -103,6 +103,7 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
                     'avatar': None,
                     'banner': None,
                     'bio': '',
+                    'connect_five_elo': None,
                     'discord_username': None,
                     'facebook_username': None,
                     'github_username': None,

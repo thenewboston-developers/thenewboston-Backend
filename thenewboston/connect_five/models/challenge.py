@@ -23,6 +23,13 @@ class ConnectFiveChallenge(CreatedModified):
     status = models.CharField(max_length=12, choices=ChallengeStatus.choices, default=ChallengeStatus.PENDING)
     expires_at = models.DateTimeField()
     accepted_at = models.DateTimeField(null=True, blank=True)
+    rematch_for = models.ForeignKey(
+        'connect_five.ConnectFiveMatch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rematch_challenges',
+    )
 
     class Meta:
         ordering = ['-created_date']

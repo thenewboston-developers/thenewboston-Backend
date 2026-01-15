@@ -34,6 +34,7 @@ def test_read_currencies_as_bucky(api_client_bucky):
                 'avatar': None,
                 'banner': None,
                 'bio': '',
+                'connect_five_elo': None,
                 'discord_username': currency.owner.discord_username,
                 'facebook_username': currency.owner.facebook_username,
                 'github_username': currency.owner.github_username,

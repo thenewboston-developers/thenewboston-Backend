@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -18,10 +18,11 @@ from thenewboston.notifications.models import Notification
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..constants import TIME_LIMIT_CHOICES
-from ..enums import ChallengeStatus, MatchEventType
+from ..enums import ChallengeStatus, MatchEventType, MatchStatus
 from ..exceptions import ConflictError, GoneError
 from ..models import ConnectFiveChallenge, ConnectFiveEscrow, ConnectFiveMatchEvent
 from ..serializers import ConnectFiveChallengeCreateSerializer, ConnectFiveChallengeReadSerializer
+from ..services.elo import get_or_create_stats
 from ..services.escrow import (
     accept_stake,
     create_escrow,
@@ -36,9 +37,13 @@ from ..services.streaming import stream_challenge_update, stream_match_update
 class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated]
-    queryset = ConnectFiveChallenge.objects.select_related('challenger', 'opponent', 'currency').order_by(
-        '-created_date'
-    )
+    queryset = ConnectFiveChallenge.objects.select_related(
+        'challenger',
+        'challenger__connect_five_stats',
+        'currency',
+        'opponent',
+        'opponent__connect_five_stats',
+    ).order_by('-created_date')
     serializer_class = ConnectFiveChallengeReadSerializer
     serializer_classes = {'create': ConnectFiveChallengeCreateSerializer}
 
@@ -116,7 +121,11 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
         with transaction.atomic():
             challenge = (
                 ConnectFiveChallenge.objects.select_for_update()
-                .select_related('challenger', 'opponent', 'currency')
+                .select_related(
+                    'challenger',
+                    'currency',
+                    'opponent',
+                )
                 .get(pk=pk)
             )
             escrow = ConnectFiveEscrow.objects.select_for_update().get(challenge=challenge)
@@ -127,7 +136,7 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
             if challenge.opponent_id != request.user.id:
                 raise PermissionDenied({'detail': 'Only the opponent can accept this challenge.'})
 
-            if timezone.now() >= challenge.expires_at:
+            if challenge.rematch_for_id is None and timezone.now() >= challenge.expires_at:
                 wallet = get_wallet_for_update(user=challenge.challenger, currency=challenge.currency)
                 challenge.status = ChallengeStatus.EXPIRED
                 challenge.save(update_fields=['status', 'modified_date'])
@@ -135,16 +144,21 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
                 stream_challenge_update(challenge=challenge, request=request)
                 raise GoneError({'detail': 'Challenge has expired.'})
 
-            wallet = get_wallet_for_update(user=request.user, currency=challenge.currency)
-            accept_stake(
-                escrow=escrow,
-                wallet=wallet,
-                amount=challenge.stake_amount,
-            )
+            try:
+                wallet = get_wallet_for_update(user=request.user, currency=challenge.currency)
+                accept_stake(
+                    escrow=escrow,
+                    wallet=wallet,
+                    amount=challenge.stake_amount,
+                )
+            except ValidationError as error:
+                if challenge.rematch_for_id:
+                    raise ConflictError({'detail': 'Insufficient funds for rematch.'}) from error
+                raise
 
             from ..models import ConnectFiveMatch, ConnectFiveMatchPlayer
 
-            active_player = random.choice([challenge.challenger, challenge.opponent])
+            active_player = _get_active_player(challenge=challenge)
             match = ConnectFiveMatch.objects.create(
                 challenge=challenge,
                 player_a=challenge.challenger,
@@ -158,6 +172,8 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
             )
             ConnectFiveMatchPlayer.objects.create(match=match, user=challenge.challenger)
             ConnectFiveMatchPlayer.objects.create(match=match, user=challenge.opponent)
+            get_or_create_stats(user=challenge.challenger, for_update=True)
+            get_or_create_stats(user=challenge.opponent, for_update=True)
 
             challenge.status = ChallengeStatus.ACCEPTED
             challenge.accepted_at = timezone.now()
@@ -206,3 +222,45 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
             stream_challenge_update(challenge=challenge, request=request, challenge_data=response_data)
 
             return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='decline')
+    def decline(self, request, pk=None):
+        assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
+
+        with transaction.atomic():
+            challenge = (
+                ConnectFiveChallenge.objects.select_for_update()
+                .select_related('challenger', 'opponent', 'currency')
+                .get(pk=pk)
+            )
+            escrow = ConnectFiveEscrow.objects.select_for_update().get(challenge=challenge)
+
+            if challenge.status != ChallengeStatus.PENDING:
+                raise ConflictError({'detail': 'Challenge is not pending.'})
+
+            if challenge.opponent_id != request.user.id:
+                raise PermissionDenied({'detail': 'Only the opponent can decline.'})
+
+            challenge.status = ChallengeStatus.DECLINED
+            challenge.save(update_fields=['status', 'modified_date'])
+
+            wallet = get_wallet_for_update(user=challenge.challenger, currency=challenge.currency)
+            refund_challenge(escrow=escrow, wallet=wallet)
+
+            response_data = ConnectFiveChallengeReadSerializer(challenge, context={'request': request}).data
+            stream_challenge_update(challenge=challenge, request=request, challenge_data=response_data)
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+
+def _get_active_player(*, challenge):
+    if challenge.rematch_for_id and challenge.rematch_for:
+        previous_match = challenge.rematch_for
+        if previous_match.status != MatchStatus.DRAW and previous_match.winner_id:
+            return (
+                previous_match.player_b
+                if previous_match.winner_id == previous_match.player_a_id
+                else previous_match.player_a
+            )
+
+    return random.choice([challenge.challenger, challenge.opponent])

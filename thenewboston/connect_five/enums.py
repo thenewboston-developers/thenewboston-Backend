@@ -4,6 +4,7 @@ from django.db import models
 class ChallengeStatus(models.TextChoices):
     ACCEPTED = 'accepted', 'Accepted'
     CANCELLED = 'cancelled', 'Cancelled'
+    DECLINED = 'declined', 'Declined'
     EXPIRED = 'expired', 'Expired'
     PENDING = 'pending', 'Pending'
 

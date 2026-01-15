@@ -7,6 +7,7 @@ from .models import (
     ConnectFiveMatch,
     ConnectFiveMatchEvent,
     ConnectFiveMatchPlayer,
+    ConnectFiveStats,
 )
 
 admin.site.register(ConnectFiveChallenge)
@@ -15,3 +16,4 @@ admin.site.register(ConnectFiveLedgerEntry)
 admin.site.register(ConnectFiveMatch)
 admin.site.register(ConnectFiveMatchEvent)
 admin.site.register(ConnectFiveMatchPlayer)
+admin.site.register(ConnectFiveStats)
