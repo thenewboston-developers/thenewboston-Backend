@@ -1,4 +1,3 @@
-import random
 from datetime import timedelta
 
 from django.db import transaction
@@ -18,7 +17,7 @@ from thenewboston.notifications.models import Notification
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..constants import TIME_LIMIT_CHOICES
-from ..enums import ChallengeStatus, MatchEventType, MatchStatus
+from ..enums import ChallengeStatus, MatchEventType
 from ..exceptions import ConflictError, GoneError
 from ..models import ConnectFiveChallenge, ConnectFiveEscrow, ConnectFiveMatchEvent
 from ..serializers import ConnectFiveChallengeCreateSerializer, ConnectFiveChallengeReadSerializer
@@ -254,13 +253,4 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
 
 
 def _get_active_player(*, challenge):
-    if challenge.rematch_for_id and challenge.rematch_for:
-        previous_match = challenge.rematch_for
-        if previous_match.status != MatchStatus.DRAW and previous_match.winner_id:
-            return (
-                previous_match.player_b
-                if previous_match.winner_id == previous_match.player_a_id
-                else previous_match.player_a
-            )
-
-    return random.choice([challenge.challenger, challenge.opponent])
+    return challenge.opponent
