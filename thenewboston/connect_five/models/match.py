@@ -47,6 +47,10 @@ class ConnectFiveMatch(CreatedModified):
     time_limit_seconds = models.PositiveIntegerField()
     board_state = models.JSONField(default=create_empty_board)
     finished_at = models.DateTimeField(null=True, blank=True)
+    player_a_elo_before = models.IntegerField(null=True, blank=True)
+    player_a_elo_after = models.IntegerField(null=True, blank=True)
+    player_b_elo_before = models.IntegerField(null=True, blank=True)
+    player_b_elo_after = models.IntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_date']

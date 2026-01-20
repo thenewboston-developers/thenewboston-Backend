@@ -18,6 +18,7 @@ def test_login(api_client, bucky):
         'avatar': None,
         'banner': None,
         'bio': '',
+        'connect_five_elo': None,
         'discord_username': None,
         'facebook_username': None,
         'github_username': None,
