@@ -45,14 +45,6 @@ def apply_move(*, board_state, move_type, player_value, x, y):
             raise ValidationError({'detail': 'Vertical placement overlaps existing pieces.'})
         for x_pos, y_pos in positions:
             place(x_pos, y_pos)
-    elif move_type == MoveType.CROSS4:
-        positions = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-        if not all(in_bounds(x_pos, y_pos) for x_pos, y_pos in positions):
-            raise ValidationError({'detail': 'Cross placement out of bounds.'})
-        if not all(is_empty(x_pos, y_pos) for x_pos, y_pos in positions):
-            raise ValidationError({'detail': 'Cross placement overlaps existing pieces.'})
-        for x_pos, y_pos in positions:
-            place(x_pos, y_pos)
     elif move_type == MoveType.BOMB:
         if not in_bounds(x, y):
             raise ValidationError({'detail': 'Bomb target out of bounds.'})

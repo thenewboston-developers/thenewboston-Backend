@@ -9,7 +9,6 @@ class ConnectFiveMatchPlayer(CreatedModified):
     spent_total = models.PositiveBigIntegerField(default=0)
     inventory_h2 = models.PositiveIntegerField(default=0)
     inventory_v2 = models.PositiveIntegerField(default=0)
-    inventory_cross4 = models.PositiveIntegerField(default=0)
     inventory_bomb = models.PositiveIntegerField(default=0)
 
     class Meta:

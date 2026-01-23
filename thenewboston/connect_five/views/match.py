@@ -144,7 +144,6 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             match_player.save(
                 update_fields=[
                     'inventory_bomb',
-                    'inventory_cross4',
                     'inventory_h2',
                     'inventory_v2',
                     'modified_date',
@@ -232,7 +231,6 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             match_player.save(
                 update_fields=[
                     'inventory_bomb',
-                    'inventory_cross4',
                     'inventory_h2',
                     'inventory_v2',
                     'spent_total',
@@ -354,11 +352,9 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 def _get_inventory_field(move_type):
     mapping = {
         MoveType.BOMB: 'inventory_bomb',
-        MoveType.CROSS4: 'inventory_cross4',
         MoveType.H2: 'inventory_h2',
         MoveType.V2: 'inventory_v2',
         SpecialType.BOMB: 'inventory_bomb',
-        SpecialType.CROSS4: 'inventory_cross4',
         SpecialType.H2: 'inventory_h2',
         SpecialType.V2: 'inventory_v2',
     }

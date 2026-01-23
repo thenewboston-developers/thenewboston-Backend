@@ -14,7 +14,6 @@ class ConnectFiveMatchPlayerSerializer(BaseModelSerializer):
         model = ConnectFiveMatchPlayer
         fields = (
             'inventory_bomb',
-            'inventory_cross4',
             'inventory_h2',
             'inventory_v2',
             'remaining_spend',

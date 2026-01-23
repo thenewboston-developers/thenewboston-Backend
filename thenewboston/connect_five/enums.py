@@ -19,7 +19,6 @@ class MatchStatus(models.TextChoices):
 
 class MoveType(models.TextChoices):
     BOMB = 'BOMB', 'Bomb'
-    CROSS4 = 'CROSS4', 'Cross4'
     H2 = 'H2', 'Horizontal 2'
     SINGLE = 'SINGLE', 'Single'
     V2 = 'V2', 'Vertical 2'
@@ -27,7 +26,6 @@ class MoveType(models.TextChoices):
 
 class SpecialType(models.TextChoices):
     BOMB = 'BOMB', 'Bomb'
-    CROSS4 = 'CROSS4', 'Cross4'
     H2 = 'H2', 'Horizontal 2'
     V2 = 'V2', 'Vertical 2'
 
