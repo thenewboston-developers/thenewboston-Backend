@@ -34,8 +34,8 @@ The Connect Five section will have three main pages in the top navigation:
 The dashboard (replacing the current homepage) must include:
 - Incoming challenges
 - Outgoing challenges
-- Active games (including tournament games; tournament games are labeled with a "Tournament" badge plus tournament name and round label)
-- Game history (paginated; tournament games show the "Tournament" badge plus tournament name and round label)
+- Active games (including tournament games; tournament games are labeled with a "Tournament" badge plus tournament name and round label such as Quarterfinal/Semifinal/Final)
+- Game history (paginated; tournament games show the "Tournament" badge plus tournament name and round label such as Quarterfinal/Semifinal/Final)
 - Upcoming tournament times:
   - For each registered upcoming tournament, show time until it starts.
   - For active tournaments, show time until the user's next round.
@@ -46,7 +46,7 @@ The dashboard (replacing the current homepage) must include:
 
 ### Tournaments Page (List View)
 - Cards for all tournaments (live, upcoming, completed), ordered live then upcoming then completed; completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
-- Cancelled tournaments are not visible anywhere in the user UI.
+- Cancelled tournaments are not visible anywhere in the user UI (no list, dashboard, or history entries); only the cancellation notification and direct-link message are shown.
 - The list view requires sign-in; signed-out users are prompted to sign in.
 - Each card includes:
   - A small banner image for the tournament.
@@ -65,13 +65,14 @@ Clicking a card routes the user to the tournament details page.
 - Registration closes at the start time (server time); any request at or after start is rejected.
 - Users can register or remove their registration until the start time; unregistering refunds the buy-in, and re-registering charges again.
 - Buy-ins are deducted and locked at registration.
-- Buy-ins are TNB only; free tournaments still include a guaranteed TNB prize pool.
+- Buy-ins are TNB only; free tournaments do not require a guaranteed TNB prize pool.
 - Users without a TNB wallet can register for free tournaments; if they win, a TNB wallet is created for payout.
 - Minimum players is configurable per tournament, with an enforced floor of 2.
 - If the tournament reaches maximum players before the start time, registration closes and the CTA shows "Full". If a spot opens before the start time, registration reopens.
 - At the start time, if the minimum player count is not met, the tournament is cancelled.
 - If the tournament is cancelled, all player buy-ins and the admin guarantee are refunded.
 - Registered users receive a notification when a tournament is cancelled.
+- No other tournament notifications are required.
 - At the start time, if the minimum is met, round 1 matchmaking is random and the tournament begins immediately.
 - Users can register for multiple tournaments even if schedules overlap; missing a match results in a timeout loss. No warnings or blocks are shown for overlaps.
 
@@ -82,26 +83,27 @@ This page must show:
 - Tournament status (upcoming, live, or completed).
 - Minimum and maximum players.
 - Date/time when the tournament begins.
-- Buy-in amount (or Free) and any guaranteed prize pool contribution.
-- Payouts and prize pool (guaranteed minimum and current totals based on registered players; winner takes all).
+- Buy-in amount (or Free) and any admin-guaranteed prize pool contribution (optional).
+- Payouts and prize pool (current total including any admin guarantee and registered player buy-ins; winner takes all).
 - Total time per player.
 - Max spend (TNB) per game (fixed at 0; special moves disabled).
-- Registered player list (avatar, username, current ELO).
+- Registered player list (avatar, username, current ELO), ordered by registration time.
 
 If the user is registered:
-- Display their wins/losses, current round, and next opponent.
+- Display their wins/losses (byes do not count), current round, and next opponent.
 
 When the tournament ends:
-- Display final results for all players, including placement and elimination round.
+- Display only the winner; no placement or elimination-round UI for non-winners.
 - Highlight the winner with a trophy graphic.
 
 Visibility:
-- The page requires sign-in; unauthenticated users are prompted to sign in.
+- All tournament viewing requires sign-in; unauthenticated users are prompted to sign in.
 - Signed-in users can view the tournament lobby and watch any tournament game live as spectators.
 - Spectators can see both players' remaining time; there is no spectator count or chat.
 - Before the tournament begins, signed-in non-registered users see a registration view.
 - If registration is not yet open, the registration view shows a disabled register CTA with a countdown.
 - After the tournament begins, signed-in non-registered users see the tournament lobby view.
+- For eliminated users in a live tournament, keep the status as "Live" and show an "Eliminated" state.
 - If a signed-in user has an active tournament match, the lobby shows a "Return to Game" button; clicking their matchup in the bracket also opens the game.
 - When a user is actively playing a tournament game, the game page includes a "Back to Tournament Lobby" button (or similar UI) that returns them to the tournament lobby.
 - If a user opens a cancelled tournament (for example, via a direct link), show a cancellation message.
@@ -117,6 +119,7 @@ Tournament format:
 Bracket and round schedule:
 - The bracket is created after registration closes and the minimum player count is met.
 - The number of rounds is based on the player count.
+- Round labels use Quarterfinal/Semifinal/Final.
 - The admin sets a tournament start time and a break time between rounds; per-round start times are derived automatically.
 - Round 1 starts at the tournament start time.
 - Each round length equals the max possible game duration (2 * total_time_per_player) plus the configured break time.
@@ -128,7 +131,7 @@ Bracket and round schedule:
 ### Match Rules and Ratings
 - Tournament matches follow standard Connect Five rules, but special moves and in-match purchases are disabled.
 - Tournament game UI hides spend/purchase elements and any result TNB delta callouts.
-- Draws are not allowed in any Connect Five match; if a game ends with no Connect Five, the player who moved first loses. Existing draw results should be cleaned up before tournament work begins.
+- Draws are not allowed in any Connect Five match; if a game ends with no Connect Five, the player who moved first loses.
 - Max spend (TNB) per game is fixed at 0 for tournaments; total time per player is set by the site admin.
 - The starting player for each tournament match is random.
 - Tournament matches affect ELO and player stats the same way as standard matches.
