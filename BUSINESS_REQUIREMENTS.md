@@ -36,74 +36,89 @@ The dashboard (replacing the current homepage) must include:
 - Outgoing challenges
 - Active games (including tournament games)
 - Game history (paginated)
-- Time until the next tournament game for the user
-- The user’s ELO summary, including:
-  - Current ELO
-  - A chart showing ELO over time
+- Time until the user's next tournament game (shown only when the user is registered for an upcoming tournament)
+- The user's current ELO
 
 ### Tournaments Page (List View)
 At the top of the page:
-- A large hero banner highlighting the next major upcoming tournament
+- A large hero banner highlighting the next major upcoming tournament.
+- The hero tournament is selected manually by the site admin (placeholder only; no automated selection logic yet).
 
 Below the hero:
-- Cards for each upcoming tournament
+- Cards for each upcoming tournament.
 - Each card includes:
-  - A small banner image for the tournament
-  - Tournament name
-  - Quick details (example: “Starts Jan 25, 2025 • 2:00 PM EST - 12/16 Players”)
+  - A small banner image for the tournament.
+  - Tournament name.
+  - Quick details (example: "Starts Jan 25, 2025 - 2:00 PM EST - 12/16 Players").
   - A single call-to-action button that displays one of the following states:
-    - “Register Now”
-    - “Registration opens in 14h 32m” (countdown)
-    - “Registered” (with a checkmark icon)
+    - "Register Now"
+    - "Registration opens in 14h 32m" (countdown until registration opens)
+    - "Registered" (with a checkmark icon)
 
 Clicking a card routes the user to the tournament details page.
+
+### Registration Rules
+- Registration opens 1 hour before the tournament start time.
+- Registration closes at the start time.
+- Users can register or remove their registration until the start time.
+- At the start time, if the minimum player count is not met, the tournament is cancelled.
+- At the start time, if the minimum is met, round 1 matchmaking is random and the tournament begins immediately.
 
 ### Tournament Details / Lobby (Single Page)
 The tournament details page is also the lobby and registration page (pre-start) and the live tournament view (post-start).
 
 This page must show:
-- Tournament status (e.g., upcoming, completed, or “Live - Round 2 In Progress”)
-- Minimum and maximum players
-- Date/time when the tournament begins
-- Payouts and prize pool
-- Total time per player
-- Max spend (TNB) per game
+- Tournament status (upcoming, live, completed, or cancelled).
+- Minimum and maximum players.
+- Date/time when the tournament begins.
+- Payouts and prize pool.
+- Total time per player.
+- Max spend (TNB) per game.
 
 If the user is registered:
-- Display their current results and progress
+- Display their current results and progress.
 
 When the tournament ends:
-- Display final results for all players
-- Show trophy graphics next to the top 3 finishers
+- Display final results for all players.
+- Show trophy graphics next to the top 3 finishers.
+
+Visibility:
+- The page is visible to all users.
+- Before the tournament begins, non-registered users see a registration view.
+- After the tournament begins, non-registered users see the tournament lobby view.
 
 ### Bracket and Scheduling
 The tournament details page must also include the tournament bracket and round schedule.
 
-Tournament flow:
-1. Registration
-2. Random matchmaking for round 1
-3. Bracket creation and round schedule after registration, for example:
-   - Round 1 - 1:00 PM
-   - Round 2 - 2:00 PM
-   - Finals - 3:00 PM
+Tournament format:
+- Single-elimination bracket.
+- Byes are assigned randomly when the player count is odd.
 
-Additional requirements:
-- Users can register and remove their registration before the tournament begins.
+Bracket and round schedule:
+- The bracket is created after registration closes and the minimum player count is met.
+- Round schedule times are defined per tournament, for example:
+  - Round 1 - 1:00 PM
+  - Round 2 - 2:00 PM
+  - Finals - 3:00 PM
 - A countdown timer shows time until the next round.
 
-### Admin Management
-An admin section is required so the site admin can create tournaments.
+### Match Rules and Ratings
+- Tournament matches follow standard Connect Five rules, including special moves and the in-match economy.
+- Max spend (TNB) per game and total time per player are set by the site admin when creating the tournament.
+- Tournament matches affect ELO and player stats the same way as standard matches.
+- No-shows or disconnects are handled by timeout; the opponent wins by timeout.
 
-## Open Questions
-- How is the “next major upcoming tournament” chosen for the hero banner (manual flag, prize pool size, start time, etc.)?
-- What are the registration open/close rules (open at publish time, close at start time, or earlier)?
-- What happens if the minimum player count is not met by the start time (cancel, delay, reschedule, auto-start with fewer players)?
-- What is the tournament format (single elimination, double elimination, Swiss, round robin)? How are byes handled for odd player counts?
-- Are tournament matches subject to the same rules as standard matches (special moves, max spend, time controls)?
-- Do tournament matches affect ELO and player stats? If yes, is the ELO impact the same as standard matches?
-- How is the prize pool funded (entry fees, sponsor pool, both)? What is the payout distribution model?
-- What is the behavior for no-shows or disconnects (forfeit rules, grace periods, auto-advancement)?
-- How should the “next tournament game” on the dashboard behave for users not registered in any tournament?
-- What time zone should be used for all tournament times and countdowns?
-- Should tournament pages be visible to non-registered users, and if so, what actions are available?
-- Is there a requirement to store and display historical ELO trend data (time range, granularity, and retention)?
+### Time Display
+- All tournament times are displayed in the viewer's local time zone.
+- Countdown timers are relative and identical for all players.
+
+### Admin Management
+An admin section is required so the site admin can create tournaments. Admin creation includes:
+- Setting the start time, minimum/maximum players, total time per player, and max spend (TNB) per game.
+- Defining round schedule times.
+- Defining payout distribution (for example: 1st = 300 TNB, 2nd = 200 TNB, 3rd = 100 TNB).
+- Selecting which tournament appears in the hero banner (manual selection; no automated logic yet).
+- Funding the prize pool from the admin wallet at creation; funds are reserved and refunded if the tournament is cancelled.
+
+## Remaining Questions
+- None at this time.
