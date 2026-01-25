@@ -131,3 +131,61 @@ An admin section is required so the site admin can create tournaments. Admin cre
 - Payouts are always distributed to the top 10% of finishers, weighted by placement, from the total prize pool.
 - Selecting which tournament appears in the hero banner (manual selection; no automated logic yet).
 - Prize pool funding comes from player buy-ins plus any admin guarantee; all funds are reserved and refunded if the tournament is cancelled.
+
+---
+
+## Open Questions
+
+### Prize Pool & Payouts
+1. "Top 10% of finishers, weighted by placement" – what is the exact weighting formula? For example, if 3 players are paid out, what percentage does 1st, 2nd, and 3rd each receive?
+2. What happens when 10% results in a fractional number of players (e.g., 12 players = 1.2 players)? Do we round up, round down, or use a minimum of 1?
+3. What is the minimum payout threshold? For example, if there are only 5 players, does only 1st place get paid?
+
+> come up with a response to these questions based on what you think we should do
+
+### Round Scheduling & Match Flow
+4. What happens if a match is still in progress when the next round is scheduled to start? Does the ongoing match continue until completion, delaying the next round for those players only?
+5. If a round finishes early, do players simply wait for the scheduled start time of the next round? Is there any UI indication of this waiting period?
+6. Can players participate in non-tournament (standard lobby) games while waiting between tournament rounds?
+7. Is there a recommended or enforced minimum buffer time between rounds when admins create the schedule?
+
+### No-Shows & Timeouts
+8. The document states no-shows are "handled by timeout" – is this the same timeout as the "total time per player" setting, or is there a separate no-show grace period?
+9. What happens if both players fail to show up for a match (double no-show)?
+10. If a player disconnects mid-match, is there any reconnection window, or does the clock simply continue running?
+
+### Bye Handling
+11. When a bye is assigned (odd number of players), does it count as a win for stats purposes? Does it affect ELO?
+12. How is the bye recipient selected? Randomly? Based on seeding/ELO?
+
+### Registration Edge Cases
+13. What happens if a user attempts to register at the exact moment the tournament starts (race condition)? Is there a small buffer before the cutoff?
+14. Can a user who unregisters re-register if spots are still available?
+15. The minimum player count triggers cancellation – what is this minimum? Is it configurable per tournament, or is there a system-wide default?
+
+### Spectating
+16. Can spectators see both players' remaining time?
+17. Can spectators see special move purchases and the in-match economy?
+18. Is there a spectator count displayed on the game or tournament lobby?
+19. Will there be any spectator chat or commentary feature?
+
+### Admin Capabilities
+20. Can admins edit tournament settings (time, player limits, prize pool, etc.) after creation but before the tournament starts?
+21. Can admins manually cancel a tournament before the start time?
+22. Can admins view the list of registered players before the tournament begins?
+23. What image assets are required for a tournament? (Hero banner dimensions, card thumbnail dimensions, etc.)
+24. If no hero tournament is manually selected, what appears in the hero banner area? Is it hidden, or does it default to the next upcoming tournament?
+
+### Tournament History & Archives
+25. How long are completed tournaments visible on the Tournaments page?
+26. Is there a dedicated "My Tournaments" or tournament history view for users to see their past tournament participation?
+27. What does a tournament card display after the tournament is completed? (Winner, final results summary?)
+
+### In-Match Economy (Tournament Games)
+28. Does the "max spend (TNB) per game" setting apply independently to each tournament game, or is there a cumulative limit across all games in the tournament?
+29. When players spend TNB on special moves during tournament games, where does that TNB go? Into the prize pool, or is it handled the same as standard matches?
+
+### Miscellaneous
+30. Are tournament games visually distinguished from standard games in the "Active games" and "Game history" sections of the Dashboard?
+31. Can a user be registered for multiple tournaments that have overlapping schedules?
+32. What happens if a registered user's TNB balance drops below the buy-in amount before the tournament starts (e.g., due to other transactions)?
