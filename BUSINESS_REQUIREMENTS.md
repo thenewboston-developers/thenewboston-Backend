@@ -34,14 +34,18 @@ The Connect Five section will have three main pages in the top navigation:
 The dashboard (replacing the current homepage) must include:
 - Incoming challenges
 - Outgoing challenges
-- Active games (including tournament games; tournament games are labeled with a "Tournament" badge)
-- Game history (paginated; tournament games are labeled with a "Tournament" badge)
-- Time until the user's next tournament game (shown only when the user is registered for an upcoming tournament)
+- Active games (including tournament games; tournament games are labeled with a "Tournament" badge plus tournament name and round label)
+- Game history (paginated; tournament games show the "Tournament" badge plus tournament name and round label)
+- Upcoming tournament times:
+  - For each registered upcoming tournament, show time until it starts.
+  - For active tournaments, show time until the user's next round.
+  - Multiple entries may appear when the user is registered for multiple tournaments.
 - Tournament info on the dashboard is limited to the user's tournaments (registered, active, completed)
 - The user's current ELO
 
 ### Tournaments Page (List View)
-- Cards for all tournaments (upcoming, live, completed, cancelled); completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
+- Cards for all tournaments (upcoming, live, completed); completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
+- Cancelled tournaments are not visible anywhere in the user UI.
 - Each card includes:
   - A small banner image for the tournament.
   - Tournament name.
@@ -50,7 +54,6 @@ The dashboard (replacing the current homepage) must include:
     - Upcoming: "Register Now", "Full", "Registration opens in 14h 32m", or "Registered" (with a checkmark icon)
     - Live: "Live" (with a "View" CTA)
     - Completed: "Completed" with winner name, finish date/time, and a "View results" CTA
-    - Cancelled: "Cancelled"
 
 Clicking a card routes the user to the tournament details page.
 
@@ -60,7 +63,7 @@ Clicking a card routes the user to the tournament details page.
 - Users can register or remove their registration until the start time; unregistering refunds the buy-in, and re-registering charges again.
 - Buy-ins are deducted and locked at registration.
 - Minimum players is configurable per tournament, with an enforced floor of 2.
-- If the tournament reaches maximum players before the start time, registration closes and the CTA shows "Full".
+- If the tournament reaches maximum players before the start time, registration closes and the CTA shows "Full". If a spot opens before the start time, registration reopens.
 - At the start time, if the minimum player count is not met, the tournament is cancelled.
 - If the tournament is cancelled, all player buy-ins and the admin guarantee are refunded.
 - At the start time, if the minimum is met, round 1 matchmaking is random and the tournament begins immediately.
@@ -70,14 +73,14 @@ Clicking a card routes the user to the tournament details page.
 The tournament details page is also the lobby and registration page (pre-start) and the live tournament view (post-start).
 
 This page must show:
-- Tournament status (upcoming, live, completed, or cancelled).
+- Tournament status (upcoming, live, or completed).
 - Minimum and maximum players.
 - Date/time when the tournament begins.
 - Buy-in amount (or Free) and any guaranteed prize pool contribution.
-- Payouts and prize pool.
+- Payouts and prize pool (current totals based on registered players; winner takes all).
 - Total time per player.
 - Max spend (TNB) per game (fixed at 0; special moves disabled).
-- Registered player list (public).
+- Registered player list (avatar, username, ELO).
 
 If the user is registered:
 - Display their current results and progress.
@@ -87,11 +90,12 @@ When the tournament ends:
 - Show trophy graphics next to the top 3 finishers.
 
 Visibility:
-- The page is visible to all users.
-- All users can view the tournament lobby and watch any tournament game live as spectators.
+- The page requires sign-in; unauthenticated users are prompted to sign in.
+- Signed-in users can view the tournament lobby and watch any tournament game live as spectators.
 - Spectators can see both players' remaining time; there is no spectator count or chat.
-- Before the tournament begins, non-registered users see a registration view.
-- After the tournament begins, non-registered users see the tournament lobby view.
+- Before the tournament begins, signed-in non-registered users see a registration view.
+- After the tournament begins, signed-in non-registered users see the tournament lobby view.
+- If a signed-in user has an active tournament match, the lobby shows a "Return to Game" button; clicking their matchup in the bracket also opens the game.
 - When a user is actively playing a tournament game, the game page includes a "Back to Tournament Lobby" button (or similar UI) that returns them to the tournament lobby.
 
 ### Bracket and Scheduling
@@ -100,6 +104,7 @@ The tournament details page must also include the tournament bracket and round s
 Tournament format:
 - Single-elimination bracket.
 - Byes are assigned randomly when the player count is odd and advance the player without a win/loss or ELO change.
+- Byes do not create match records and do not appear in match history; they are only shown as bracket advancement.
 
 Bracket and round schedule:
 - The bracket is created after registration closes and the minimum player count is met.
@@ -107,6 +112,7 @@ Bracket and round schedule:
   - Round 1 - 1:00 PM
   - Round 2 - 2:00 PM
   - Finals - 3:00 PM
+- Round 1 scheduled time always equals the tournament start time.
 - Admin schedule validation enforces a minimum gap between rounds of (2 * total_time_per_player) + buffer (for example, 5 minutes).
 - A countdown timer shows time until the next round.
 - If a round finishes early, players wait until the scheduled next round; show a "Waiting for next round" state with a countdown.
@@ -132,9 +138,11 @@ An admin section is required so the site admin can create tournaments. Admin cre
 - Max spend is fixed to 0 for tournaments; special moves are disabled.
 - Optionally adding a guaranteed amount to the prize pool at creation.
 - Defining round schedule times; validation enforces a minimum gap between rounds of (2 * total_time_per_player) + buffer (for example, 5 minutes).
-- Payouts are always distributed to the top 10% of finishers, weighted by placement, from the total prize pool. Paid places = max(1, ceil(total_players * 0.10)); weights are linear by placement (for N paid places, weight = N - place + 1).
+- Round 1 scheduled time always equals the tournament start time.
+- The winner receives the entire prize pool; no other payouts are made.
 - Admins cannot edit tournament settings after creation; to change settings, they must cancel and recreate the tournament.
 - Admins can manually cancel a tournament before the start time, triggering full refunds.
+- Admins cannot cancel a tournament after it has started.
 - Prize pool funding comes from player buy-ins plus any admin guarantee; all funds are reserved and refunded if the tournament is cancelled.
 
 ---
