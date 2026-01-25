@@ -41,11 +41,13 @@ The dashboard (replacing the current homepage) must include:
   - For active tournaments, show time until the user's next round.
   - Multiple entries may appear when the user is registered for multiple tournaments.
 - Tournament info on the dashboard is limited to the user's tournaments (registered, active, completed)
+- If a user is eliminated from an active tournament, that tournament no longer appears in their active list.
 - The user's current ELO
 
 ### Tournaments Page (List View)
 - Cards for all tournaments (upcoming, live, completed); completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
 - Cancelled tournaments are not visible anywhere in the user UI.
+- The list view requires sign-in; signed-out users are prompted to sign in.
 - Each card includes:
   - A small banner image for the tournament.
   - Tournament name.
@@ -54,6 +56,7 @@ The dashboard (replacing the current homepage) must include:
     - Upcoming: "Register Now", "Full", "Registration opens in 14h 32m", or "Registered" (with a checkmark icon)
     - Live: "Live" (with a "View" CTA)
     - Completed: "Completed" with winner name, finish date/time, and a "View results" CTA
+  - If the user is registered, the CTA shows "Registered" (with a checkmark icon) even when the tournament is full.
 
 Clicking a card routes the user to the tournament details page.
 
@@ -66,8 +69,9 @@ Clicking a card routes the user to the tournament details page.
 - If the tournament reaches maximum players before the start time, registration closes and the CTA shows "Full". If a spot opens before the start time, registration reopens.
 - At the start time, if the minimum player count is not met, the tournament is cancelled.
 - If the tournament is cancelled, all player buy-ins and the admin guarantee are refunded.
+- Registered users receive a notification when a tournament is cancelled.
 - At the start time, if the minimum is met, round 1 matchmaking is random and the tournament begins immediately.
-- Users can register for multiple tournaments even if schedules overlap; missing a match results in a timeout loss.
+- Users can register for multiple tournaments even if schedules overlap; missing a match results in a timeout loss. No warnings or blocks are shown for overlaps.
 
 ### Tournament Details / Lobby (Single Page)
 The tournament details page is also the lobby and registration page (pre-start) and the live tournament view (post-start).
@@ -77,23 +81,24 @@ This page must show:
 - Minimum and maximum players.
 - Date/time when the tournament begins.
 - Buy-in amount (or Free) and any guaranteed prize pool contribution.
-- Payouts and prize pool (current totals based on registered players; winner takes all).
+- Payouts and prize pool (guaranteed minimum and current totals based on registered players; winner takes all).
 - Total time per player.
 - Max spend (TNB) per game (fixed at 0; special moves disabled).
 - Registered player list (avatar, username, ELO).
 
 If the user is registered:
-- Display their current results and progress.
+- Display their wins/losses, current round, and next opponent.
 
 When the tournament ends:
 - Display final results for all players.
-- Show trophy graphics next to the top 3 finishers.
+- Highlight the winner with a trophy graphic.
 
 Visibility:
 - The page requires sign-in; unauthenticated users are prompted to sign in.
 - Signed-in users can view the tournament lobby and watch any tournament game live as spectators.
 - Spectators can see both players' remaining time; there is no spectator count or chat.
 - Before the tournament begins, signed-in non-registered users see a registration view.
+- If registration is not yet open, the registration view shows a disabled register CTA with a countdown.
 - After the tournament begins, signed-in non-registered users see the tournament lobby view.
 - If a signed-in user has an active tournament match, the lobby shows a "Return to Game" button; clicking their matchup in the bracket also opens the game.
 - When a user is actively playing a tournament game, the game page includes a "Back to Tournament Lobby" button (or similar UI) that returns them to the tournament lobby.
@@ -116,7 +121,7 @@ Bracket and round schedule:
 - Admin schedule validation enforces a minimum gap between rounds of (2 * total_time_per_player) + buffer (for example, 5 minutes).
 - A countdown timer shows time until the next round.
 - If a round finishes early, players wait until the scheduled next round; show a "Waiting for next round" state with a countdown.
-- Rounds always start at their scheduled times.
+- Rounds always start at their scheduled times, even if all matches finish early.
 - Players may play standard lobby games while waiting between rounds; if they miss their tournament match, they time out.
 
 ### Match Rules and Ratings
