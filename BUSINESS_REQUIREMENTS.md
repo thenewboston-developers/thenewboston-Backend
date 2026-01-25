@@ -41,11 +41,11 @@ The dashboard (replacing the current homepage) must include:
   - For active tournaments, show time until the user's next round.
   - Multiple entries may appear when the user is registered for multiple tournaments.
 - Tournament info on the dashboard is limited to the user's tournaments (registered, active, completed)
-- If a user is eliminated from an active tournament, that tournament no longer appears in their active list.
+- If a user is eliminated from an active tournament, that tournament moves into their completed list even while the tournament is still live.
 - The user's current ELO
 
 ### Tournaments Page (List View)
-- Cards for all tournaments (upcoming, live, completed); completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
+- Cards for all tournaments (live, upcoming, completed), ordered live then upcoming then completed; completed tournaments remain visible indefinitely. The list is paginated and not filtered by user participation.
 - Cancelled tournaments are not visible anywhere in the user UI.
 - The list view requires sign-in; signed-out users are prompted to sign in.
 - Each card includes:
@@ -65,6 +65,8 @@ Clicking a card routes the user to the tournament details page.
 - Registration closes at the start time (server time); any request at or after start is rejected.
 - Users can register or remove their registration until the start time; unregistering refunds the buy-in, and re-registering charges again.
 - Buy-ins are deducted and locked at registration.
+- Buy-ins are TNB only; free tournaments still include a guaranteed TNB prize pool.
+- Users without a TNB wallet can register for free tournaments; if they win, a TNB wallet is created for payout.
 - Minimum players is configurable per tournament, with an enforced floor of 2.
 - If the tournament reaches maximum players before the start time, registration closes and the CTA shows "Full". If a spot opens before the start time, registration reopens.
 - At the start time, if the minimum player count is not met, the tournament is cancelled.
@@ -84,13 +86,13 @@ This page must show:
 - Payouts and prize pool (guaranteed minimum and current totals based on registered players; winner takes all).
 - Total time per player.
 - Max spend (TNB) per game (fixed at 0; special moves disabled).
-- Registered player list (avatar, username, ELO).
+- Registered player list (avatar, username, current ELO).
 
 If the user is registered:
 - Display their wins/losses, current round, and next opponent.
 
 When the tournament ends:
-- Display final results for all players.
+- Display final results for all players, including placement and elimination round.
 - Highlight the winner with a trophy graphic.
 
 Visibility:
@@ -102,6 +104,7 @@ Visibility:
 - After the tournament begins, signed-in non-registered users see the tournament lobby view.
 - If a signed-in user has an active tournament match, the lobby shows a "Return to Game" button; clicking their matchup in the bracket also opens the game.
 - When a user is actively playing a tournament game, the game page includes a "Back to Tournament Lobby" button (or similar UI) that returns them to the tournament lobby.
+- If a user opens a cancelled tournament (for example, via a direct link), show a cancellation message.
 
 ### Bracket and Scheduling
 The tournament details page must also include the tournament bracket and round schedule.
@@ -113,12 +116,10 @@ Tournament format:
 
 Bracket and round schedule:
 - The bracket is created after registration closes and the minimum player count is met.
-- Round schedule times are defined per tournament, for example:
-  - Round 1 - 1:00 PM
-  - Round 2 - 2:00 PM
-  - Finals - 3:00 PM
-- Round 1 scheduled time always equals the tournament start time.
-- Admin schedule validation enforces a minimum gap between rounds of (2 * total_time_per_player) + buffer (for example, 5 minutes).
+- The number of rounds is based on the player count.
+- The admin sets a tournament start time and a break time between rounds; per-round start times are derived automatically.
+- Round 1 starts at the tournament start time.
+- Each round length equals the max possible game duration (2 * total_time_per_player) plus the configured break time.
 - A countdown timer shows time until the next round.
 - If a round finishes early, players wait until the scheduled next round; show a "Waiting for next round" state with a countdown.
 - Rounds always start at their scheduled times, even if all matches finish early.
@@ -126,8 +127,10 @@ Bracket and round schedule:
 
 ### Match Rules and Ratings
 - Tournament matches follow standard Connect Five rules, but special moves and in-match purchases are disabled.
-- Draws are not allowed in any Connect Five match; if a game ends with no Connect Five, the player who moved first loses.
+- Tournament game UI hides spend/purchase elements and any result TNB delta callouts.
+- Draws are not allowed in any Connect Five match; if a game ends with no Connect Five, the player who moved first loses. Existing draw results should be cleaned up before tournament work begins.
 - Max spend (TNB) per game is fixed at 0 for tournaments; total time per player is set by the site admin.
+- The starting player for each tournament match is random.
 - Tournament matches affect ELO and player stats the same way as standard matches.
 - No rematches in tournament brackets; each pairing is a single game.
 - No-shows or disconnects are handled by standard per-player timeouts; there is no grace period or reconnect window and the clock keeps running. If both players no-show, the player whose clock runs first times out and loses.
@@ -139,11 +142,11 @@ Bracket and round schedule:
 
 ### Admin Management
 An admin section is required so the site admin can create tournaments. Admin creation includes:
-- Setting the start time, minimum/maximum players (minimum >= 2), total time per player, and the buy-in amount (or Free).
+- Setting the start time, minimum/maximum players (minimum >= 2), total time per player, buy-in amount (or Free), and break time between rounds.
+- Providing a banner image (required).
 - Max spend is fixed to 0 for tournaments; special moves are disabled.
-- Optionally adding a guaranteed amount to the prize pool at creation.
-- Defining round schedule times; validation enforces a minimum gap between rounds of (2 * total_time_per_player) + buffer (for example, 5 minutes).
-- Round 1 scheduled time always equals the tournament start time.
+- Optionally adding a guaranteed amount to the prize pool at creation (including for free tournaments).
+- Round schedule times are generated automatically based on start time, total time per player, and break time.
 - The winner receives the entire prize pool; no other payouts are made.
 - Admins cannot edit tournament settings after creation; to change settings, they must cancel and recreate the tournament.
 - Admins can manually cancel a tournament before the start time, triggering full refunds.
