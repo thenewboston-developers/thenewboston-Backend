@@ -86,6 +86,7 @@ Visibility:
 - The page is visible to all users.
 - Before the tournament begins, non-registered users see a registration view.
 - After the tournament begins, non-registered users see the tournament lobby view.
+- When a user is actively playing a tournament game, the game page includes a "Back to Tournament Lobby" button (or similar UI) that returns them to the tournament lobby.
 
 ### Bracket and Scheduling
 The tournament details page must also include the tournament bracket and round schedule.
@@ -119,6 +120,3 @@ An admin section is required so the site admin can create tournaments. Admin cre
 - Defining payout distribution (for example: 1st = 300 TNB, 2nd = 200 TNB, 3rd = 100 TNB).
 - Selecting which tournament appears in the hero banner (manual selection; no automated logic yet).
 - Funding the prize pool from the admin wallet at creation; funds are reserved and refunded if the tournament is cancelled.
-
-## Remaining Questions
-- None at this time.
