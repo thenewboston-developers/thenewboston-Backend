@@ -33,7 +33,7 @@ from ..serializers import (
 )
 from ..services.clocks import apply_elapsed_time, switch_turn, touch_turn
 from ..services.escrow import create_escrow, get_wallet_for_update, lock_stake, purchase_special
-from ..services.match import finish_match_connect5, finish_match_draw, finish_match_timeout
+from ..services.match import finish_match_connect5, finish_match_draw, finish_match_resign, finish_match_timeout
 from ..services.rules import apply_move, check_win, is_draw
 from ..services.streaming import stream_challenge_update, stream_match_update
 
@@ -250,6 +250,39 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
             return Response(response_data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='resign')
+    def resign(self, request, pk=None):
+        assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
+
+        with transaction.atomic():
+            match = (
+                ConnectFiveMatch.objects.select_for_update()
+                .select_related('challenge', 'player_a', 'player_b')
+                .get(pk=pk)
+            )
+
+            if match.status != MatchStatus.ACTIVE:
+                raise GoneError({'detail': 'Match is no longer active.'})
+
+            if request.user.id not in {match.player_a_id, match.player_b_id}:
+                raise PermissionDenied({'detail': 'You are not a participant in this match.'})
+
+            remaining, _ = apply_elapsed_time(match)
+            if remaining <= 0:
+                winner = match.player_b if match.active_player_id == match.player_a_id else match.player_a
+                finish_match_timeout(match=match, winner=winner)
+                response_data = ConnectFiveMatchReadSerializer(match, context={'request': request}).data
+                stream_match_update(match=match, request=request, match_data=response_data)
+                raise GoneError({'detail': 'Match ended due to timeout.'})
+
+            winner = match.player_b if request.user.id == match.player_a_id else match.player_a
+            finish_match_resign(match=match, resigning_player=request.user, winner=winner)
+
+            response_data = ConnectFiveMatchReadSerializer(match, context={'request': request}).data
+            stream_match_update(match=match, request=request, match_data=response_data)
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], url_path='rematch')
     def rematch(self, request, pk=None):
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
@@ -261,7 +294,12 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
                 .get(pk=pk)
             )
 
-            if match.status not in {MatchStatus.DRAW, MatchStatus.FINISHED_CONNECT5, MatchStatus.FINISHED_TIMEOUT}:
+            if match.status not in {
+                MatchStatus.DRAW,
+                MatchStatus.FINISHED_CONNECT5,
+                MatchStatus.FINISHED_RESIGN,
+                MatchStatus.FINISHED_TIMEOUT,
+            }:
                 raise ConflictError({'detail': 'Rematches are only available for completed matches.'})
 
             if request.user.id not in {match.player_a_id, match.player_b_id}:
@@ -328,7 +366,12 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             pk=pk
         )
 
-        if match.status not in {MatchStatus.DRAW, MatchStatus.FINISHED_CONNECT5, MatchStatus.FINISHED_TIMEOUT}:
+        if match.status not in {
+            MatchStatus.DRAW,
+            MatchStatus.FINISHED_CONNECT5,
+            MatchStatus.FINISHED_RESIGN,
+            MatchStatus.FINISHED_TIMEOUT,
+        }:
             raise ConflictError({'detail': 'Rematches are only available for completed matches.'})
 
         if request.user.id not in {match.player_a_id, match.player_b_id}:

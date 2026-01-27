@@ -14,6 +14,7 @@ class MatchStatus(models.TextChoices):
     CANCELLED = 'cancelled', 'Cancelled'
     DRAW = 'draw', 'Draw'
     FINISHED_CONNECT5 = 'finished_connect5', 'Finished (Connect 5)'
+    FINISHED_RESIGN = 'finished_resign', 'Finished (Resign)'
     FINISHED_TIMEOUT = 'finished_timeout', 'Finished (Timeout)'
 
 
@@ -36,6 +37,7 @@ class MatchEventType(models.TextChoices):
     CHALLENGE_EXPIRED = 'challenge_expired', 'Challenge Expired'
     MOVE = 'move', 'Move'
     PURCHASE = 'purchase', 'Purchase'
+    RESIGN = 'resign', 'Resign'
     SETTLEMENT = 'settlement', 'Settlement'
     TIMEOUT = 'timeout', 'Timeout'
 
