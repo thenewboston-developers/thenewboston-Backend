@@ -105,29 +105,6 @@ def refund_challenge(*, escrow, wallet):
     escrow.save(update_fields=['status', 'modified_date'])
 
 
-def settle_draw(*, escrow, wallet_a, wallet_b):
-    if escrow.status == EscrowStatus.SETTLED:
-        raise EscrowAlreadySettledError({'detail': 'Escrow already settled.'})
-
-    if escrow.player_a_contrib:
-        credit_wallet(
-            wallet=wallet_a,
-            escrow=escrow,
-            amount=escrow.player_a_contrib,
-            action=LedgerAction.DRAW_REFUND,
-        )
-    if escrow.player_b_contrib:
-        credit_wallet(
-            wallet=wallet_b,
-            escrow=escrow,
-            amount=escrow.player_b_contrib,
-            action=LedgerAction.DRAW_REFUND,
-        )
-
-    escrow.status = EscrowStatus.SETTLED
-    escrow.save(update_fields=['status', 'modified_date'])
-
-
 def settle_win(*, escrow, wallet, amount):
     if escrow.status == EscrowStatus.SETTLED:
         raise EscrowAlreadySettledError({'detail': 'Escrow already settled.'})
