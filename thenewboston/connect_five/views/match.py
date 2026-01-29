@@ -56,7 +56,12 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        queryset = queryset.filter(Q(player_a=user) | Q(player_b=user))
+
+        mine_filter = self.request.query_params.get('mine')
+        if mine_filter in {'1', 'self', 'true'}:
+            queryset = queryset.filter(Q(player_a=user) | Q(player_b=user))
+        elif mine_filter == 'exclude':
+            queryset = queryset.exclude(Q(player_a=user) | Q(player_b=user))
 
         if status_filter := self.request.query_params.get('status'):
             queryset = queryset.filter(status=status_filter)
