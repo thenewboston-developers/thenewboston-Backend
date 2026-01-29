@@ -12,8 +12,8 @@ class ChallengeStatus(models.TextChoices):
 class MatchStatus(models.TextChoices):
     ACTIVE = 'active', 'Active'
     CANCELLED = 'cancelled', 'Cancelled'
-    DRAW = 'draw', 'Draw'
     FINISHED_CONNECT5 = 'finished_connect5', 'Finished (Connect 5)'
+    FINISHED_FULL_BOARD = 'finished_full_board', 'Finished (Full Board)'
     FINISHED_RESIGN = 'finished_resign', 'Finished (Resign)'
     FINISHED_TIMEOUT = 'finished_timeout', 'Finished (Timeout)'
 
@@ -53,7 +53,6 @@ class LedgerAction(models.TextChoices):
     STAKE_ACCEPT = 'stake_accept', 'Stake Accept'
     STAKE_LOCK = 'stake_lock', 'Stake Lock'
     WIN_PAYOUT = 'win_payout', 'Win Payout'
-    DRAW_REFUND = 'draw_refund', 'Draw Refund'
 
 
 class LedgerDirection(models.TextChoices):

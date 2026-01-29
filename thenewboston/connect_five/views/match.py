@@ -33,8 +33,8 @@ from ..serializers import (
 )
 from ..services.clocks import apply_elapsed_time, switch_turn, touch_turn
 from ..services.escrow import create_escrow, get_wallet_for_update, lock_stake, purchase_special
-from ..services.match import finish_match_connect5, finish_match_draw, finish_match_resign, finish_match_timeout
-from ..services.rules import apply_move, check_win, is_draw
+from ..services.match import finish_match_connect5, finish_match_full_board, finish_match_resign, finish_match_timeout
+from ..services.rules import apply_move, check_win, is_board_full
 from ..services.streaming import stream_challenge_update, stream_match_update
 
 
@@ -128,8 +128,9 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             if move_type != MoveType.BOMB:
                 if check_win(board_state=board_state, player_value=player_value, positions=placed_positions):
                     finish_match_connect5(match=match, winner=request.user)
-                elif is_draw(board_state=board_state):
-                    finish_match_draw(match=match)
+                elif is_board_full(board_state=board_state):
+                    winner = _get_full_board_winner(match)
+                    finish_match_full_board(match=match, winner=winner)
                 else:
                     switch_turn(match, now=now)
             else:
@@ -300,8 +301,8 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             )
 
             if match.status not in {
-                MatchStatus.DRAW,
                 MatchStatus.FINISHED_CONNECT5,
+                MatchStatus.FINISHED_FULL_BOARD,
                 MatchStatus.FINISHED_RESIGN,
                 MatchStatus.FINISHED_TIMEOUT,
             }:
@@ -372,8 +373,8 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         )
 
         if match.status not in {
-            MatchStatus.DRAW,
             MatchStatus.FINISHED_CONNECT5,
+            MatchStatus.FINISHED_FULL_BOARD,
             MatchStatus.FINISHED_RESIGN,
             MatchStatus.FINISHED_TIMEOUT,
         }:
@@ -395,6 +396,18 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+def _get_full_board_winner(match):
+    if not match.active_player_id:
+        return match.player_a
+
+    active_player = match.player_a if match.active_player_id == match.player_a_id else match.player_b
+
+    if match.turn_number % 2 == 0:
+        return active_player
+
+    return match.player_b if active_player.id == match.player_a_id else match.player_a
 
 
 def _get_inventory_field(move_type):

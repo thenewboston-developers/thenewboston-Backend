@@ -96,5 +96,5 @@ def check_win(*, board_state, player_value, positions):
     return False
 
 
-def is_draw(board_state):
+def is_board_full(board_state):
     return all(cell != 0 for row in board_state for cell in row)

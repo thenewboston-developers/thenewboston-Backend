@@ -10,4 +10,4 @@ class ConnectFiveLeaderboardEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ConnectFiveStats
-        fields = ('draws', 'elo', 'losses', 'matches_played', 'user', 'wins')
+        fields = ('elo', 'losses', 'matches_played', 'user', 'wins')

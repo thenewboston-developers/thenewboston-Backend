@@ -11,7 +11,6 @@ class ConnectFiveStats(CreatedModified):
     matches_played = models.PositiveIntegerField(default=0)
     wins = models.PositiveIntegerField(default=0)
     losses = models.PositiveIntegerField(default=0)
-    draws = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = 'Connect Five stats'
