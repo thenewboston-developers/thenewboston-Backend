@@ -20,13 +20,17 @@ from ..enums import ChallengeStatus, MatchEventType, MatchStatus, MoveType, Spec
 from ..exceptions import ConflictError, GoneError
 from ..models import (
     ConnectFiveChallenge,
+    ConnectFiveChatMessage,
     ConnectFiveEscrow,
     ConnectFiveMatch,
     ConnectFiveMatchEvent,
     ConnectFiveMatchPlayer,
 )
+from ..pagination import ConnectFiveChatPagination
 from ..serializers import (
     ConnectFiveChallengeReadSerializer,
+    ConnectFiveChatMessageCreateSerializer,
+    ConnectFiveChatMessageReadSerializer,
     ConnectFiveMatchReadSerializer,
     ConnectFiveMoveSerializer,
     ConnectFivePurchaseSerializer,
@@ -35,7 +39,7 @@ from ..services.clocks import apply_elapsed_time, switch_turn, touch_turn
 from ..services.escrow import create_escrow, get_wallet_for_update, lock_stake, purchase_special
 from ..services.match import finish_match_connect5, finish_match_full_board, finish_match_resign, finish_match_timeout
 from ..services.rules import apply_move, check_win, is_board_full
-from ..services.streaming import stream_challenge_update, stream_match_update
+from ..services.streaming import stream_challenge_update, stream_chat_message, stream_match_update
 
 
 class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
@@ -396,6 +400,31 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get', 'post'], url_path='chat')
+    def chat(self, request, pk=None):
+        match = self.get_object()
+
+        if request.method == 'GET':
+            queryset = (
+                ConnectFiveChatMessage.objects.filter(match=match).select_related('sender').order_by('-created_date')
+            )
+            paginator = ConnectFiveChatPagination()
+            page = paginator.paginate_queryset(queryset, request, view=self)
+            serializer = ConnectFiveChatMessageReadSerializer(page, many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = ConnectFiveChatMessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = ConnectFiveChatMessage.objects.create(
+            match=match,
+            sender=request.user,
+            message=serializer.validated_data['message'],
+        )
+        response_data = ConnectFiveChatMessageReadSerializer(message, context={'request': request}).data
+        stream_chat_message(message=message, request=request, message_data=response_data)
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 def _get_full_board_winner(match):
