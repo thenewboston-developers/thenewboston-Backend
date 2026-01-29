@@ -1,6 +1,6 @@
 from thenewboston.general.enums import MessageType
 
-from ..consumers import ConnectFiveConsumer
+from ..consumers import ConnectFiveConsumer, ConnectFivePublicConsumer
 from ..serializers import ConnectFiveChallengeReadSerializer, ConnectFiveMatchReadSerializer
 
 
@@ -25,6 +25,10 @@ def stream_match_update(*, match, request=None, match_data=None):
         message_type=MessageType.UPDATE_CONNECT_FIVE_MATCH,
         match_data=match_data,
         user_ids=[match.player_a_id, match.player_b_id],
+    )
+    ConnectFivePublicConsumer.stream_match(
+        message_type=MessageType.UPDATE_CONNECT_FIVE_MATCH,
+        match_data=match_data,
     )
 
     return match_data

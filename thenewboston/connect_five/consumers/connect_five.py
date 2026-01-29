@@ -58,3 +58,23 @@ class ConnectFiveConsumer(JsonWebsocketConsumer):
         'type' indicating the action.
         """
         self.send_json({'match': event['payload'], 'type': event['type']})
+
+
+class ConnectFivePublicConsumer(JsonWebsocketConsumer):
+    group_name = 'connect_five_public'
+
+    def connect(self):
+        self.accept()
+        async_to_sync(get_channel_layer().group_add)(self.group_name, self.channel_name)
+
+    def disconnect(self, close_code):
+        async_to_sync(get_channel_layer().group_discard)(self.group_name, self.channel_name)
+
+    @classmethod
+    def stream_match(cls, *, message_type, match_data):
+        channel_layer = get_channel_layer()
+        event = {'payload': match_data, 'type': message_type.value}
+        async_to_sync(channel_layer.group_send)(cls.group_name, event)
+
+    def update_connect_five_match(self, event):
+        self.send_json({'match': event['payload'], 'type': event['type']})

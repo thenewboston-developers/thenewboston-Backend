@@ -49,16 +49,19 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        queryset = queryset.filter(Q(challenger=user) | Q(opponent=user))
-
-        if status_filter := self.request.query_params.get('status'):
-            queryset = queryset.filter(status=status_filter)
 
         mine_filter = self.request.query_params.get('mine')
-        if mine_filter == 'sent':
+        if mine_filter in {'1', 'self', 'true'}:
+            queryset = queryset.filter(Q(challenger=user) | Q(opponent=user))
+        elif mine_filter == 'exclude':
+            queryset = queryset.exclude(Q(challenger=user) | Q(opponent=user))
+        elif mine_filter == 'sent':
             queryset = queryset.filter(challenger=user)
         elif mine_filter == 'received':
             queryset = queryset.filter(opponent=user)
+
+        if status_filter := self.request.query_params.get('status'):
+            queryset = queryset.filter(status=status_filter)
 
         return queryset
 
