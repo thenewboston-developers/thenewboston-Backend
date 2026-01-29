@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     ConnectFiveChallenge,
+    ConnectFiveChatMessage,
     ConnectFiveEscrow,
     ConnectFiveLedgerEntry,
     ConnectFiveMatch,
@@ -11,6 +12,7 @@ from .models import (
 )
 
 admin.site.register(ConnectFiveChallenge)
+admin.site.register(ConnectFiveChatMessage)
 admin.site.register(ConnectFiveEscrow)
 admin.site.register(ConnectFiveLedgerEntry)
 admin.site.register(ConnectFiveMatch)

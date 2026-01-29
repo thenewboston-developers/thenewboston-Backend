@@ -1,7 +1,11 @@
 from thenewboston.general.enums import MessageType
 
-from ..consumers import ConnectFiveConsumer, ConnectFivePublicConsumer
-from ..serializers import ConnectFiveChallengeReadSerializer, ConnectFiveMatchReadSerializer
+from ..consumers import ConnectFiveChatConsumer, ConnectFiveConsumer, ConnectFivePublicConsumer
+from ..serializers import (
+    ConnectFiveChallengeReadSerializer,
+    ConnectFiveChatMessageReadSerializer,
+    ConnectFiveMatchReadSerializer,
+)
 
 
 def stream_challenge_update(*, challenge, request=None, challenge_data=None):
@@ -32,3 +36,16 @@ def stream_match_update(*, match, request=None, match_data=None):
     )
 
     return match_data
+
+
+def stream_chat_message(*, message, request=None, message_data=None):
+    if message_data is None:
+        message_data = ConnectFiveChatMessageReadSerializer(message, context={'request': request}).data
+
+    ConnectFiveChatConsumer.stream_message(
+        message_type=MessageType.CREATE_CONNECT_FIVE_CHAT_MESSAGE,
+        message_data=message_data,
+        match_id=message.match_id,
+    )
+
+    return message_data

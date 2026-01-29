@@ -3,6 +3,7 @@ from enum import Enum
 
 class MessageType(Enum):
     CREATE_EXCHANGE_ORDER = 'create.exchange_order'
+    CREATE_CONNECT_FIVE_CHAT_MESSAGE = 'create.connect_five_chat_message'
     CREATE_NOTIFICATION = 'create.notification'
     CREATE_TRADE = 'create.trade'
     UPDATE_CONNECT_FIVE_CHALLENGE = 'update.connect_five_challenge'
