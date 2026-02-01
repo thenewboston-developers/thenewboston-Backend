@@ -17,9 +17,15 @@ from thenewboston.notifications.models import Notification
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..constants import TIME_LIMIT_CHOICES
-from ..enums import ChallengeStatus, MatchEventType
+from ..enums import ChallengeStatus, MatchEventType, MatchStatus
 from ..exceptions import ConflictError, GoneError
-from ..models import ConnectFiveChallenge, ConnectFiveEscrow, ConnectFiveMatchEvent
+from ..models import (
+    ConnectFiveChallenge,
+    ConnectFiveEscrow,
+    ConnectFiveMatch,
+    ConnectFiveMatchEvent,
+    ConnectFiveMatchPlayer,
+)
 from ..serializers import ConnectFiveChallengeCreateSerializer, ConnectFiveChallengeReadSerializer
 from ..services.elo import get_or_create_stats
 from ..services.escrow import (
@@ -158,13 +164,12 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
                     raise ConflictError({'detail': 'Insufficient funds for rematch.'}) from error
                 raise
 
-            from ..models import ConnectFiveMatch, ConnectFiveMatchPlayer
-
             active_player = _get_active_player(challenge=challenge)
+            player_a, player_b = _get_player_sides(challenge=challenge)
             match = ConnectFiveMatch.objects.create(
                 challenge=challenge,
-                player_a=challenge.challenger,
-                player_b=challenge.opponent,
+                player_a=player_a,
+                player_b=player_b,
                 active_player=active_player,
                 clock_a_remaining_ms=challenge.time_limit_seconds * 1000,
                 clock_b_remaining_ms=challenge.time_limit_seconds * 1000,
@@ -257,3 +262,23 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
 
 def _get_active_player(*, challenge):
     return challenge.opponent
+
+
+def _get_player_sides(*, challenge):
+    latest_match = (
+        ConnectFiveMatch.objects.filter(
+            Q(player_a=challenge.challenger, player_b=challenge.opponent)
+            | Q(player_a=challenge.opponent, player_b=challenge.challenger),
+            status__in={
+                MatchStatus.FINISHED_CONNECT5,
+                MatchStatus.FINISHED_FULL_BOARD,
+                MatchStatus.FINISHED_RESIGN,
+                MatchStatus.FINISHED_TIMEOUT,
+            },
+        )
+        .order_by('-finished_at', '-created_date')
+        .first()
+    )
+    if latest_match:
+        return latest_match.player_b, latest_match.player_a
+    return challenge.challenger, challenge.opponent
