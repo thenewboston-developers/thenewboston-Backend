@@ -1,5 +1,6 @@
 from .challenge import ConnectFiveChallengeCreateSerializer, ConnectFiveChallengeReadSerializer
 from .chat_message import ConnectFiveChatMessageCreateSerializer, ConnectFiveChatMessageReadSerializer
+from .elo_snapshot import ConnectFiveEloSnapshotSerializer
 from .leaderboard import ConnectFiveLeaderboardEntrySerializer
 from .match import ConnectFiveMatchPlayerSerializer, ConnectFiveMatchReadSerializer
 from .move import ConnectFiveMoveSerializer
@@ -10,6 +11,7 @@ __all__ = [
     'ConnectFiveChallengeReadSerializer',
     'ConnectFiveChatMessageCreateSerializer',
     'ConnectFiveChatMessageReadSerializer',
+    'ConnectFiveEloSnapshotSerializer',
     'ConnectFiveLeaderboardEntrySerializer',
     'ConnectFiveMatchPlayerSerializer',
     'ConnectFiveMatchReadSerializer',

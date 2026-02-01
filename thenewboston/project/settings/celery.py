@@ -1,6 +1,12 @@
+from celery.schedules import crontab
+
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    'capture_connect_five_elo_snapshots': {
+        'task': 'tasks.capture_connect_five_elo_snapshots',
+        'schedule': crontab(hour=23, minute=59),
+    },
     'expire_connect_five_challenges': {
         'task': 'tasks.expire_connect_five_challenges',
         'schedule': 30,
