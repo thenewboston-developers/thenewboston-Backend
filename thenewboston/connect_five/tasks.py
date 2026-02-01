@@ -4,7 +4,7 @@ from django.utils import timezone
 from thenewboston.project.celery import app
 
 from .enums import ChallengeStatus, MatchStatus
-from .models import ConnectFiveChallenge, ConnectFiveEscrow, ConnectFiveMatch
+from .models import ConnectFiveChallenge, ConnectFiveEloSnapshot, ConnectFiveEscrow, ConnectFiveMatch, ConnectFiveStats
 from .services.clocks import apply_elapsed_time
 from .services.escrow import get_wallet_for_update, refund_challenge
 from .services.match import finish_match_timeout
@@ -64,3 +64,16 @@ def sweep_connect_five_timeouts_task():
             winner = match.player_b if match.active_player_id == match.player_a_id else match.player_a
             finish_match_timeout(match=match, winner=winner)
             stream_match_update(match=match)
+
+
+@app.task(name='tasks.capture_connect_five_elo_snapshots')
+def capture_connect_five_elo_snapshots_task():
+    snapshot_date = timezone.localdate()
+    stats_queryset = ConnectFiveStats.objects.all().only('elo', 'user_id')
+
+    for stats in stats_queryset.iterator():
+        ConnectFiveEloSnapshot.objects.update_or_create(
+            user_id=stats.user_id,
+            snapshot_date=snapshot_date,
+            defaults={'elo': stats.elo},
+        )

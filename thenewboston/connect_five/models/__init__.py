@@ -1,5 +1,6 @@
 from .challenge import ConnectFiveChallenge
 from .chat_message import ConnectFiveChatMessage
+from .elo_snapshot import ConnectFiveEloSnapshot
 from .escrow import ConnectFiveEscrow, ConnectFiveLedgerEntry
 from .match import ConnectFiveMatch
 from .match_event import ConnectFiveMatchEvent
@@ -9,6 +10,7 @@ from .stats import ConnectFiveStats
 __all__ = [
     'ConnectFiveChallenge',
     'ConnectFiveChatMessage',
+    'ConnectFiveEloSnapshot',
     'ConnectFiveEscrow',
     'ConnectFiveLedgerEntry',
     'ConnectFiveMatch',
