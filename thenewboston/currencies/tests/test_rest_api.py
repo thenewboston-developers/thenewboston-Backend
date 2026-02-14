@@ -60,3 +60,36 @@ def test_read_currencies_as_bucky(api_client_bucky):
     assert data['next'] is None
     assert data['previous'] is None
     assert data['results'] == sorted(expected_currencies, key=lambda x: x['created_date'], reverse=True)
+
+
+@pytest.mark.django_db
+def test_read_currencies_search_filter(api_client_bucky):
+    url = '/api/currencies'
+    baker.make(
+        'currencies.Currency',
+        description='Space currency',
+        domain='lunar.example',
+        logo=None,
+        ticker='MOON',
+    )
+    baker.make(
+        'currencies.Currency',
+        description='Ocean currency',
+        domain='sea.example',
+        logo=None,
+        ticker='WAVE',
+    )
+    baker.make(
+        'currencies.Currency',
+        description='Forest currency',
+        domain='forest.example',
+        logo=None,
+        ticker='TREE',
+    )
+
+    response = api_client_bucky.get(f'{url}?search=wav')
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data['count'] == 1
+    assert data['results'][0]['ticker'] == 'WAVE'
