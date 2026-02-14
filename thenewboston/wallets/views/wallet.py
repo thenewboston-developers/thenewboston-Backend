@@ -108,7 +108,7 @@ class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
 
     def get_queryset(self):
         user = self.request.user
-        return Wallet.objects.filter(owner=user)
+        return Wallet.objects.filter(owner=user).select_related('currency').order_by('currency__ticker', 'id')
 
     def get_serializer_class(self):
         if self.action == 'create':
