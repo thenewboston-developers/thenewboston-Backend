@@ -9,6 +9,7 @@ from thenewboston.general.utils.text import truncate_text
 from thenewboston.notifications.consumers import NotificationConsumer
 from thenewboston.notifications.models.notification import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
+from thenewboston.social.consumers import CommentConsumer
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..models import Comment
@@ -25,6 +26,15 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
         read_serializer = CommentReadSerializer(comment, context={'request': request})
+        comment_data = read_serializer.data
+
+        transaction.on_commit(
+            lambda comment_data=comment_data, post_id=comment.post_id: CommentConsumer.stream_comment(
+                message_type=MessageType.CREATE_COMMENT,
+                comment_data=comment_data,
+                post_id=post_id,
+            )
+        )
 
         new_mentions = getattr(comment, '_new_mention_ids', None)
         if new_mentions:
@@ -39,7 +49,7 @@ class CommentViewSet(viewsets.ModelViewSet):
             if not post_owner_was_mentioned:
                 self.notify_post_owner(comment=comment, request=request)
 
-        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(comment_data, status=status.HTTP_201_CREATED)
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -89,5 +99,30 @@ class CommentViewSet(viewsets.ModelViewSet):
             )
 
         read_serializer = CommentReadSerializer(comment, context={'request': request})
+        comment_data = read_serializer.data
 
-        return Response(read_serializer.data)
+        transaction.on_commit(
+            lambda comment_data=comment_data, post_id=comment.post_id: CommentConsumer.stream_comment(
+                message_type=MessageType.UPDATE_COMMENT,
+                comment_data=comment_data,
+                post_id=post_id,
+            )
+        )
+
+        return Response(comment_data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        comment_id = instance.id
+        post_id = instance.post_id
+        self.perform_destroy(instance)
+
+        transaction.on_commit(
+            lambda comment_id=comment_id, post_id=post_id: CommentConsumer.stream_comment_delete(
+                message_type=MessageType.DELETE_COMMENT,
+                comment_id=comment_id,
+                post_id=post_id,
+            )
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -4,9 +4,11 @@ from thenewboston.connect_five.consumers import ConnectFiveChatConsumer, Connect
 from thenewboston.exchange.consumers import ExchangeOrderConsumer, TradeConsumer
 from thenewboston.general.consumers.frontend_deployment import FrontendDeploymentConsumer
 from thenewboston.notifications.consumers import NotificationConsumer
+from thenewboston.social.consumers import CommentConsumer
 from thenewboston.wallets.consumers import WalletConsumer
 
 websocket_urlpatterns = [
+    re_path(r'^ws/comments/(?P<post_id>\d+)$', CommentConsumer.as_asgi()),
     re_path(r'^ws/connect-five/chat/(?P<match_id>\d+)$', ConnectFiveChatConsumer.as_asgi()),
     re_path(r'^ws/connect-five/public$', ConnectFivePublicConsumer.as_asgi()),
     re_path(r'^ws/connect-five/(?P<user_id>\d+)$', ConnectFiveConsumer.as_asgi()),
