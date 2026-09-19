@@ -17,7 +17,7 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
         dsn=SENTRY_DSN,  # type: ignore # noqa: F821
         environment=ENV_NAME,  # type: ignore # noqa: F821
         integrations=integrations,
-        enable_tracing=False,  # Disable performance monitoring
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,  # type: ignore # noqa: F821
         attach_stacktrace=True,
         send_default_pii=True,
         in_app_include=['thenewboston'],

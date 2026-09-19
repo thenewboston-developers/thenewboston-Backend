@@ -1,8 +1,11 @@
+from corsheaders.defaults import default_headers
+
 DEBUG = False
 SECRET_KEY = NotImplemented
 
 ALLOWED_HOSTS: list[str] = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = (*default_headers, 'sentry-trace', 'baggage')
 CSRF_TRUSTED_ORIGINS: list[str] = []
 
 INTERNAL_IPS = ['127.0.0.1']

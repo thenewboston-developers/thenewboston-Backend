@@ -195,6 +195,12 @@ make deploy
 make deploy-cleanup
 ```
 
+## Sentry performance monitoring
+
+When `THENEWBOSTON_SETTING_SENTRY_DSN` is set, the Django and Celery integrations capture performance traces at a default 10% sampling rate, including instrumented database and outbound HTTP calls. Override the rate with `THENEWBOSTON_SETTING_SENTRY_TRACES_SAMPLE_RATE` (a number from 0 to 1) in `/etc/thenewboston/.env`, then recreate the application containers to apply the setting.
+
+The API allows the `sentry-trace` and `baggage` CORS headers so requests from the frontend can continue the same trace. Deploy these backend settings before enabling cross-origin trace propagation in the frontend. In Sentry's Traces view, filter to the backend and frontend projects and the production environment, then load an authenticated page and inspect a sampled request and its database spans. Incoming sampled traces inherit their parent's sampling decision.
+
 ## Certificate renewal checks
 
 Run these checks on the EC2 host:
