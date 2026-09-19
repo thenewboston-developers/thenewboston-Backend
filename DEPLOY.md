@@ -78,7 +78,7 @@ ssh ubuntu@thenewboston.network 'sudo cp /tmp/thenewboston.conf /etc/nginx/sites
 ```
 
 7. Install certbot as described at https://certbot.eff.org/instructions?ws=nginx&os=ubuntufocal
-   (use buckyroberts@gmail.com for urgent renewal and security notices)
+   and verify automated renewal using the [checks below](#certificate-renewal-checks).
 
 8. Create environment specific configuration file:
 
@@ -194,3 +194,52 @@ make deploy
 ```bash
 make deploy-cleanup
 ```
+
+## Certificate renewal checks
+
+Run these checks on the EC2 host:
+
+```bash
+certbot --version
+sudo certbot certificates
+systemctl list-timers --all --no-pager
+```
+
+Inspect the existing Certbot timer and its service with `systemctl status` and `systemctl cat`, including the next run and recent service logs. Installation methods use different unit names; check existing cron entries if no timer exists. Inspect the certificate's renewal configuration under `/etc/letsencrypt/renewal/` and existing renewal hooks before changing its authenticator, installer, or nginx reload behavior. Preserve the existing scheduler rather than adding a duplicate.
+
+Use the certificate name reported above, which may differ from the domain:
+
+```bash
+CERTBOT_CERT_NAME='replace-with-name-from-certbot-certificates'
+sudo certbot renew --cert-name "$CERTBOT_CERT_NAME" --dry-run
+```
+
+A dry run can temporarily change nginx configuration and reload it. Deploy hooks are skipped unless `--run-deploy-hooks` is supported and supplied; inspect hooks before testing them. See the [Certbot renewal documentation](https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates).
+
+After renewal, compare the served certificate's dates and fingerprint with the certificate file reported by `certbot certificates`. Run the following from outside the host:
+
+```bash
+openssl s_client -connect thenewboston.network:443 -servername thenewboston.network </dev/null 2>/dev/null \
+  | openssl x509 -noout -dates -fingerprint -sha256
+curl --max-time 15 --silent --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' \
+  https://thenewboston.network/api/login
+```
+
+The GET request may return HTTP 405 because login requires POST. TLS errors, timeouts, or HTTP 5xx still require investigation. Keep certificate verification enabled when testing login.
+
+Configure an external certificate expiry and availability check: [Let's Encrypt stopped expiration notification emails on June 4, 2025](https://letsencrypt.org/2025/01/22/ending-expiration-emails/).
+
+## Troubleshooting runtime filesystem exhaustion
+
+An error such as `No space left on device` under `/run/systemd/journal/streams/` identifies the affected path, not necessarily a full root EBS volume. `/run` normally uses a separate tmpfs; check both byte and inode limits and identify the owner before choosing a repair:
+
+```bash
+findmnt -T /run -o TARGET,SOURCE,FSTYPE,OPTIONS
+df -hT / /run /var/log /var/lib/docker
+df -i / /run /var/log /var/lib/docker
+free -h
+sudo du -xhd1 /run
+sudo du -x --inodes --max-depth=2 /run
+```
+
+Preserve these observations and relevant logs before rebooting, because `/run` is volatile. Do not delete arbitrary `/run` files: services use them for runtime state and sockets. Journald's `RuntimeMaxUse` and `RuntimeKeepFree` settings govern journal files under `/run/log/journal`, not stream metadata under `/run/systemd/journal/streams`. Set retention or capacity limits only after identifying the resource and process responsible. See [journald configuration](https://www.freedesktop.org/software/systemd/man/252/journald.conf.html) and [tmpfs limits](https://docs.kernel.org/filesystems/tmpfs.html).
