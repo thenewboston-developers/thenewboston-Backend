@@ -11,14 +11,16 @@ from thenewboston.notifications.models.notification import Notification
 from thenewboston.notifications.serializers.notification import NotificationReadSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 
-from ..models import Comment
+from ..pagination import CommentPagination
 from ..serializers.comment import CommentReadSerializer, CommentUpdateSerializer, CommentWriteSerializer
 from ..utils.mentions import notify_mentioned_users_in_comment
+from ..utils.querysets import get_comment_read_queryset
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    pagination_class = CommentPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Comment.objects.all().prefetch_related('mentioned_users')
+    queryset = get_comment_read_queryset()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
