@@ -69,17 +69,41 @@ class PostReadSerializer(serializers.ModelSerializer):
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
+            prefetched_likes = getattr(obj, '_prefetched_objects_cache', {}).get('likes')
+            if prefetched_likes is not None:
+                return any(like.user_id == request.user.id for like in prefetched_likes)
             return PostLike.objects.filter(post=obj, user=request.user).exists()
         return False
 
     def get_tip_amounts(self, obj):
+        prefetched_comments = getattr(obj, '_prefetched_objects_cache', {}).get('comments')
+        if prefetched_comments is not None:
+            totals = {}
+            currencies = {}
+            for comment in prefetched_comments:
+                if comment.price_amount is None or comment.price_currency_id is None:
+                    continue
+                currency_id = comment.price_currency_id
+                totals[currency_id] = totals.get(currency_id, 0) + comment.price_amount
+                currencies[currency_id] = comment.price_currency
+            return [
+                {
+                    'currency': CurrencyReadSerializer(currencies[currency_id], context=self.context).data,
+                    'total_amount': total_amount,
+                }
+                for currency_id, total_amount in totals.items()
+            ]
+
         tip_amounts = []
         comments_with_tips = obj.comments.filter(price_amount__isnull=False, price_currency__isnull=False)
         currency_sums = comments_with_tips.values('price_currency').annotate(total_amount=Sum('price_amount'))
         currency_ids = [item['price_currency'] for item in currency_sums]
 
         if currency_ids:
-            currencies = {c.id: c for c in Currency.objects.filter(id__in=currency_ids)}
+            currencies = {
+                c.id: c
+                for c in Currency.objects.filter(id__in=currency_ids).select_related('owner__connect_five_stats')
+            }
 
             for item in currency_sums:
                 currency = currencies.get(item['price_currency'])

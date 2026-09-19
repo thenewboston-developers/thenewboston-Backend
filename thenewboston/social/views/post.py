@@ -1,4 +1,6 @@
+from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,6 +15,9 @@ from ..filters.post import PostFilter
 from ..models import Post
 from ..serializers.post import PostReadSerializer, PostWriteSerializer
 from ..utils.mentions import notify_mentioned_users_in_post
+from ..utils.querysets import get_comment_read_queryset
+
+User = get_user_model()
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -47,16 +52,18 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action in ['retrieve', 'list']:
-            queryset = queryset.prefetch_related(
-                'comments__mentioned_users',
-                'comments__owner',
-                'comments__price_currency',
-                'likes',
-                'mentioned_users',
-                'owner',
+        if self.action in ['retrieve', 'list', 'tip_amounts']:
+            queryset = queryset.select_related(
+                'owner__connect_five_stats',
                 'price_currency',
-                'recipient',
+                'recipient__connect_five_stats',
+            ).prefetch_related(
+                Prefetch(
+                    'comments',
+                    queryset=get_comment_read_queryset().select_related('price_currency__owner__connect_five_stats'),
+                ),
+                'likes',
+                Prefetch('mentioned_users', queryset=User.objects.select_related('connect_five_stats')),
             )
 
         return queryset
