@@ -3,16 +3,18 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from django.test import override_settings
 from django.utils import timezone
 from model_bakery import baker
 
 from thenewboston.exchange.models import ExchangeOrder, OrderProcessingLock
 from thenewboston.general.clients.redis import get_redis_client
 from thenewboston.general.enums import MessageType
-from thenewboston.general.tests.any import ANY_INT
 from thenewboston.general.tests.misc import model_to_dict_with_id
 from thenewboston.general.utils.datetime import to_iso_format
 from thenewboston.wallets.models.wallet import Wallet
+
+from .helpers import assert_order_response
 
 
 @pytest.mark.django_db
@@ -54,18 +56,8 @@ def test_create_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
         response = authenticated_api_client.post('/api/exchange-orders', payload)
 
     response_json = response.json()
-    assert (response.status_code, response_json) == (
-        201,
-        {
-            'id': ANY_INT,
-            'asset_pair': asset_pair_id,
-            'side': 1,
-            'quantity': 2,
-            'price': 101,
-            'status': 1,
-        },
-    )
     order = ExchangeOrder.objects.get(id=response_json['id'])
+    assert_order_response(authenticated_api_client, response, order, status_code=201)
     after_trade_at = trade_at + timedelta(microseconds=1)
     assert model_to_dict_with_id(order) == {
         'id': order.id,
@@ -209,18 +201,8 @@ def test_create_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
     }
     response = authenticated_api_client.post('/api/exchange-orders', payload)
     response_json = response.json()
-    assert (response.status_code, response_json) == (
-        201,
-        {
-            'id': ANY_INT,
-            'asset_pair': asset_pair_id,
-            'side': -1,
-            'quantity': 2,
-            'price': 101,
-            'status': 1,
-        },
-    )
     order = ExchangeOrder.objects.get(id=response_json['id'])
+    assert_order_response(authenticated_api_client, response, order, status_code=201)
     after_trade_at = trade_at + timedelta(microseconds=1)
     assert model_to_dict_with_id(order) == {
         'id': order.id,
@@ -319,13 +301,25 @@ def test_publish_new_order_message(authenticated_api_client, tnb_currency, yyy_c
 
     try:
         response = authenticated_api_client.post('/api/exchange-orders', payload)
-        assert (response.status_code, response.json()) == (
-            201,
-            {'id': ANY_INT, 'asset_pair': ANY_INT, 'side': 1, 'quantity': 2, 'price': 101, 'status': 1},
-        )
+        assert_order_response(authenticated_api_client, response, ExchangeOrder.objects.get(), status_code=201)
         message = pubsub.get_message(ignore_subscribe_messages=True, timeout=0.01)
         assert message
         assert message.get('type') == 'message' and message.get('data') == 'new_order'
     finally:
         pubsub.unsubscribe()
         pubsub.close()
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures('bucky_yyy_wallet')
+def test_order_mutation_response_includes_request_context(authenticated_api_client, tnb_currency, yyy_currency):
+    asset_pair = baker.make('exchange.AssetPair', primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    with override_settings(MEDIA_URL='/media/'):
+        response = authenticated_api_client.post(
+            '/api/exchange-orders', {'asset_pair': asset_pair.id, 'side': 1, 'quantity': 2, 'price': 101}
+        )
+        order = ExchangeOrder.objects.get()
+        assert_order_response(authenticated_api_client, response, order, status_code=201)
+
+        response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100})
+        assert_order_response(authenticated_api_client, response, order)

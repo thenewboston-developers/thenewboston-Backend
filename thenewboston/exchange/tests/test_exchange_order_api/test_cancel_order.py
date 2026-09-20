@@ -3,6 +3,7 @@ import pytest
 from thenewboston.exchange.models import AssetPair, ExchangeOrder
 from thenewboston.general.tests.misc import model_to_dict_with_id
 
+from .helpers import assert_order_response
 from ..factories.exchange_order import make_buy_order, make_sell_order
 
 
@@ -39,16 +40,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
-    assert (response.status_code, response.json()) == (
-        200,
-        {
-            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
-            'side': 1,
-            'quantity': 2,
-            'price': 101,
-            'status': 100,
-        },
-    )
+    assert_order_response(authenticated_api_client, response, buy_order)
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
         'id': buy_order.id,
@@ -82,16 +74,7 @@ def test_cancel_buy_order(authenticated_api_client, bucky, tnb_currency, yyy_cur
     before_update_created_date = buy_order.created_date
     before_update_modified_date = buy_order.modified_date
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
-    assert (response.status_code, response.json()) == (
-        200,
-        {
-            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
-            'side': 1,
-            'quantity': 2,
-            'price': 101,
-            'status': 100,
-        },
-    )
+    assert_order_response(authenticated_api_client, response, buy_order)
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
         'id': buy_order.id,
@@ -128,10 +111,7 @@ def test_cancel_sell_order(authenticated_api_client, bucky, tnb_currency, yyy_cu
     bucky_tnb_wallet.refresh_from_db()
     assert bucky_tnb_wallet.balance == 1000 - 2
     response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100})
-    assert (response.status_code, response.json()) == (
-        200,
-        {'asset_pair': order.asset_pair_id, 'side': -1, 'quantity': 2, 'price': 101, 'status': 100},
-    )
+    assert_order_response(authenticated_api_client, response, order)
     order.refresh_from_db()
     assert order.status == 100  # CANCELLED
     bucky_tnb_wallet.refresh_from_db()
@@ -184,16 +164,7 @@ def test_cancel_partly_filled_buy_order(authenticated_api_client, bucky, tnb_cur
     }
 
     response = authenticated_api_client.patch(f'/api/exchange-orders/{buy_order.id}', {'status': 100})
-    assert (response.status_code, response.json()) == (
-        200,
-        {
-            'asset_pair': AssetPair.objects.get(primary_currency=tnb_currency, secondary_currency=yyy_currency).id,
-            'side': 1,
-            'quantity': 5,
-            'price': 101,
-            'status': 100,
-        },
-    )
+    assert_order_response(authenticated_api_client, response, buy_order)
     buy_order.refresh_from_db()
     assert model_to_dict_with_id(buy_order) == {
         'id': buy_order.id,
@@ -255,3 +226,25 @@ def test_cancel_someones_else_order(authenticated_api_client, dmitry, tnb_curren
         'filled_quantity': 0,
         'status': 1,
     }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('field', ['asset_pair', 'side', 'quantity', 'price'])
+def test_cancel_order_rejects_readonly_fields(
+    authenticated_api_client, bucky, tnb_currency, yyy_currency, bucky_yyy_wallet, field
+):
+    order = make_buy_order(bucky, tnb_currency, yyy_currency, price=100, quantity=2)
+    bucky_yyy_wallet.refresh_from_db()
+    reserved_balance = bucky_yyy_wallet.balance
+    value = order.asset_pair_id if field == 'asset_pair' else getattr(order, field)
+
+    response = authenticated_api_client.patch(f'/api/exchange-orders/{order.id}', {'status': 100, field: value})
+
+    assert (response.status_code, response.json()) == (
+        400,
+        {'non_field_errors': [{'message': f'Readonly field(s): {field}', 'code': 'invalid'}]},
+    )
+    order.refresh_from_db()
+    bucky_yyy_wallet.refresh_from_db()
+    assert order.status == 1
+    assert bucky_yyy_wallet.balance == reserved_balance
