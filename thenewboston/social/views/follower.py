@@ -1,3 +1,4 @@
+from django.db.models import Exists, OuterRef
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -22,6 +23,18 @@ class FollowerViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectFollowerOrReadOnly]
     queryset = Follower.objects.all()
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related('follower__connect_five_stats', 'following__connect_five_stats')
+            .annotate(
+                self_following=Exists(
+                    Follower.objects.filter(follower_id=self.request.user.pk, following_id=OuterRef('follower_id'))
+                )
+            )
+        )
 
     @staticmethod
     def notify_profile_owner(follower, request):

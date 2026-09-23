@@ -26,9 +26,10 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
+        new_mentions = getattr(comment, '_new_mention_ids', None)
+        comment = get_comment_read_queryset().select_related('post__owner').get(pk=comment.pk)
         read_serializer = CommentReadSerializer(comment, context={'request': request})
 
-        new_mentions = getattr(comment, '_new_mention_ids', None)
         if new_mentions:
             transaction.on_commit(
                 lambda comment=comment, mentioned_user_ids=new_mentions: notify_mentioned_users_in_comment(
@@ -83,6 +84,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = serializer.save()
 
         new_mentions = getattr(comment, '_new_mention_ids', None)
+        comment = get_comment_read_queryset().get(pk=comment.pk)
         if new_mentions:
             transaction.on_commit(
                 lambda comment=comment, new_mentions=new_mentions: notify_mentioned_users_in_comment(

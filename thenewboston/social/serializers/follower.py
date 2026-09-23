@@ -22,9 +22,11 @@ class FollowerReadSerializer(serializers.ModelSerializer):
         This method is used when fetching followers of a user to check if the logged-in user
         is following each follower or not.
         """
+        if hasattr(obj, 'self_following'):
+            return obj.self_following
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
-            return Follower.objects.filter(follower=request.user, following=obj.follower).exists()
+            return Follower.objects.filter(follower=request.user, following_id=obj.follower_id).exists()
         return False
 
 

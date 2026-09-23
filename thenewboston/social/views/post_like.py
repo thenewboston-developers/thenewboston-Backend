@@ -23,7 +23,7 @@ class PostLikeViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = PostLikeFilter
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated]
-    queryset = PostLike.objects.select_related('user').order_by('-created_date')
+    queryset = PostLike.objects.select_related('user__connect_five_stats').order_by('-created_date')
     serializer_class = PostLikeReadSerializer
 
 

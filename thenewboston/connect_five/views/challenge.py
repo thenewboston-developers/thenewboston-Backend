@@ -46,6 +46,7 @@ class ConnectFiveChallengeViewSet(CreateModelMixin, ListModelMixin, RetrieveMode
         'challenger',
         'challenger__connect_five_stats',
         'currency',
+        'match',
         'opponent',
         'opponent__connect_five_stats',
     ).order_by('-created_date')

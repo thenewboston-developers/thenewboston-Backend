@@ -37,8 +37,8 @@ class Trade(AdjustableTimestampsModel):
     def __str__(self):
         return (
             f'Trade ID: {self.pk} | '
-            f'Buy Order: {self.buy_order.pk} | '
-            f'Sell Order: {self.sell_order.pk} | '
+            f'Buy Order: {self.buy_order_id} | '
+            f'Sell Order: {self.sell_order_id} | '
             f'Quantity: {self.filled_quantity} | '
             f'Trade Price: {self.price} | '
             f'Overpayment Amount: {self.overpayment_amount}'

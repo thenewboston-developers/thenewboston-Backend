@@ -3,5 +3,13 @@ from django.contrib import admin
 from .models import Currency, Mint, Whitepaper
 
 admin.site.register(Currency)
-admin.site.register(Mint)
-admin.site.register(Whitepaper)
+
+
+@admin.register(Mint)
+class MintAdmin(admin.ModelAdmin):
+    list_select_related = ('currency', 'owner')
+
+
+@admin.register(Whitepaper)
+class WhitepaperAdmin(admin.ModelAdmin):
+    list_select_related = ('currency',)

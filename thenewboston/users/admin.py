@@ -31,4 +31,6 @@ class CustomUserAdmin(UserAdmin):
     list_filter = UserAdmin.list_filter
 
 
-admin.site.register(UserAgreement)
+@admin.register(UserAgreement)
+class UserAgreementAdmin(admin.ModelAdmin):
+    list_select_related = ('user',)

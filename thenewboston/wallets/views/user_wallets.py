@@ -34,7 +34,7 @@ class UserWalletListView(generics.ListAPIView):
 
         queryset = (
             Wallet.objects.filter(owner_id=user_id, balance__gt=0)
-            .select_related('currency', 'currency__owner')
+            .select_related('currency__owner__connect_five_stats')
             .annotate(
                 rank=Coalesce(Subquery(rank_subquery, output_field=models.IntegerField()), Value(0)) + 1,
                 total_users=Coalesce(Subquery(total_users_subquery, output_field=models.IntegerField()), Value(1)),

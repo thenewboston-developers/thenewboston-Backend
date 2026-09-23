@@ -12,5 +12,8 @@ class AssetPairViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = AssetPairFilter
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated]
-    queryset = AssetPair.objects.all()
+    queryset = AssetPair.objects.select_related(
+        'primary_currency__owner__connect_five_stats',
+        'secondary_currency__owner__connect_five_stats',
+    )
     serializer_class = AssetPairSerializer

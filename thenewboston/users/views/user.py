@@ -11,7 +11,7 @@ from ..serializers.user import UserReadSerializer, UserUpdateSerializer, UserWri
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = User.objects.select_related('connect_five_stats')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
@@ -59,6 +59,10 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.action in {'list', 'retrieve'}:
+            queryset = queryset.prefetch_related(
+                Prefetch('players', queryset=ConnectFiveMatchPlayer.objects.select_related('user__connect_five_stats'))
+            )
         user = self.request.user
 
         mine_filter = self.request.query_params.get('mine')
@@ -407,7 +411,9 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
         if request.method == 'GET':
             queryset = (
-                ConnectFiveChatMessage.objects.filter(match=match).select_related('sender').order_by('-created_date')
+                ConnectFiveChatMessage.objects.filter(match=match)
+                .select_related('sender__connect_five_stats')
+                .order_by('-created_date')
             )
             paginator = ConnectFiveChatPagination()
             page = paginator.paginate_queryset(queryset, request, view=self)

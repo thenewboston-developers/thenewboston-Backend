@@ -21,7 +21,9 @@ class CurrencyBalanceListView(generics.ListAPIView):
 
     def get_queryset(self):
         currency_id = self.request.GET.get('currency')
-        queryset = Wallet.objects.filter(balance__gt=0, currency_id=currency_id).select_related('owner', 'currency')
+        queryset = Wallet.objects.filter(balance__gt=0, currency_id=currency_id).select_related(
+            'owner__connect_five_stats', 'currency'
+        )
         total_minted = Mint.objects.filter(currency_id=currency_id).aggregate(total=Sum('amount'))['total'] or 0
 
         if total_minted > 0:

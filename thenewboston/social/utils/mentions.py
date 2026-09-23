@@ -1,6 +1,7 @@
 import re
 from typing import List, Optional, Sequence, Set
 
+from django.db.models.functions import Lower
 from rest_framework import serializers
 
 from thenewboston.general.enums import MessageType, NotificationType
@@ -63,16 +64,17 @@ def derive_mentioned_user_ids(content: str) -> List[int]:
     if not usernames:
         return []
 
-    mention_ids: List[int] = []
-    seen_ids = set()
-
-    for username in usernames:
-        user = User.objects.filter(username__iexact=username).first()
-        if user and user.id not in seen_ids:
-            seen_ids.add(user.id)
-            mention_ids.append(user.id)
-
-    return mention_ids
+    users = (
+        User.objects.annotate(mention_username=Lower('username'))
+        .filter(mention_username__in=usernames)
+        .order_by('pk')
+        .values_list('mention_username', 'pk')
+    )
+    user_ids = {}
+    for username, user_id in users:
+        # Match the first user if legacy accounts differ only by username case.
+        user_ids.setdefault(username, user_id)
+    return [user_ids[username] for username in usernames if username in user_ids]
 
 
 def sync_mentioned_users(*, instance, content: str, mentioned_user_ids: Optional[Sequence[int]]):
@@ -94,20 +96,22 @@ def sync_mentioned_users(*, instance, content: str, mentioned_user_ids: Optional
 
 
 def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
-    for user_id in mentioned_user_ids:
-        if user_id == post.owner.id:
-            continue
+    recipient_ids = [user_id for user_id in mentioned_user_ids if user_id != post.owner_id]
+    if not recipient_ids:
+        return
 
+    payload = {
+        'post_id': post.id,
+        'mentioner': UserReadSerializer(post.owner, context={'request': request}).data,
+        'notification_type': NotificationType.POST_MENTION.value,
+        'post_preview': truncate_text(post.content),
+        'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+        'post_created': post.created_date.isoformat(),
+    }
+    for user_id in recipient_ids:
         notification = Notification.objects.create(
             owner_id=user_id,
-            payload={
-                'post_id': post.id,
-                'mentioner': UserReadSerializer(post.owner, context={'request': request}).data,
-                'notification_type': NotificationType.POST_MENTION.value,
-                'post_preview': truncate_text(post.content),
-                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
-                'post_created': post.created_date.isoformat(),
-            },
+            payload=payload,
         )
 
         notification_data = NotificationReadSerializer(notification, context={'request': request}).data
@@ -120,25 +124,27 @@ def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
 def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
     from ..serializers.comment import CommentReadSerializer
 
+    recipient_ids = [user_id for user_id in mentioned_user_ids if user_id != comment.owner_id]
+    if not recipient_ids:
+        return
+
     post = comment.post
+    payload = {
+        'post_id': post.id,
+        'comment_id': comment.id,
+        'mentioner': UserReadSerializer(comment.owner, context={'request': request}).data,
+        'comment': CommentReadSerializer(comment, context={'request': request}).data,
+        'notification_type': NotificationType.COMMENT_MENTION.value,
+        'post_preview': truncate_text(post.content),
+        'comment_preview': truncate_text(comment.content),
+        'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+        'post_created': post.created_date.isoformat(),
+    }
 
-    for user_id in mentioned_user_ids:
-        if user_id == comment.owner.id:
-            continue
-
+    for user_id in recipient_ids:
         notification = Notification.objects.create(
             owner_id=user_id,
-            payload={
-                'post_id': post.id,
-                'comment_id': comment.id,
-                'mentioner': UserReadSerializer(comment.owner, context={'request': request}).data,
-                'comment': CommentReadSerializer(comment, context={'request': request}).data,
-                'notification_type': NotificationType.COMMENT_MENTION.value,
-                'post_preview': truncate_text(post.content),
-                'comment_preview': truncate_text(comment.content),
-                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
-                'post_created': post.created_date.isoformat(),
-            },
+            payload=payload,
         )
 
         notification_data = NotificationReadSerializer(notification, context={'request': request}).data
