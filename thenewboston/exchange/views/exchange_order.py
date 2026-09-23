@@ -45,6 +45,8 @@ class ExchangeOrderViewSet(
 
         if self.request.method in UPDATE_METHODS:
             queryset = queryset.with_advisory_xact_lock(ORDER_PROCESSING_LOCK_ID)
+        else:
+            queryset = queryset.select_related('asset_pair__primary_currency', 'asset_pair__secondary_currency')
 
         return queryset
 
@@ -83,12 +85,13 @@ class ExchangeOrderViewSet(
             asset_pair_id = asset_pair.id
 
         filter_kwargs = {'asset_pair_id': asset_pair_id, 'status__in': UNFILLED_STATUSES}
-        buy_orders = ExchangeOrder.objects.filter(side=ExchangeOrderSide.BUY.value, **filter_kwargs).order_by('-price')[
+        orders = ExchangeOrder.objects.select_related('asset_pair__primary_currency', 'asset_pair__secondary_currency')
+        buy_orders = orders.filter(side=ExchangeOrderSide.BUY.value, **filter_kwargs).order_by('-price')[
             :50
         ]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
-        sell_orders = ExchangeOrder.objects.filter(side=ExchangeOrderSide.SELL.value, **filter_kwargs).order_by(
-            'price'
-        )[:50]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
+        sell_orders = orders.filter(side=ExchangeOrderSide.SELL.value, **filter_kwargs).order_by('price')[
+            :50
+        ]  # TODO(dmu) MEDIUM: Unhardcode in favor of `limit` query parameter
         return Response(
             {
                 'sell_orders': ExchangeOrderReadSerializer(sell_orders, many=True).data,

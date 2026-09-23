@@ -16,7 +16,7 @@ class WhitepaperViewSet(viewsets.ModelViewSet):
     filterset_class = WhitepaperFilter
     pagination_class = CustomPageNumberPagination
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Whitepaper.objects.all().order_by('-created_date')
+    queryset = Whitepaper.objects.select_related('owner__connect_five_stats').order_by('-created_date')
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update', 'update']:

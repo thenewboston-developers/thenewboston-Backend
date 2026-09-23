@@ -28,7 +28,7 @@ class TransferListView(APIView):
             Post.objects.filter(
                 Q(owner=user) | Q(recipient=user), price_amount__isnull=False, price_currency_id=currency_id
             )
-            .select_related('owner', 'recipient', 'price_currency')
+            .select_related('owner__connect_five_stats', 'recipient__connect_five_stats', 'price_currency')
             .order_by('-created_date')
         )
 
@@ -48,7 +48,7 @@ class TransferListView(APIView):
         # Get comments where user sent funds
         comments = (
             Comment.objects.filter(owner=user, price_amount__isnull=False, price_currency_id=currency_id)
-            .select_related('owner', 'post__owner', 'price_currency')
+            .select_related('owner', 'post__owner__connect_five_stats', 'price_currency')
             .order_by('-created_date')
         )
 
@@ -68,7 +68,7 @@ class TransferListView(APIView):
         received_comments = (
             Comment.objects.filter(post__owner=user, price_amount__isnull=False, price_currency_id=currency_id)
             .exclude(owner=user)
-            .select_related('owner', 'price_currency')
+            .select_related('owner__connect_five_stats', 'price_currency')
             .order_by('-created_date')
         )
 

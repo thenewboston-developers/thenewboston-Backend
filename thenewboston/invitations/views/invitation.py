@@ -32,7 +32,7 @@ class InvitationViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        return Invitation.objects.filter(owner=self.request.user)
+        return Invitation.objects.filter(owner=self.request.user).select_related('recipient__connect_five_stats')
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

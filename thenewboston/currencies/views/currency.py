@@ -20,7 +20,7 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPageNumberPagination
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
-    queryset = Currency.objects.all()
+    queryset = Currency.objects.select_related('owner__connect_five_stats')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
