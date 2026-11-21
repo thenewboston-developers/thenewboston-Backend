@@ -4,7 +4,7 @@ from itertools import groupby
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.exchange.filters.trade_price_chart_data import TradePriceChartDataFilter
@@ -15,7 +15,7 @@ from thenewboston.exchange.serializers.trade_price_chart_data import TradePriceC
 class TradePriceChartDataView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = TradePriceChartDataFilter
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Trade.objects.select_related(
         'buy_order__asset_pair', 'buy_order__asset_pair__primary_currency', 'buy_order__asset_pair__secondary_currency'
     ).order_by('created_date')

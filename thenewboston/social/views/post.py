@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -21,7 +21,7 @@ class PostViewSet(viewsets.ModelViewSet):
     filterset_class = PostFilter
     pagination_class = CustomPageNumberPagination
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsObjectOwnerOrReadOnly]
     queryset = Post.objects.all().order_by('-created_date')
 
     def create(self, request, *args, **kwargs):
@@ -54,7 +54,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated], url_path='tip-amounts')
+    @action(detail=True, methods=['get'], url_path='tip-amounts')
     def tip_amounts(self, request, pk=None):
         post = self.get_object()
         serializer = PostReadSerializer(post, context={'request': request})

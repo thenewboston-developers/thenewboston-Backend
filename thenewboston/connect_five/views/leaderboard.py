@@ -1,5 +1,5 @@
 from rest_framework.mixins import ListModelMixin
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.views.base import CustomGenericViewSet
@@ -14,7 +14,7 @@ class ConnectFiveLeaderboardPagination(CustomPageNumberPagination):
 
 class ConnectFiveLeaderboardViewSet(ListModelMixin, CustomGenericViewSet):
     pagination_class = ConnectFiveLeaderboardPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = (
         ConnectFiveStats.objects.select_related('user').filter(matches_played__gt=0).order_by('-elo', 'user__username')
     )

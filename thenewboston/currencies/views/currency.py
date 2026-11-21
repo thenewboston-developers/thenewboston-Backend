@@ -2,7 +2,7 @@ from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -19,7 +19,7 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     ordering_fields = ['ticker', 'created_date', 'modified_date']
     pagination_class = CustomPageNumberPagination
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsObjectOwnerOrReadOnly]
     queryset = Currency.objects.select_related('owner__connect_five_stats')
 
     def create(self, request, *args, **kwargs):

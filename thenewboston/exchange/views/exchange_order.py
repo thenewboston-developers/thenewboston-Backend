@@ -2,7 +2,7 @@ from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -50,7 +50,7 @@ class ExchangeOrderViewSet(
 
         return queryset
 
-    @action(detail=False, methods=['get'], url_path='book')
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='book')
     def book(self, request):
         # TODO(dmu) HIGH: Move to a dedicated endpoint, so regular DRF filtering can be used
         asset_pair_id = request.query_params.get('asset_pair')

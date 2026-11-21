@@ -2,7 +2,7 @@ from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Value, Win
 from django.db.models.functions import Cast, Rank
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.wallets.models import Wallet
@@ -16,7 +16,7 @@ class CurrencyBalanceListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = CurrencyBalanceFilter
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = CurrencyBalanceSerializer
 
     def get_queryset(self):

@@ -1,7 +1,7 @@
-from django.db.models import Exists, OuterRef
+from django.db.models import BooleanField, Exists, OuterRef, Value
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.enums import MessageType, NotificationType
@@ -21,19 +21,22 @@ class FollowerViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = FollowerFilter
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated, IsObjectFollowerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsObjectFollowerOrReadOnly]
     queryset = Follower.objects.all()
 
     def get_queryset(self):
+        user = self.request.user
+
+        if user.is_authenticated:
+            self_following = Exists(Follower.objects.filter(follower_id=user.pk, following_id=OuterRef('follower_id')))
+        else:
+            self_following = Value(False, output_field=BooleanField())
+
         return (
             super()
             .get_queryset()
             .select_related('follower__connect_five_stats', 'following__connect_five_stats')
-            .annotate(
-                self_following=Exists(
-                    Follower.objects.filter(follower_id=self.request.user.pk, following_id=OuterRef('follower_id'))
-                )
-            )
+            .annotate(self_following=self_following)
         )
 
     @staticmethod

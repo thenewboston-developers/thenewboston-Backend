@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from thenewboston.general.pagination import CustomPageNumberPagination
 
@@ -11,7 +11,7 @@ from ..serializers.asset_pair import AssetPairSerializer
 class AssetPairViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = AssetPairFilter
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = AssetPair.objects.select_related(
         'primary_currency__owner__connect_five_stats',
         'secondary_currency__owner__connect_five_stats',

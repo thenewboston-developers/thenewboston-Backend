@@ -1,6 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -15,7 +15,7 @@ class WhitepaperViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = WhitepaperFilter
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated, IsObjectOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsObjectOwnerOrReadOnly]
     queryset = Whitepaper.objects.select_related('owner__connect_five_stats').order_by('-created_date')
 
     def get_serializer_class(self):

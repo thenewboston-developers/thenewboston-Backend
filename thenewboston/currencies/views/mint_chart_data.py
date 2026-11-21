@@ -1,6 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.currencies.filters.mint_chart_data import MintChartDataFilter
@@ -11,7 +11,7 @@ from thenewboston.currencies.serializers.mint_chart_data import MintChartDataRes
 class MintChartDataView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = MintChartDataFilter
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Mint.objects.select_related('currency').order_by('created_date')
     serializer_class = MintChartDataResponseSerializer
 
