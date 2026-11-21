@@ -1,5 +1,6 @@
 # TODO(dmu) LOW: Move some of these to thenewboston/project/settings/custom.py
 ACCOUNT_NUMBER_LENGTH = 64
+ANONYMOUS_MAX_PAGE_SIZE = 100
 DEFAULT_INVITATION_LIMIT = 10
 DEFAULT_PAGE_SIZE = 20
 INVITE_SYSTEM_ENABLED = False

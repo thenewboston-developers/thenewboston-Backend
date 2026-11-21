@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.enums import NotificationType
@@ -44,7 +44,7 @@ from ..services.streaming import stream_challenge_update, stream_chat_message, s
 
 class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = ConnectFiveMatch.objects.select_related(
         'active_player',
         'active_player__connect_five_stats',
@@ -67,8 +67,12 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
         mine_filter = self.request.query_params.get('mine')
         if mine_filter in {'1', 'self', 'true'}:
-            queryset = queryset.filter(Q(player_a=user) | Q(player_b=user))
-        elif mine_filter == 'exclude':
+            # Signed-out visitors have no matches of their own
+            if user.is_authenticated:
+                queryset = queryset.filter(Q(player_a=user) | Q(player_b=user))
+            else:
+                queryset = queryset.none()
+        elif mine_filter == 'exclude' and user.is_authenticated:
             queryset = queryset.exclude(Q(player_a=user) | Q(player_b=user))
 
         if status_filter := self.request.query_params.get('status'):
@@ -374,7 +378,7 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
             return Response(response_data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['get'], url_path='rematch-status')
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated], url_path='rematch-status')
     def rematch_status(self, request, pk=None):
         match = ConnectFiveMatch.objects.select_related('challenge', 'challenge__currency', 'player_a', 'player_b').get(
             pk=pk

@@ -1,6 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.authentication import get_user_auth_data
@@ -11,6 +11,9 @@ from ..serializers.user import UserReadSerializer, UserUpdateSerializer, UserWri
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    # Accounts cannot be deleted through the API, so DELETE is not an allowed method
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
+    permission_classes = [IsAuthenticatedOrReadOnly, IsSelfOrReadOnly]
     queryset = User.objects.select_related('connect_five_stats')
 
     def create(self, request, *args, **kwargs):
@@ -29,12 +32,11 @@ class UserViewSet(viewsets.ModelViewSet):
         return [parser() for parser in self.parser_classes]
 
     def get_permissions(self):
+        # Creating an account is the only write that does not require authentication
         if self.request.method == 'POST':
-            self.permission_classes = [AllowAny]
-        elif self.request.method in ['PATCH', 'PUT']:
-            self.permission_classes = [IsAuthenticated, IsSelfOrReadOnly]
+            return [AllowAny()]
 
-        return [permission() for permission in self.permission_classes]
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.request.method == 'POST':

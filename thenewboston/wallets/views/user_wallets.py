@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models import Count, OuterRef, Subquery, Value
 from django.db.models.functions import Coalesce
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.users.models import User
@@ -12,7 +12,7 @@ from ..serializers.user_wallets import UserWalletSerializer
 
 
 class UserWalletListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = UserWalletSerializer
 
     def get_queryset(self):

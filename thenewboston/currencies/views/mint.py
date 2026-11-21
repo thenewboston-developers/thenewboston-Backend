@@ -1,6 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from thenewboston.general.pagination import CustomPageNumberPagination
@@ -14,7 +14,7 @@ class MintViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.Retriev
     filter_backends = [DjangoFilterBackend]
     filterset_class = MintFilter
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Mint.objects.all().order_by('-created_date')
 
     def create(self, request, *args, **kwargs):
