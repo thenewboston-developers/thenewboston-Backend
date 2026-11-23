@@ -46,6 +46,7 @@ class MatchReadSerializer(serializers.ModelSerializer):
     clock_side = serializers.SerializerMethodField()
     computer_name = serializers.SerializerMethodField()
     last_game_result = serializers.SerializerMethodField()
+    last_turn = serializers.SerializerMethodField()
     legal_turns = serializers.SerializerMethodField()
     scores = serializers.SerializerMethodField()
     server_time = serializers.SerializerMethodField()
@@ -88,6 +89,7 @@ class MatchReadSerializer(serializers.ModelSerializer):
             'result_points',
             'result_reason',
             'last_game_result',
+            'last_turn',
             'legal_turns',
             'can_double',
             'created_date',
@@ -95,6 +97,13 @@ class MatchReadSerializer(serializers.ModelSerializer):
             'next_game_at',
             'rematch_of',
         ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if not self.context.get('detail'):
+            # Lobby lists do not need presentation events or a query per match.
+            fields.pop('last_turn')
+        return fields
 
     def _user(self, user):
         if user is None:
@@ -132,6 +141,30 @@ class MatchReadSerializer(serializers.ModelSerializer):
         if not obj.game_winner:
             return None
         return {'winner': obj.game_winner, 'points': obj.result_points, 'reason': obj.result_reason}
+
+    def get_last_turn(self, obj):
+        # CPU roll + move commit together and clear the live dice. The event
+        # retains the actual dice and checker moves for clients between polls.
+        # A game-start boundary prevents replaying a previous game's last turn.
+        # Cap the query at the serialized snapshot, which may already be stale.
+        event = (
+            obj.events.filter(
+                event_type__in=['move', 'created', 'accepted', 'next_game'],
+                version__lte=obj.version,
+            )
+            .order_by('-version')
+            .values('event_type', 'version', 'payload')
+            .first()
+        )
+        if not event or event['event_type'] != 'move':
+            return None
+        payload = event['payload']
+        return {
+            'version': event['version'],
+            'side': payload['side'],
+            'dice': payload['dice'],
+            'moves': payload['moves'],
+        }
 
     def get_legal_turns(self, obj):
         if self.context.get('detail') and obj.phase == 'moving' and self._side(obj) == obj.active_side:
