@@ -18,7 +18,6 @@ class PostImageInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    exclude = ('image',)  # deprecated, see `Post.image`
     inlines = (PostImageInline,)
 
 

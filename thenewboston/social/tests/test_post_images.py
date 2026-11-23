@@ -1,4 +1,3 @@
-import importlib
 from datetime import timedelta
 from io import BytesIO
 from unittest.mock import patch
@@ -7,6 +6,7 @@ import pytest
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from model_bakery import baker
@@ -69,7 +69,7 @@ class TestPostImageUpload:
         assert not PostImage.objects.exists()
 
     def test_upload_is_refused_while_too_many_images_are_unattached(self, authenticated_api_client, bucky, dmitry):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         baker.make(PostImage, owner=bucky, post=post, _quantity=MAX_UNATTACHED_POST_IMAGES_PER_USER)
         baker.make(PostImage, owner=dmitry, post=None, _quantity=MAX_UNATTACHED_POST_IMAGES_PER_USER)
         baker.make(PostImage, owner=bucky, post=None, _quantity=MAX_UNATTACHED_POST_IMAGES_PER_USER - 1)
@@ -142,7 +142,7 @@ class TestPostImages:
         if case == 'other_owner':
             image_id = make_post_image(dmitry).id
         elif case == 'other_post':
-            image_id = make_post_image(bucky, post=baker.make(Post, owner=bucky, image='')).id
+            image_id = make_post_image(bucky, post=baker.make(Post, owner=bucky)).id
         else:
             image_id = own_image.id + 1000
 
@@ -178,7 +178,7 @@ class TestPostImages:
         assert not Post.objects.exists()
 
     def test_update_reorders_adds_and_removes_images(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         kept, removed, moved = (make_post_image(bucky, post=post, position=position) for position in range(3))
         added = make_post_image(bucky)
 
@@ -193,7 +193,7 @@ class TestPostImages:
 
     @pytest.mark.parametrize('request_format', ['json', 'multipart'])
     def test_update_without_image_fields_keeps_the_images(self, authenticated_api_client, bucky, request_format):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         images = [make_post_image(bucky, post=post, position=position) for position in range(2)]
 
         response = authenticated_api_client.patch(f'/api/posts/{post.id}', {'content': 'Edited'}, format=request_format)
@@ -203,7 +203,7 @@ class TestPostImages:
         assert image_ids_of(post) == [image.id for image in images]
 
     def test_update_with_an_empty_list_removes_every_image(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         for position in range(2):
             make_post_image(bucky, post=post, position=position)
 
@@ -215,7 +215,7 @@ class TestPostImages:
         assert not post.images.exists()
 
     def test_update_cannot_take_an_image_of_another_user(self, authenticated_api_client, bucky, dmitry):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         own_image = make_post_image(bucky, post=post)
         other_image = make_post_image(dmitry)
 
@@ -230,7 +230,7 @@ class TestPostImages:
         assert other_image.post is None
 
     def test_update_cannot_take_an_image_from_another_post(self, authenticated_api_client, bucky):
-        post, other_post = baker.make(Post, owner=bucky, image='', _quantity=2)
+        post, other_post = baker.make(Post, owner=bucky, _quantity=2)
         own_image = make_post_image(bucky, post=post)
         other_image = make_post_image(bucky, post=other_post)
 
@@ -243,7 +243,7 @@ class TestPostImages:
         assert image_ids_of(other_post) == [other_image.id]
 
     def test_has_image_filter(self, authenticated_api_client, bucky):
-        with_images, without_images = baker.make(Post, owner=bucky, image='', _quantity=2)
+        with_images, without_images = baker.make(Post, owner=bucky, _quantity=2)
         for position in range(2):
             make_post_image(bucky, post=with_images, position=position)
 
@@ -262,11 +262,11 @@ class TestPostImages:
             assert response.status_code == 200
             return response.data['results'], len(queries)
 
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         make_post_image(bucky, post=post)
         _, single_count = get_posts()
         for _ in range(3):
-            post = baker.make(Post, owner=bucky, image='')
+            post = baker.make(Post, owner=bucky)
             for position in range(3):
                 make_post_image(bucky, post=post, position=position)
 
@@ -276,7 +276,7 @@ class TestPostImages:
         assert [len(post['images']) for post in posts] == [3, 3, 3, 1]
 
     def test_notification_thumbnail_is_the_first_image(self, authenticated_api_client, bucky, dmitry):
-        post = baker.make(Post, owner=dmitry, image='')
+        post = baker.make(Post, owner=dmitry)
         make_post_image(dmitry, post=post, position=1)
         first = make_post_image(dmitry, post=post, position=0)
 
@@ -303,7 +303,6 @@ class TestSingleImageApi:
         assert post_image.post_id == response.data['id']
         assert response.data['image'] == post_image.image.url
         assert response.data['images'] == [{'id': post_image.id, 'image': response.data['image']}]
-        assert Post.objects.get().image == ''
 
     def test_create_sends_coins_with_an_image_file(
         self, authenticated_api_client, bucky, dmitry, tnb_currency, bucky_tnb_wallet
@@ -329,7 +328,7 @@ class TestSingleImageApi:
         assert Notification.objects.get(owner=dmitry).payload['post_image_thumbnail'] == post_image.image.url
 
     def test_update_with_an_empty_image_field_keeps_the_images(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         images = [make_post_image(bucky, post=post, position=position) for position in range(2)]
 
         response = authenticated_api_client.patch(
@@ -340,7 +339,7 @@ class TestSingleImageApi:
         assert image_ids_of(post) == [image.id for image in images]
 
     def test_update_with_an_image_file_replaces_the_first_image(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         first, second = (make_post_image(bucky, post=post, position=position) for position in range(2))
         previous_name = first.image.name
 
@@ -355,7 +354,7 @@ class TestSingleImageApi:
         assert response.data['image'] == first.image.url
 
     def test_update_with_an_image_file_gives_a_post_its_first_image(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
 
         response = authenticated_api_client.patch(
             f'/api/posts/{post.id}', {'image': make_image_file()}, format='multipart'
@@ -366,7 +365,7 @@ class TestSingleImageApi:
         assert response.data['image'] == response.data['images'][0]['image']
 
     def test_clear_image_removes_the_first_image(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         first, second = (make_post_image(bucky, post=post, position=position) for position in range(2))
 
         response = authenticated_api_client.patch(
@@ -378,7 +377,7 @@ class TestSingleImageApi:
         assert response.data['image'] == second.image.url
 
     def test_image_ids_cannot_be_combined_with_the_single_image_fields(self, authenticated_api_client, bucky):
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         image = make_post_image(bucky)
 
         response = authenticated_api_client.patch(
@@ -400,7 +399,7 @@ class TestDeleteUnattachedPostImages:
 
     def test_only_expired_unattached_images_are_deleted(self, bucky):
         expired_age = UNATTACHED_POST_IMAGE_LIFETIME + timedelta(minutes=1)
-        post = baker.make(Post, owner=bucky, image='')
+        post = baker.make(Post, owner=bucky)
         expired = self.make_image(bucky, age=expired_age)
         recent = self.make_image(bucky, age=UNATTACHED_POST_IMAGE_LIFETIME - timedelta(minutes=1))
         attached = self.make_image(bucky, age=expired_age, post=post)
@@ -424,18 +423,46 @@ class TestDeleteUnattachedPostImages:
         assert not PostImage.objects.exists()
 
 
-@pytest.mark.django_db
-def test_migration_copies_the_image_of_each_post(bucky, dmitry):
-    migration = importlib.import_module('thenewboston.social.migrations.0008_copy_post_images')
-    with_image = baker.make(Post, owner=bucky, image='images/first.png')
-    baker.make(Post, owner=bucky, image='')
-    already_copied = baker.make(Post, owner=dmitry, image='images/second.png')
-    existing = baker.make(PostImage, owner=dmitry, post=already_copied, image='images/second.png')
+@pytest.fixture
+def migrate_social():
+    """Takes the `social` tables to a migration (the latest by default) and returns the models as they were then."""
 
-    from django.apps import apps
+    def migrate(name=None):
+        executor = MigrationExecutor(connection)
+        targets = [('social', name)] if name else executor.loader.graph.leaf_nodes()
+        executor.migrate(targets)
+        return executor.loader.project_state(targets).apps
 
-    migration.copy_post_images(apps, None)
+    yield migrate
+    migrate()
 
-    copied = PostImage.objects.exclude(pk=existing.pk).get()
-    assert (copied.post, copied.owner, copied.image.name, copied.position) == (with_image, bucky, 'images/first.png', 0)
-    assert with_image.cover_image.name == 'images/first.png'
+
+# The migrations change the schema, which a test that runs inside a transaction must not do
+@pytest.mark.django_db(transaction=True)
+def test_migration_copies_the_image_of_each_post(bucky, dmitry, migrate_social):
+    # The `Post.image` column that the migration reads exists only in the historical models
+    apps = migrate_social('0007_post_image')
+    HistoricalPost, HistoricalPostImage = apps.get_model('social', 'Post'), apps.get_model('social', 'PostImage')
+    with_image = HistoricalPost.objects.create(owner_id=bucky.id, content='First', image='images/first.png')
+    HistoricalPost.objects.create(owner_id=bucky.id, content='No image', image='')
+    already_copied = HistoricalPost.objects.create(owner_id=dmitry.id, content='Second', image='images/second.png')
+    existing = HistoricalPostImage.objects.create(
+        owner_id=dmitry.id, post_id=already_copied.id, image='images/second.png'
+    )
+
+    migrate_social('0008_copy_post_images')
+
+    copied = HistoricalPostImage.objects.exclude(pk=existing.pk).get()
+    assert (copied.post_id, copied.owner_id, copied.image.name, copied.position) == (
+        with_image.id,
+        bucky.id,
+        'images/first.png',
+        0,
+    )
+
+    # Dropping the column leaves the copied images in place
+    migrate_social()
+
+    assert PostImage.objects.count() == 2
+    assert Post.objects.get(pk=with_image.pk).cover_image.name == 'images/first.png'
+    assert Post.objects.get(pk=already_copied.pk).cover_image.name == 'images/second.png'

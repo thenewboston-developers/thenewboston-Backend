@@ -19,7 +19,7 @@ def make_social_post(authenticated_api_client):
         for user, elo in ((owner, 1234), (commenter, 1300), (mentioned_user, 1500), (currency_owner, 1400)):
             baker.make(ConnectFiveStats, user=user, elo=elo)
         currency = baker.make(Currency, owner=currency_owner, logo='')
-        post = baker.make(Post, owner=owner, recipient=recipient, price_currency=currency, price_amount=17, image='')
+        post = baker.make(Post, owner=owner, recipient=recipient, price_currency=currency, price_amount=17)
         post.mentioned_users.add(mentioned_user)
         for amount in (3, 7, None):
             comment = baker.make(
@@ -140,7 +140,7 @@ class TestSocialReadPerformance:
         assert second.data['previous'] is not None
 
     def test_comments_page_size_is_capped(self, authenticated_api_client):
-        post = baker.make(Post, owner=authenticated_api_client.forced_user, image='')
+        post = baker.make(Post, owner=authenticated_api_client.forced_user)
         baker.make(Comment, post=post, owner=post.owner, price_amount=None, price_currency=None, _quantity=105)
 
         response = authenticated_api_client.get('/api/comments?page_size=10000')
@@ -151,7 +151,7 @@ class TestSocialReadPerformance:
         assert response.data['next'] is not None
 
     def test_comments_page_parameter_uses_default_page_size(self, authenticated_api_client):
-        post = baker.make(Post, owner=authenticated_api_client.forced_user, image='')
+        post = baker.make(Post, owner=authenticated_api_client.forced_user)
         baker.make(Comment, post=post, owner=post.owner, price_amount=None, price_currency=None, _quantity=21)
 
         response = authenticated_api_client.get('/api/comments?page=1')
