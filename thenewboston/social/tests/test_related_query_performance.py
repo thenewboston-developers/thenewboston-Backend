@@ -51,7 +51,7 @@ class TestRelatedSocialQueryPerformance:
             assert row['following']['connect_five_elo'] == 1500
 
     def test_post_likes_join_user_stats(self, authenticated_api_client):
-        post = baker.make(Post, owner=authenticated_api_client.forced_user, image='')
+        post = baker.make(Post, owner=authenticated_api_client.forced_user)
         users = baker.make(User, _quantity=8)
         baker.make(ConnectFiveStats, user=users[0], elo=1400)
         baker.make(PostLike, post=post, user=users[0])
@@ -69,7 +69,7 @@ class TestRelatedSocialQueryPerformance:
             assert row['user']['connect_five_elo'] == (1400 if row['user']['id'] == users[0].pk else None)
 
     def test_post_update_queries_do_not_grow_with_comments(self, authenticated_api_client):
-        post = baker.make(Post, owner=authenticated_api_client.forced_user, image='')
+        post = baker.make(Post, owner=authenticated_api_client.forced_user)
         users = baker.make(User, _quantity=8)
 
         def add_comment(user):
@@ -120,7 +120,7 @@ class TestRelatedSocialQueryPerformance:
         users = [baker.make(User, username=f'mention_target_{index}') for index in range(8)]
         for user in users[:-1]:
             baker.make(ConnectFiveStats, user=user, elo=1300)
-        post = baker.make(Post, owner=authenticated_api_client.forced_user, image='')
+        post = baker.make(Post, owner=authenticated_api_client.forced_user)
 
         def create(mentioned_users):
             data = {'content': ' '.join(f'@{user.username}' for user in mentioned_users)}
@@ -154,7 +154,7 @@ class TestRelatedSocialQueryPerformance:
 
     def test_comment_notification_payload_is_serialized_once(self, authenticated_api_client):
         author = authenticated_api_client.forced_user
-        post = baker.make(Post, owner=author, image='')
+        post = baker.make(Post, owner=author)
         comment = baker.make(Comment, post=post, owner=author, price_amount=None, price_currency=None)
         recipients = baker.make(User, _quantity=8)
         comment.mentioned_users.set(recipients)

@@ -6,10 +6,6 @@ from thenewboston.general.models import CreatedModified
 class Post(CreatedModified):
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE)
     content = models.TextField()
-    # Deprecated: the images of a post are `PostImage` rows (`post.images`) and this column is no longer read or
-    # written. It still holds the values that were copied to `PostImage`, so the release that introduced `PostImage`
-    # can be rolled back. TODO: Drop the column once that release has proven stable.
-    image = models.ImageField(upload_to='images/', blank=True)
     recipient = models.ForeignKey(
         'users.User', on_delete=models.CASCADE, related_name='received_posts', blank=True, null=True
     )

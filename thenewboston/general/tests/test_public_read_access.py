@@ -11,7 +11,7 @@ from thenewboston.general.constants import ANONYMOUS_MAX_PAGE_SIZE
 
 @pytest.fixture
 def content(bucky, dmitry, tnb_currency, yyy_currency, dmitry_tnb_wallet):
-    post = baker.make('social.Post', owner=bucky, image='')
+    post = baker.make('social.Post', owner=bucky)
     comment = baker.make('social.Comment', post=post, owner=dmitry)
     baker.make('social.PostLike', post=post, user=dmitry)
     baker.make('social.Follower', follower=dmitry, following=bucky)
@@ -267,7 +267,7 @@ def test_anonymous_user_reads_match_chat(api_client, content):
 
 @pytest.mark.django_db
 def test_page_size_is_capped_for_anonymous_user(api_client, bucky):
-    baker.make('social.Post', owner=bucky, image='', _quantity=ANONYMOUS_MAX_PAGE_SIZE + 5)
+    baker.make('social.Post', owner=bucky, _quantity=ANONYMOUS_MAX_PAGE_SIZE + 5)
 
     response = api_client.get('/api/posts?page_size=10000')
 
@@ -279,7 +279,7 @@ def test_page_size_is_capped_for_anonymous_user(api_client, bucky):
 
 @pytest.mark.django_db
 def test_page_size_is_not_capped_for_authenticated_user(authenticated_api_client, bucky):
-    baker.make('social.Post', owner=bucky, image='', _quantity=ANONYMOUS_MAX_PAGE_SIZE + 5)
+    baker.make('social.Post', owner=bucky, _quantity=ANONYMOUS_MAX_PAGE_SIZE + 5)
 
     response = authenticated_api_client.get('/api/posts?page_size=10000')
 
@@ -290,7 +290,7 @@ def test_page_size_is_not_capped_for_authenticated_user(authenticated_api_client
 
 @pytest.mark.django_db
 def test_default_page_size_is_unchanged_for_anonymous_user(api_client, bucky):
-    baker.make('social.Post', owner=bucky, image='', _quantity=25)
+    baker.make('social.Post', owner=bucky, _quantity=25)
 
     response = api_client.get('/api/posts')
 
