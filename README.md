@@ -82,3 +82,15 @@ To contribute effectively, follow these guidelines:
 - Do your work and run `make lint` to ensure code quality.
 - Open a Pull Request (PR) for review.
 - Wait for approval before merging to `master`. No direct pushes, please!
+
+# Backgammon
+
+Backgammon supports free computer practice and human challenges, with optional TNB stakes for human matches. Matches are played to 1, 3, or 5 points. Singles, gammons, backgammons, doubling-cube ownership, and the Crawford game determine the point score. The TNB stake is fixed for the entire match: cube decisions never increase the coin commitment. Computer games cannot carry a stake.
+
+The server owns dice rolls, legal turns, match clocks, and settlement. A complete turn must use the maximum number of playable dice, including the larger die when only one can be played. Actions include an `expected_version` so stale requests cannot replay moves or payments. Stake, refund, and payout entries are recorded in the match ledger. Free games do not require a wallet.
+
+The API is under `/api/backgammon/matches`. Creation requires a UUID `request_id` that is reused for retries, and selects `mode`, `opponent_id` for human games, `difficulty`, `stake_amount`, `target_score`, and `time_limit_seconds`. Pending matches are invitations; their actions are `accept`, `decline`, and `cancel`. Active match actions are `roll`, `move`, `double`, `respond-double`, `next-game`, and `resign`. A finished match can create a `rematch`. The detail response includes available complete turns for the player currently moving. Public match state supports spectating; pending invitations are private to their participants.
+
+The computer is a local heuristic opponent, not GNU Backgammon or a tournament-strength engine. Easy chooses legal outcomes randomly, normal evaluates board position, and hard considers sampled replies. Computer turns run through Celery. Run both the worker and Beat scheduler alongside the API; the scheduler also handles abandoned challenges and match clocks. New database tables are installed by the normal deployment migration step.
+
+Run the game tests with `poetry run pytest thenewboston/backgammon/tests`. Tests require the same PostgreSQL and Redis services as the rest of the backend suite.
