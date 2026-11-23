@@ -214,6 +214,21 @@ class TestPostImages:
         assert response.data['images'] == []
         assert not post.images.exists()
 
+    def test_update_cannot_take_an_image_of_another_user(self, authenticated_api_client, bucky, dmitry):
+        post = baker.make(Post, owner=bucky, image='')
+        own_image = make_post_image(bucky, post=post)
+        other_image = make_post_image(dmitry)
+
+        response = authenticated_api_client.patch(
+            f'/api/posts/{post.id}', {'image_ids': [own_image.id, other_image.id]}, format='json'
+        )
+
+        assert response.status_code == 400
+        assert response.data['image_ids'][0]['message'] == f'Invalid image ids: {other_image.id}'
+        assert image_ids_of(post) == [own_image.id]
+        other_image.refresh_from_db()
+        assert other_image.post is None
+
     def test_update_cannot_take_an_image_from_another_post(self, authenticated_api_client, bucky):
         post, other_post = baker.make(Post, owner=bucky, image='', _quantity=2)
         own_image = make_post_image(bucky, post=post)
@@ -289,6 +304,40 @@ class TestSingleImageApi:
         assert response.data['image'] == post_image.image.url
         assert response.data['images'] == [{'id': post_image.id, 'image': response.data['image']}]
         assert Post.objects.get().image == ''
+
+    def test_create_sends_coins_with_an_image_file(
+        self, authenticated_api_client, bucky, dmitry, tnb_currency, bucky_tnb_wallet
+    ):
+        with patch('thenewboston.notifications.models.notification.Notification.stream'):
+            response = authenticated_api_client.post(
+                '/api/posts',
+                {
+                    'content': 'Coins and a photo',
+                    'image': make_image_file(),
+                    'price_amount': '5',
+                    'price_currency': str(tnb_currency.id),
+                    'recipient': str(dmitry.id),
+                },
+                format='multipart',
+            )
+
+        assert response.status_code == 201
+        post_image = PostImage.objects.get()
+        assert response.data['image'] == post_image.image.url
+        bucky_tnb_wallet.refresh_from_db()
+        assert bucky_tnb_wallet.balance == 995
+        assert Notification.objects.get(owner=dmitry).payload['post_image_thumbnail'] == post_image.image.url
+
+    def test_update_with_an_empty_image_field_keeps_the_images(self, authenticated_api_client, bucky):
+        post = baker.make(Post, owner=bucky, image='')
+        images = [make_post_image(bucky, post=post, position=position) for position in range(2)]
+
+        response = authenticated_api_client.patch(
+            f'/api/posts/{post.id}', {'content': 'Edited', 'image': ''}, format='multipart'
+        )
+
+        assert response.status_code == 200
+        assert image_ids_of(post) == [image.id for image in images]
 
     def test_update_with_an_image_file_replaces_the_first_image(self, authenticated_api_client, bucky):
         post = baker.make(Post, owner=bucky, image='')

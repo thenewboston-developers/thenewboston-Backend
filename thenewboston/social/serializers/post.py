@@ -142,7 +142,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
     """
 
     clear_image = serializers.BooleanField(write_only=True, required=False)
-    image = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    image = serializers.ImageField(write_only=True, required=False)
     image_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True, max_length=MAX_POST_IMAGES
     )
@@ -232,7 +232,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         - If neither 'image_ids' nor the single-image fields are in the request, no changes are made to the images
 
         Single-image fields, which apply to the first image of the post:
-        - If 'clear_image' is True, or None/null is provided for 'image', the image is removed
+        - If 'clear_image' is True, the image is removed
         - If a new 'image' is provided, it replaces the image
 
         Note: Transfer-related fields (recipient, price_amount, price_currency) cannot be updated.
@@ -255,7 +255,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         if image_ids is not serializers.empty:
             user = self.context['request'].user
             set_post_images(post=instance, images=get_images_for_post(image_ids=image_ids, user=user, post=instance))
-        elif clear_image or image is None:
+        elif clear_image:
             remove_cover_image(post=instance)
         elif image is not serializers.empty:
             replace_cover_image(post=instance, image_file=image)
