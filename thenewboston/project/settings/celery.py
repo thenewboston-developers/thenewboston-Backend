@@ -7,6 +7,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.capture_connect_five_elo_snapshots',
         'schedule': crontab(hour=23, minute=59),
     },
+    'delete_unattached_post_images': {
+        'task': 'tasks.delete_unattached_post_images',
+        'schedule': 60 * 60,  # 1 hour
+    },
     'expire_connect_five_challenges': {
         'task': 'tasks.expire_connect_five_challenges',
         'schedule': 30,

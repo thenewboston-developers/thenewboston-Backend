@@ -22,6 +22,7 @@ def get_post_read_queryset():
             'comments',
             queryset=get_comment_read_queryset().select_related('price_currency__owner__connect_five_stats'),
         ),
+        'images',
         'likes',
         Prefetch('mentioned_users', queryset=User.objects.select_related('connect_five_stats')),
     )

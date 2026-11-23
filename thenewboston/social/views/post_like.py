@@ -16,6 +16,7 @@ from thenewboston.users.serializers.user import UserReadSerializer
 from ..filters.post_like import PostLikeFilter
 from ..models import Post, PostLike
 from ..serializers.post_like import PostLikeReadSerializer
+from ..utils.images import get_post_image_thumbnail
 
 
 class PostLikeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -55,7 +56,7 @@ class PostActionViewSet(GenericViewSet):
                 'liker': UserReadSerializer(liker, context={'request': request}).data,
                 'notification_type': NotificationType.POST_LIKE.value,
                 'post_preview': truncate_text(post.content),
-                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+                'post_image_thumbnail': get_post_image_thumbnail(post, request),
                 'post_created': post.created_date.isoformat(),
             },
         )

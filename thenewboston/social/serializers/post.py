@@ -5,20 +5,31 @@ from rest_framework import serializers
 from thenewboston.currencies.models import Currency
 from thenewboston.currencies.serializers.currency import CurrencyReadSerializer, CurrencyTinySerializer
 from thenewboston.general.enums import NotificationType
-from thenewboston.general.utils.image import process_image
 from thenewboston.general.utils.text import truncate_text
 from thenewboston.general.utils.transfers import transfer_coins
 from thenewboston.notifications.models import Notification
 from thenewboston.users.serializers.user import UserReadSerializer
 from thenewboston.wallets.models import Wallet
 
+from ..constants import MAX_POST_IMAGES
 from ..models import Post, PostLike
 from ..serializers.comment import CommentReadSerializer
+from ..serializers.post_image import PostImageReadSerializer
+from ..utils.images import (
+    get_images_for_post,
+    get_post_image_thumbnail,
+    remove_cover_image,
+    replace_cover_image,
+    set_post_images,
+)
 from ..utils.mentions import sync_mentioned_users
 
 
 class PostReadSerializer(serializers.ModelSerializer):
     comments = CommentReadSerializer(many=True, read_only=True)
+    # The first of `images`, kept for clients that show one image per post
+    image = serializers.ImageField(source='cover_image', read_only=True)
+    images = PostImageReadSerializer(many=True, read_only=True)
     owner = UserReadSerializer(read_only=True)
     recipient = UserReadSerializer(read_only=True)
     price_currency = CurrencyTinySerializer(read_only=True)
@@ -35,6 +46,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'images',
             'mentioned_users',
             'modified_date',
             'owner',
@@ -51,6 +63,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             'created_date',
             'id',
             'image',
+            'images',
             'mentioned_users',
             'modified_date',
             'owner',
@@ -120,7 +133,19 @@ class PostReadSerializer(serializers.ModelSerializer):
 
 
 class PostWriteSerializer(serializers.ModelSerializer):
+    """
+    The images of a post are set with `image_ids`: the ids of images uploaded through `/api/post-images`, in the
+    order they are shown. On update the list replaces the images of the post, so it also names the images to keep.
+
+    `image` (one file) and `clear_image` are the single-image API that preceded `image_ids`. They are still accepted
+    and apply to the first image of the post.
+    """
+
     clear_image = serializers.BooleanField(write_only=True, required=False)
+    image = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    image_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True, max_length=MAX_POST_IMAGES
+    )
     mentioned_user_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True
     )
@@ -130,6 +155,7 @@ class PostWriteSerializer(serializers.ModelSerializer):
         fields = (
             'content',
             'image',
+            'image_ids',
             'recipient',
             'price_amount',
             'price_currency',
@@ -143,14 +169,13 @@ class PostWriteSerializer(serializers.ModelSerializer):
         validated_data.pop('clear_image', None)  # Remove clear_image if present (only for updates)
         raw_mentioned_user_ids = validated_data.pop('mentioned_user_ids', [])
         mentions_provided = 'mentioned_user_ids' in self.initial_data
-        image = validated_data.get('image')
+        image = validated_data.pop('image', None)
+        image_ids = validated_data.pop('image_ids', [])
         recipient = validated_data.get('recipient')
         price_amount = validated_data.get('price_amount')
         price_currency = validated_data.get('price_currency')
-
-        if image:
-            file = process_image(image)
-            validated_data['image'] = file
+        # Checked before any coins move
+        images = get_images_for_post(image_ids=image_ids, user=request.user)
 
         if price_amount is not None and price_currency is not None and recipient is not None:
             sender_wallet = Wallet.objects.select_for_update().get(owner=request.user, currency=price_currency)
@@ -165,6 +190,12 @@ class PostWriteSerializer(serializers.ModelSerializer):
             transfer_coins(sender_wallet=sender_wallet, recipient_wallet=recipient_wallet, amount=price_amount)
 
         post = super().create({**validated_data, 'owner': request.user})
+
+        if images:
+            set_post_images(post=post, images=images)
+        elif image:
+            replace_cover_image(post=post, image_file=image)
+
         mention_ids = raw_mentioned_user_ids if mentions_provided else None
         sync_mentioned_users(instance=post, content=post.content, mentioned_user_ids=mention_ids)
 
@@ -186,20 +217,23 @@ class PostWriteSerializer(serializers.ModelSerializer):
                 'price_currency_id': post.price_currency.id,
                 'price_currency_ticker': post.price_currency.ticker,
                 'post_preview': truncate_text(post.content),
-                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+                'post_image_thumbnail': get_post_image_thumbnail(post, request),
                 'post_created': post.created_date.isoformat(),
             },
         ).save(should_stream=True)
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         """
         Update the Post instance.
 
-        This method updates the content and image of a Post instance.
-        - If 'clear_image' is True, the image is removed
-        - If 'image' is not in the request, no changes are made to the image
-        - If a new image is provided, it replaces the existing image
-        - If None/null is provided for image, it clears the image
+        This method updates the content and images of a Post instance.
+        - If 'image_ids' is provided, the images of the post become exactly those images, in that order
+        - If neither 'image_ids' nor the single-image fields are in the request, no changes are made to the images
+
+        Single-image fields, which apply to the first image of the post:
+        - If 'clear_image' is True, or None/null is provided for 'image', the image is removed
+        - If a new 'image' is provided, it replaces the image
 
         Note: Transfer-related fields (recipient, price_amount, price_currency) cannot be updated.
         """
@@ -208,24 +242,23 @@ class PostWriteSerializer(serializers.ModelSerializer):
         validated_data.pop('price_currency', None)
         mentioned_user_ids = validated_data.pop('mentioned_user_ids', serializers.empty)
         clear_image = validated_data.pop('clear_image', False)
+        image = validated_data.pop('image', serializers.empty)
+        image_ids = validated_data.pop('image_ids', serializers.empty)
 
         content = validated_data.get('content')
 
         if content is not None:
             instance.content = content
 
-        if clear_image:
-            instance.image = None
-        elif 'image' in validated_data:
-            image = validated_data.get('image')
-
-            if image is None:
-                instance.image = None
-            else:
-                file = process_image(image)
-                instance.image = file
-
         instance.save()
+
+        if image_ids is not serializers.empty:
+            user = self.context['request'].user
+            set_post_images(post=instance, images=get_images_for_post(image_ids=image_ids, user=user, post=instance))
+        elif clear_image or image is None:
+            remove_cover_image(post=instance)
+        elif image is not serializers.empty:
+            replace_cover_image(post=instance, image_file=image)
 
         if mentioned_user_ids is serializers.empty:
             if 'content' not in validated_data:
@@ -238,6 +271,9 @@ class PostWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def validate(self, data):
+        if 'image_ids' in data and ('image' in data or data.get('clear_image')):
+            raise serializers.ValidationError('Use either image_ids or the single-image fields, not both.')
+
         # Only validate transfer fields on create
         if not self.instance:
             user = self.context['request'].user

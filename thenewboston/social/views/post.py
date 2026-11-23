@@ -2,7 +2,7 @@ from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
@@ -20,7 +20,7 @@ class PostViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = PostFilter
     pagination_class = CustomPageNumberPagination
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     permission_classes = [IsAuthenticatedOrReadOnly, IsObjectOwnerOrReadOnly]
     queryset = Post.objects.all().order_by('-created_date')
 

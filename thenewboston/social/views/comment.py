@@ -13,6 +13,7 @@ from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..pagination import CommentPagination
 from ..serializers.comment import CommentReadSerializer, CommentUpdateSerializer, CommentWriteSerializer
+from ..utils.images import get_post_image_thumbnail
 from ..utils.mentions import notify_mentioned_users_in_comment
 from ..utils.querysets import get_comment_read_queryset
 
@@ -65,7 +66,7 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'notification_type': NotificationType.POST_COMMENT.value,
                 'post_preview': truncate_text(post.content),
                 'comment_preview': truncate_text(comment.content),
-                'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+                'post_image_thumbnail': get_post_image_thumbnail(post, request),
                 'post_created': post.created_date.isoformat(),
             },
         )
