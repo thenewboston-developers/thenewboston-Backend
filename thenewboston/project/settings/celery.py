@@ -3,6 +3,10 @@ from celery.schedules import crontab
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    'sweep_backgammon_matches': {
+        'task': 'tasks.sweep_backgammon_matches',
+        'schedule': 15,
+    },
     'capture_connect_five_elo_snapshots': {
         'task': 'tasks.capture_connect_five_elo_snapshots',
         'schedule': crontab(hour=23, minute=59),
