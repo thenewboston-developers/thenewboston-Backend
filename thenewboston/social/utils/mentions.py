@@ -12,6 +12,8 @@ from thenewboston.notifications.serializers.notification import NotificationRead
 from thenewboston.users.models import User
 from thenewboston.users.serializers.user import UserReadSerializer
 
+from .images import get_post_image_thumbnail
+
 MENTION_PATTERN = re.compile(r'@(\w+)')
 
 
@@ -105,7 +107,7 @@ def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
         'mentioner': UserReadSerializer(post.owner, context={'request': request}).data,
         'notification_type': NotificationType.POST_MENTION.value,
         'post_preview': truncate_text(post.content),
-        'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+        'post_image_thumbnail': get_post_image_thumbnail(post, request),
         'post_created': post.created_date.isoformat(),
     }
     for user_id in recipient_ids:
@@ -137,7 +139,7 @@ def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
         'notification_type': NotificationType.COMMENT_MENTION.value,
         'post_preview': truncate_text(post.content),
         'comment_preview': truncate_text(comment.content),
-        'post_image_thumbnail': request.build_absolute_uri(post.image.url) if post.image else None,
+        'post_image_thumbnail': get_post_image_thumbnail(post, request),
         'post_created': post.created_date.isoformat(),
     }
 

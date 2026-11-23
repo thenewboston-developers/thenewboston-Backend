@@ -1,7 +1,7 @@
 import django_filters
 from django.db import models
 
-from ..models import Post
+from ..models import Post, PostImage
 
 
 class PostFilter(django_filters.FilterSet):
@@ -18,10 +18,8 @@ class PostFilter(django_filters.FilterSet):
         if value is None:
             return queryset
 
-        if value:
-            return queryset.exclude(image='').exclude(image__isnull=True)
-
-        return queryset.filter(models.Q(image='') | models.Q(image__isnull=True))
+        has_image = models.Exists(PostImage.objects.filter(post=models.OuterRef('pk')))
+        return queryset.filter(has_image if value else ~has_image)
 
     @staticmethod
     def filter_user(queryset, name, value):
