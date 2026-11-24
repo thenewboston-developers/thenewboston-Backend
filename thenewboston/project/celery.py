@@ -13,6 +13,7 @@ app = Celery(
         'thenewboston.connect_five.tasks',
         'thenewboston.exchange.tasks',
         'thenewboston.general.tasks',
+        'thenewboston.reversi.tasks',
         'thenewboston.social.tasks',
     ],
 )

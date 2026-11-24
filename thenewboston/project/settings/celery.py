@@ -19,6 +19,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.sweep_backgammon_matches',
         'schedule': 15,
     },
+    'sweep_reversi_matches': {
+        'task': 'tasks.sweep_reversi_matches',
+        'schedule': 15,
+    },
     'capture_connect_five_elo_snapshots': {
         'task': 'tasks.capture_connect_five_elo_snapshots',
         'schedule': crontab(hour=23, minute=59),

@@ -95,11 +95,23 @@ The computer is a local heuristic opponent, not GNU Backgammon or a tournament-s
 
 Run the game tests with `poetry run pytest thenewboston/backgammon/tests`. Tests require the same PostgreSQL and Redis services as the rest of the backend suite.
 
+# Reversi
+
+Reversi (Othello) supports free computer practice, including guest play without an account, and human challenges with optional TNB stakes. Black moves first. The creator picks `color` (`black`, `white`, or `random`, decided by the server), and the opponent sees the colors before accepting. A rematch between two members swaps colors. Computer games cannot carry a stake.
+
+The server owns the board, legal moves, clocks, and settlement. A move must outflank at least one opposing disk. A player without a legal move passes automatically; the game ends when neither player can move, and the side with more disks wins. Both stakes form the prize: the winner receives the whole pool with no fee, and a draw returns each stake. Resigning or running out of time loses the match. Actions include an `expected_version` so stale requests cannot replay moves or payments. Stake, refund, and payout entries are recorded in the match ledger. Free games do not require a wallet.
+
+The API is under `/api/reversi/matches`. Creation requires a UUID `request_id` that is reused for retries, and selects `mode`, `opponent_id` for human games, `difficulty`, `color`, `stake_amount`, and `time_limit_seconds` (300, 600, 900, or 1800 per player for the whole match). Pending matches are invitations that expire after five minutes; their actions are `accept`, `decline`, and `cancel`. Active match actions are `move` (`row` and `column`, zero-based from the top-left) and `resign`. A finished match can create a `rematch`. The detail response includes `legal_moves` for the side to move and `last_move` with the flipped disks. Reversi has no hidden information, so a member's started match can be watched by anyone. Invitations that are pending or never started are private to their participants, and guest games are private to their guest session (`X-Guest-Token`, see `DEPLOY.md`).
+
+The computer is a local opponent. Easy plays a random legal move, normal picks the best position one move ahead, and hard searches four moves ahead and plays the last eight squares exactly. Computer turns run through Celery, and the search runs before the match row is locked. Run both the worker and Beat scheduler alongside the API; the scheduler also expires challenges, flags fallen clocks, and retries missed computer turns. New database tables are installed by the normal deployment migration step.
+
+Run the game tests with `poetry run pytest thenewboston/reversi/tests`.
+
 # Computer games and the community game fund
 
 Connect Five now supports private computer matches at easy, normal, and hard difficulty. Create one with `POST /api/connect-five/matches/computer`, a UUID `request_id`, `difficulty`, and `time_limit_seconds` (300, 600, 900, or 1800). Reuse the request ID after a network failure. Both sides start with two of each special; computer matches have no stakes, paid purchases, or ranked statistics. Moves and resignations require `expected_version`. The detail response includes `active_side`, `winner_side`, `version`, and `server_time`; the frontend polls private computer matches. Celery runs computer turns and the existing timeout sweep retries missed work. Keep both the worker and Beat running.
 
-The shared TNB fund pays **10 TNB for a completed computer-match win** in Connect Five, Backgammon, or Battleship, at any difficulty. Connect Five requires five connected pieces; Battleship requires sinking the fleet; Backgammon requires winning the whole match (including a computer declining a double). Timeouts, resignations, partial Backgammon rounds, and human matches do not earn fund rewards. Human stakes continue to use their existing settlement paths.
+The shared TNB fund pays **10 TNB for a completed computer-match win** in Connect Five, Backgammon, Battleship, or Reversi, at any difficulty. Connect Five requires five connected pieces; Battleship requires sinking the fleet; Backgammon requires winning the whole match (including a computer declining a double); Reversi requires finishing the game with more disks. Timeouts, resignations, draws, partial Backgammon rounds, and human matches do not earn fund rewards. Human stakes continue to use their existing settlement paths.
 
 `GET /api/game-fund` publicly reports the balance, reward amount, funded wins, deposited/paid totals, and availability. Authenticated players contribute from their TNB wallet with `POST /api/game-fund/deposits` and `{amount, request_id}`. Amounts must be whole TNB from 1 through 1,000,000,000. Contributions are final and cannot be withdrawn. Reusing a donor's request ID with the same amount returns the original receipt; changing the amount returns 409.
 
