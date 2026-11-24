@@ -51,7 +51,8 @@ class GameRewardDecision(CreatedModified):
     game = models.CharField(
         max_length=16,
         choices=[
-            (game, game) for game in ('connect_five', 'backgammon', 'battleship', 'checkers', 'reversi', 'mancala')
+            (game, game)
+            for game in ('connect_five', 'backgammon', 'battleship', 'checkers', 'reversi', 'mancala', 'dots_and_boxes')
         ],
     )
     match_id = models.PositiveBigIntegerField()

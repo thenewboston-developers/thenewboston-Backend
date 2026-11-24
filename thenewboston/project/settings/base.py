@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'thenewboston.checkers.apps.CheckersConfig',
     'thenewboston.connect_five.apps.ConnectFiveConfig',
     'thenewboston.currencies.apps.CurrenciesConfig',
+    'thenewboston.dots_and_boxes.apps.DotsAndBoxesConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general.apps.GeneralConfig',
     'thenewboston.game_rewards.apps.GameRewardsConfig',
