@@ -16,6 +16,9 @@ from thenewboston.battleship.models import BattleshipMatch
 from thenewboston.battleship.rules import ship_cells
 from thenewboston.battleship.services import run_computer as run_battleship
 from thenewboston.battleship.tests.test_rules import fleet
+from thenewboston.checkers.models import CheckersMatch
+from thenewboston.checkers.rules import legal_moves
+from thenewboston.checkers.services import run_computer as run_checkers
 from thenewboston.connect_five.models import ConnectFiveMatch
 from thenewboston.connect_five.services.computer import run_computer_turn
 from thenewboston.game_rewards.models import GameFund, GameRewardDecision
@@ -23,8 +26,8 @@ from thenewboston.general.models import GuestGameSession
 from thenewboston.wallets.models import Wallet
 
 pytestmark = pytest.mark.django_db
-GAMES = ['battleship', 'backgammon', 'connect-five']
-MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch]))
+GAMES = ['battleship', 'backgammon', 'connect-five', 'checkers']
+MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch, CheckersMatch]))
 
 
 @pytest.fixture(autouse=True)
@@ -32,6 +35,7 @@ def queues():
     cache.clear()
     with (
         patch('thenewboston.battleship.services.queue_computer'),
+        patch('thenewboston.checkers.services.queue_computer'),
         patch('thenewboston.backgammon.services.queue_computer'),
         patch('thenewboston.connect_five.services.computer.queue_computer_turn'),
         patch('thenewboston.connect_five.services.computer.randbelow', return_value=0),
@@ -72,8 +76,16 @@ def test_guest_creation_is_private_idempotent_and_never_creates_account(game):
     response = create(client, game, request_id=request_id)
     assert response.status_code == 201, response.data
     assert response.data['guest_mode']
-    assert response.data['your_side'] == {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'a'}[game]
-    assert response.data[{'battleship': 'host', 'backgammon': 'white', 'connect-five': 'player_a'}[game]]['id'] == 0
+    assert (
+        response.data['your_side']
+        == {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'a', 'checkers': 'white'}[game]
+    )
+    assert (
+        response.data[
+            {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'player_a', 'checkers': 'white'}[game]
+        ]['id']
+        == 0
+    )
     assert create(client, game, request_id=request_id).data['id'] == response.data['id']
     assert create(client, game, request_id=request_id, difficulty='hard').status_code == 409
     assert before == (get_user_model().objects.count(), Wallet.objects.count())
@@ -159,6 +171,11 @@ def test_guest_can_win_without_touching_fund_or_receiving_money(game, funded, tn
         match.turn_started_at = timezone.now()
         match.save()
         response = act(client, game, match, 'fire', row=row, column=column)
+    elif game == 'checkers':
+        match.board = [0] * 64
+        match.board[42], match.board[35] = 1, -1
+        match.save()
+        response = act(client, game, match, 'move', path=[42, 28])
     elif game == 'backgammon':
         match.board = winning_board()
         match.active_side = 'white'
@@ -270,3 +287,20 @@ def test_guest_reward_requires_enabled_and_configured_fund(tnb_currency):
     fund.save()
     assert settle_computer_reward(game='battleship', match_id=1, user_id=None, won=True) == receipt
     assert not GameRewardDecision.objects.exists()
+
+
+def test_guest_checkers_worker_plays_and_stale_worker_cannot_replay():
+    client = guest_client()
+    match = CheckersMatch.objects.get(pk=create(client, 'checkers').data['id'])
+    response = act(client, 'checkers', match, 'move', path=legal_moves(match.board, 'white')[0])
+    assert response.status_code == 200, response.data
+    match.refresh_from_db()
+    assert match.active_side == 'black'
+    version = match.version
+    run_checkers(match.id, version)
+    match.refresh_from_db()
+    assert match.active_side == 'white' and match.version == version + 1
+    run_checkers(match.id, version)
+    match.refresh_from_db()
+    assert match.version == version + 1
+    assert not match.ledger_entries.exists()

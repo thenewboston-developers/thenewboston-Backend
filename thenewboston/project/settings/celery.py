@@ -7,6 +7,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.delete_expired_guest_games',
         'schedule': 60 * 60,
     },
+    'sweep_checkers_matches': {
+        'task': 'tasks.sweep_checkers_matches',
+        'schedule': 10.0,
+    },
     'sweep_battleship_matches': {
         'task': 'tasks.sweep_battleship_matches',
         'schedule': 15,
