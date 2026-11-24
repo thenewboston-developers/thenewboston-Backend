@@ -8,6 +8,7 @@ app = Celery(
     'thenewboston.project',
     include=[
         'thenewboston.backgammon.tasks',
+        'thenewboston.battleship.tasks',
         'thenewboston.connect_five.tasks',
         'thenewboston.exchange.tasks',
         'thenewboston.social.tasks',
