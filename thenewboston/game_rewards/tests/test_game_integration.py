@@ -13,6 +13,8 @@ from thenewboston.battleship.rules import resolve_shot, ship_cells
 from thenewboston.game_rewards.admin import GameFundAdmin
 from thenewboston.game_rewards.models import GameFund, GameRewardDecision
 from thenewboston.game_rewards.services import contribute, settle_computer_reward
+from thenewboston.mancala.models import MancalaMatch
+from thenewboston.mancala.services import run_computer as run_mancala_computer
 
 pytestmark = pytest.mark.django_db
 
@@ -115,7 +117,87 @@ def test_battleship_last_ship_pays_and_returns_receipt(bucky_tnb_wallet, dmitry_
     assert GameFund.objects.get().balance == 0
 
 
-@pytest.mark.parametrize('game', ['backgammon', 'battleship'])
+def mancala_match(client, board, active_side='host'):
+    with patch('thenewboston.mancala.services.queue_computer'):
+        response = client.post('/api/mancala/matches', {'request_id': str(uuid4()), 'mode': 'computer'})
+    assert response.status_code == 201, response.data
+    match = MancalaMatch.objects.get(pk=response.data['id'])
+    match.board = board
+    match.active_side = active_side
+    match.save()
+    return match
+
+
+def test_mancala_win_on_stones_pays_and_returns_receipt(bucky_tnb_wallet, dmitry_tnb_wallet):
+    contribute(user=dmitry_tnb_wallet.owner, amount=10, request_id=uuid4())
+    client = client_for(bucky_tnb_wallet.owner)
+    # The player's last stone ends the game 27 to 21.
+    match = mancala_match(client, [0, 0, 0, 0, 0, 1, 26, 1, 2, 3, 0, 0, 0, 15])
+    with patch('thenewboston.mancala.services.queue_computer'):
+        response = client.post(f'/api/mancala/matches/{match.pk}/move', {'expected_version': match.version, 'pit': 5})
+    assert response.status_code == 200, response.data
+    assert response.data['computer_reward'] == {'status': 'paid', 'amount': 10, 'currency': 'TNB'}
+    assert (response.data['winner'], response.data['result_reason']) == ('host', 'stones')
+    assert client.get(f'/api/mancala/matches/{match.pk}').data['computer_reward']['amount'] == 10
+    bucky_tnb_wallet.refresh_from_db()
+    assert bucky_tnb_wallet.balance == 1010
+    assert GameFund.objects.get().balance == 0
+    assert GameRewardDecision.objects.get().game == 'mancala'
+
+
+def test_mancala_win_decided_by_the_computers_last_move_still_pays(bucky_tnb_wallet, dmitry_tnb_wallet):
+    contribute(user=dmitry_tnb_wallet.owner, amount=10, request_id=uuid4())
+    # The computer's only move empties its row, and the player keeps the stones left on their side.
+    match = mancala_match(
+        client_for(bucky_tnb_wallet.owner), [1, 2, 3, 0, 0, 0, 20, 0, 0, 0, 0, 0, 1, 21], active_side='guest'
+    )
+    with patch('thenewboston.mancala.services.queue_computer'):
+        run_mancala_computer(match.pk, match.version)
+    match.refresh_from_db()
+    assert (match.status, match.winner, match.result_reason) == ('finished', 'host', 'stones')
+    assert match.board == [0, 0, 0, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 22]
+    assert match.computer_reward == {'status': 'paid', 'amount': 10, 'currency': 'TNB'}
+    bucky_tnb_wallet.refresh_from_db()
+    assert bucky_tnb_wallet.balance == 1010
+
+
+@pytest.mark.parametrize(
+    'board,status',
+    [
+        # 24 all: a draw is not a win.
+        ([0, 0, 0, 0, 0, 1, 23, 1, 2, 0, 0, 0, 0, 21], 'not_eligible'),
+        # The computer finishes ahead 21 to 27.
+        ([0, 0, 0, 0, 0, 1, 20, 1, 2, 3, 0, 0, 0, 21], 'not_eligible'),
+    ],
+)
+def test_mancala_draw_or_loss_to_computer_earns_nothing(bucky_tnb_wallet, dmitry_tnb_wallet, board, status):
+    contribute(user=dmitry_tnb_wallet.owner, amount=10, request_id=uuid4())
+    client = client_for(bucky_tnb_wallet.owner)
+    match = mancala_match(client, board)
+    with patch('thenewboston.mancala.services.queue_computer'):
+        response = client.post(f'/api/mancala/matches/{match.pk}/move', {'expected_version': match.version, 'pit': 5})
+    assert response.status_code == 200, response.data
+    assert response.data['status'] == 'finished'
+    assert response.data['computer_reward'] == {'status': status, 'amount': 0, 'currency': 'TNB'}
+    bucky_tnb_wallet.refresh_from_db()
+    assert bucky_tnb_wallet.balance == 1000
+    assert GameFund.objects.get().balance == 10
+
+
+def test_mancala_win_with_an_empty_fund_is_recorded_and_never_paid_later(bucky_tnb_wallet, dmitry_tnb_wallet):
+    client = client_for(bucky_tnb_wallet.owner)
+    match = mancala_match(client, [0, 0, 0, 0, 0, 1, 26, 1, 2, 3, 0, 0, 0, 15])
+    with patch('thenewboston.mancala.services.queue_computer'):
+        response = client.post(f'/api/mancala/matches/{match.pk}/move', {'expected_version': match.version, 'pit': 5})
+    assert response.data['computer_reward'] == {'status': 'fund_empty', 'amount': 0, 'currency': 'TNB'}
+    contribute(user=dmitry_tnb_wallet.owner, amount=100, request_id=uuid4())
+    assert client.get(f'/api/mancala/matches/{match.pk}').data['computer_reward']['status'] == 'fund_empty'
+    bucky_tnb_wallet.refresh_from_db()
+    assert bucky_tnb_wallet.balance == 1000
+    assert GameFund.objects.get().balance == 100
+
+
+@pytest.mark.parametrize('game', ['backgammon', 'battleship', 'mancala'])
 def test_resigning_to_computer_never_awards_and_old_results_do_not_claim(game, bucky_tnb_wallet, dmitry_tnb_wallet):
     contribute(user=dmitry_tnb_wallet.owner, amount=10, request_id=uuid4())
     client = client_for(bucky_tnb_wallet.owner)
@@ -125,7 +207,7 @@ def test_resigning_to_computer_never_awards_and_old_results_do_not_claim(game, b
     assert result.status_code == 200
     assert result.data['computer_reward']['status'] == 'not_eligible'
     assert GameFund.objects.get().balance == 10
-    model = BackgammonMatch if game == 'backgammon' else BattleshipMatch
+    model = {'backgammon': BackgammonMatch, 'battleship': BattleshipMatch, 'mancala': MancalaMatch}[game]
     model.objects.filter(pk=match['id']).update(computer_reward=None)
     GameRewardDecision.objects.all().delete()
     assert client.get(f'/api/{game}/matches/{match["id"]}').data['computer_reward'] is None

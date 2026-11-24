@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'thenewboston.general.apps.GeneralConfig',
     'thenewboston.game_rewards.apps.GameRewardsConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
+    'thenewboston.mancala.apps.MancalaConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
     'thenewboston.reversi.apps.ReversiConfig',
     'thenewboston.social.apps.SocialConfig',

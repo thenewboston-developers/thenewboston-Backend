@@ -35,6 +35,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.expire_connect_five_challenges',
         'schedule': 30,
     },
+    'sweep_mancala_matches': {
+        'task': 'tasks.sweep_mancala_matches',
+        'schedule': 15,
+    },
     'sweep_connect_five_timeouts': {
         'task': 'tasks.sweep_connect_five_timeouts',
         'schedule': 15,

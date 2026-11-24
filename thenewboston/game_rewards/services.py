@@ -103,7 +103,7 @@ def settle_computer_reward(*, game, match_id, user_id, won):
             'amount': REWARD_AMOUNT if eligible else 0,
             'currency': 'TNB',
         }
-    if game not in {'connect_five', 'backgammon', 'battleship', 'checkers', 'reversi'}:
+    if game not in {'connect_five', 'backgammon', 'battleship', 'checkers', 'reversi', 'mancala'}:
         raise ValueError('Unsupported reward game.')
     fund = _locked_fund()
     existing = GameRewardDecision.objects.filter(game=game, match_id=match_id).first()
