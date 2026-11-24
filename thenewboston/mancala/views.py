@@ -44,7 +44,8 @@ class MancalaMatchViewSet(GuestGameResponseMixin, ListModelMixin, RetrieveModelM
         elif mine == 'exclude':
             queryset = queryset.exclude(participants)
         if statuses := self.request.query_params.get('status'):
-            queryset = queryset.filter(status__in=statuses.split(','))
+            # Unknown values are ignored instead of reaching the database.
+            queryset = queryset.filter(status__in=set(statuses.split(',')) & set(MancalaMatch.Status.values))
         return queryset
 
     def get_serializer_context(self):

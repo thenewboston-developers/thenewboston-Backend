@@ -45,7 +45,8 @@ class BattleshipMatchViewSet(GuestGameResponseMixin, ListModelMixin, RetrieveMod
             else super().get_queryset().none()
         )
         if statuses := self.request.query_params.get('status'):
-            queryset = queryset.filter(status__in=statuses.split(','))
+            # Unknown values are ignored instead of reaching the database.
+            queryset = queryset.filter(status__in=set(statuses.split(',')) & set(BattleshipMatch.Status.values))
         return queryset
 
     @transaction.atomic
