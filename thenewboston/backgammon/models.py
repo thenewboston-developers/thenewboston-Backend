@@ -17,7 +17,10 @@ class BackgammonMatch(CreatedModified):
         DECLINED = 'declined', 'Declined'
         EXPIRED = 'expired', 'Expired'
 
-    white = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='backgammon_as_white')
+    white = models.ForeignKey(
+        'users.User', on_delete=models.PROTECT, related_name='backgammon_as_white', null=True, blank=True
+    )
+    guest_session = models.ForeignKey('general.GuestGameSession', on_delete=models.CASCADE, null=True, blank=True)
     request_id = models.UUIDField(default=uuid.uuid4)
     black = models.ForeignKey(
         'users.User', on_delete=models.PROTECT, related_name='backgammon_as_black', null=True, blank=True
@@ -60,6 +63,12 @@ class BackgammonMatch(CreatedModified):
     class Meta:
         ordering = ['-created_date']
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(white__isnull=False, guest_session__isnull=True)
+                | models.Q(white__isnull=True, guest_session__isnull=False, mode='computer', stake_amount=0),
+                name='backgammon_owner',
+            ),
+            models.UniqueConstraint(fields=['guest_session', 'request_id'], name='backgammon_guest_request_once'),
             models.UniqueConstraint(fields=['white', 'request_id'], name='backgammon_create_request_once'),
             models.CheckConstraint(condition=~models.Q(white=models.F('black')), name='backgammon_distinct_players'),
             models.CheckConstraint(

@@ -5,6 +5,7 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
     from sentry_sdk.integrations.asyncio import AsyncioIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
     logging_integration = LoggingIntegration(
         level=logging.DEBUG,  # Breadcrumbs level
@@ -19,6 +20,9 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
         integrations=integrations,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,  # type: ignore # noqa: F821
         attach_stacktrace=True,
+        event_scrubber=EventScrubber(
+            denylist=[*DEFAULT_DENYLIST, 'x-guest-token', 'http_x_guest_token'], recursive=True
+        ),
         send_default_pii=True,
         in_app_include=['thenewboston'],
         max_request_body_size='always',

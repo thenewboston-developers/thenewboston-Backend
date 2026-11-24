@@ -249,3 +249,14 @@ sudo du -x --inodes --max-depth=2 /run
 ```
 
 Preserve these observations and relevant logs before rebooting, because `/run` is volatile. Do not delete arbitrary `/run` files: services use them for runtime state and sockets. Journald's `RuntimeMaxUse` and `RuntimeKeepFree` settings govern journal files under `/run/log/journal`, not stream metadata under `/run/systemd/journal/streams`. Set retention or capacity limits only after identifying the resource and process responsible. See [journald configuration](https://www.freedesktop.org/software/systemd/man/252/journald.conf.html) and [tmpfs limits](https://docs.kernel.org/filesystems/tmpfs.html).
+
+
+## Guest computer games
+
+Deploy the backend before the frontend that starts guest games. The normal app startup runs the new guest-session and game-ownership migrations. Existing account games and payouts continue using their existing paths. Restarting Celery and Celery Beat with this deployment registers the hourly `tasks.delete_expired_guest_games` cleanup.
+
+Signed-out clients create a seven-day session with `POST /api/guest-games/session`, then send its signed `token` in `X-Guest-Token` on game requests. The response includes `session_id` for matching cached game snapshots, not for authorization. Game snapshots include `guest_mode`, `guest_session_id`, and `your_side`; the existing creation, polling, action, and rematch routes are unchanged. The CORS allowlist includes the new header.
+
+Guest sessions authorize only free computer play, never account access, multiplayer stakes, purchases, or fund contributions. Guest games are private to the session and cannot become reward-bearing games after registration. A qualifying guest win returns an informational `computer_reward` with status `guest` and the advertised amount only when the fund is available; it creates no user, wallet, ledger entry, or payout decision. Expired sessions and their matches are deleted in bounded hourly batches. The session creation endpoint is throttled, and each session can have at most ten unfinished matches per game.
+
+Guest capability responses are not cached, debug logs omit the session response, and Sentry scrubs the capability header. Keep `X-Guest-Token` out of any additional proxy or request logging configuration.

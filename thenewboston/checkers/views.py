@@ -4,9 +4,9 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
+from thenewboston.general.guest_games import GameAccess, GuestGameResponseMixin, guest_session
 from thenewboston.general.views.base import CustomGenericViewSet
 
 from .models import CheckersMatch
@@ -25,8 +25,9 @@ class MatchPagination(PageNumberPagination):
     max_page_size = 50
 
 
-class CheckersMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+class CheckersMatchViewSet(GuestGameResponseMixin, ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
+    permission_classes = [GameAccess]
+    guest_actions = {'create', 'move', 'resign', 'rematch'}
     pagination_class = MatchPagination
     serializer_class = MatchReadSerializer
     queryset = CheckersMatch.objects.select_related('white', 'black').all()
@@ -35,6 +36,11 @@ class CheckersMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericView
         queryset = super().get_queryset()
         user = self.request.user
         participants = Q(white_id=user.id) | Q(black_id=user.id) if user.is_authenticated else Q(pk__in=[])
+        session = guest_session(self.request)
+        if session:
+            participants = Q(guest_session=session)
+        # Guest games are private, while registered matches can still be watched.
+        queryset = queryset.filter(Q(guest_session__isnull=True) | participants)
         # Pending invitations are visible only to their participants.
         queryset = queryset.filter(~Q(status='pending') | participants)
         mine = self.request.query_params.get('mine')
@@ -53,7 +59,11 @@ class CheckersMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericView
     def create(self, request, *args, **kwargs):
         serializer = MatchCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        match = create_match(user=request.user, **serializer.validated_data)
+        match = create_match(
+            user=request.user if request.user.is_authenticated else None,
+            guest_session=guest_session(request),
+            **serializer.validated_data,
+        )
         match.refresh_from_db()
         return Response(self.get_serializer(match).data, status=status.HTTP_201_CREATED)
 
@@ -71,7 +81,13 @@ class CheckersMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericView
         # Avoid locking nullable joined opponent rows; serialize on the match itself.
         self.queryset = self.queryset.select_for_update(of=('self',))
         match = self.get_object()
-        match = perform_action(match, request.user, action_name, serializer.validated_data)
+        match = perform_action(
+            match,
+            request.user if request.user.is_authenticated else None,
+            action_name,
+            serializer.validated_data,
+            guest_session(request),
+        )
         match.refresh_from_db()
         return Response(self.get_serializer(match).data)
 

@@ -94,6 +94,15 @@ def settle_computer_reward(*, game, match_id, user_id, won):
     No public claim endpoint exists. Persist the result on the match in that same
     transaction; never call from reads or retry previously completed games.
     """
+    if user_id is None:
+        # Guest wins are informational only: no fund lock, wallet, ledger or claimable reward.
+        fund = GameFund.objects.filter(pk=1).first()
+        eligible = bool(won and fund and fund.currency_id and fund.enabled and fund.balance >= REWARD_AMOUNT)
+        return {
+            'status': 'guest' if eligible else ('fund_empty' if won else 'not_eligible'),
+            'amount': REWARD_AMOUNT if eligible else 0,
+            'currency': 'TNB',
+        }
     if game not in {'connect_five', 'backgammon', 'battleship', 'checkers'}:
         raise ValueError('Unsupported reward game.')
     fund = _locked_fund()

@@ -68,7 +68,9 @@ class LoggingMiddleware:
             result.append(response.content)
 
         request_description = get_request_description(request)
-        body = b''.join(result).decode('utf-8')
+        body = (
+            '(guest session hidden)' if request.path == '/api/guest-games/session' else b''.join(result).decode('utf-8')
+        )
         duration = 'duration unknown' if duration is None else f'{duration:.3f}s'
 
         logger.debug('%s RESPONSE: HTTP%s %s (%s)', request_description, response.status_code, body, duration)

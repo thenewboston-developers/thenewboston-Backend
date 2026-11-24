@@ -16,10 +16,13 @@ class CheckersMatch(CreatedModified):
         DECLINED = 'declined', 'Declined'
         EXPIRED = 'expired', 'Expired'
 
-    white = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='checkers_as_white')
+    white = models.ForeignKey(
+        'users.User', on_delete=models.PROTECT, related_name='checkers_as_white', null=True, blank=True
+    )
     black = models.ForeignKey(
         'users.User', on_delete=models.PROTECT, related_name='checkers_as_black', null=True, blank=True
     )
+    guest_session = models.ForeignKey('general.GuestGameSession', on_delete=models.CASCADE, null=True, blank=True)
     request_id = models.UUIDField(default=uuid.uuid4)
     mode = models.CharField(max_length=8, choices=[('computer', 'Computer'), ('human', 'Human')])
     difficulty = models.CharField(max_length=6, default='normal')
@@ -48,6 +51,12 @@ class CheckersMatch(CreatedModified):
     class Meta:
         ordering = ['-created_date']
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(white__isnull=False, guest_session__isnull=True)
+                | models.Q(white__isnull=True, guest_session__isnull=False, mode='computer', stake_amount=0),
+                name='checkers_owner',
+            ),
+            models.UniqueConstraint(fields=['guest_session', 'request_id'], name='checkers_guest_request_once'),
             models.UniqueConstraint(fields=['white', 'request_id'], name='checkers_create_request_once'),
             models.CheckConstraint(condition=~models.Q(white=models.F('black')), name='checkers_distinct_players'),
             models.CheckConstraint(

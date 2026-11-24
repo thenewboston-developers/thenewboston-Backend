@@ -19,6 +19,8 @@ class ConnectFiveMatch(CreatedModified):
         'users.User',
         on_delete=models.CASCADE,
         related_name='connect_five_matches_as_player_a',
+        null=True,
+        blank=True,
     )
     player_b = models.ForeignKey(
         'users.User',
@@ -30,6 +32,10 @@ class ConnectFiveMatch(CreatedModified):
     mode = models.CharField(max_length=8, choices=[('human', 'Human'), ('computer', 'Computer')], default='human')
     difficulty = models.CharField(
         max_length=6, choices=[('easy', 'Easy'), ('normal', 'Normal'), ('hard', 'Hard')], default='normal'
+    )
+    guest_session = models.ForeignKey('general.GuestGameSession', on_delete=models.CASCADE, null=True, blank=True)
+    guest_active_side = models.CharField(
+        max_length=1, choices=[('a', 'Player'), ('b', 'Computer')], null=True, blank=True
     )
     request_id = models.UUIDField(null=True, blank=True)
     version = models.PositiveIntegerField(default=1)
@@ -69,6 +75,18 @@ class ConnectFiveMatch(CreatedModified):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(player_a__isnull=False, guest_session__isnull=True)
+                | models.Q(
+                    player_a__isnull=True,
+                    guest_session__isnull=False,
+                    mode='computer',
+                    prize_pool_total=0,
+                    max_spend_amount=0,
+                ),
+                name='connect_five_owner',
+            ),
+            models.UniqueConstraint(fields=['guest_session', 'request_id'], name='connect_five_guest_request_once'),
             models.UniqueConstraint(
                 fields=['player_a', 'request_id'],
                 condition=models.Q(mode='computer'),

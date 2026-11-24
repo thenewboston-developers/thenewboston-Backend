@@ -1,15 +1,25 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from thenewboston.general.guest_games import GUEST_PLAYER, guest_session, owns_guest_match
 from thenewboston.general.serializers import BaseModelSerializer
 from thenewboston.users.serializers.user import UserReadSerializer
 
 from ..enums import MatchStatus
 from ..models import ConnectFiveMatch, ConnectFiveMatchPlayer
+from ..services.clocks import active_side
 
 
 class ConnectFiveMatchPlayerSerializer(BaseModelSerializer):
-    user = UserReadSerializer(read_only=True)
+    user = serializers.SerializerMethodField()
+
+    def get_user(self, obj):
+        return (
+            GUEST_PLAYER
+            if obj.is_guest
+            else (UserReadSerializer(obj.user, context=self.context).data if obj.user else None)
+        )
+
     remaining_spend = serializers.SerializerMethodField()
 
     class Meta:
@@ -35,7 +45,9 @@ class ConnectFiveMatchReadSerializer(BaseModelSerializer):
     rematch_of = serializers.PrimaryKeyRelatedField(source='computer_rematch_of', read_only=True)
     server_time = serializers.SerializerMethodField()
     winner_side = serializers.SerializerMethodField()
-    player_a = UserReadSerializer(read_only=True)
+    player_a = serializers.SerializerMethodField()
+    guest_mode = serializers.SerializerMethodField()
+    your_side = serializers.SerializerMethodField()
     player_b = UserReadSerializer(read_only=True)
     players = ConnectFiveMatchPlayerSerializer(many=True, read_only=True)
 
@@ -48,6 +60,9 @@ class ConnectFiveMatchReadSerializer(BaseModelSerializer):
             'computer_reward',
             'difficulty',
             'mode',
+            'guest_mode',
+            'guest_session_id',
+            'your_side',
             'rematch_of',
             'server_time',
             'version',
@@ -80,7 +95,26 @@ class ConnectFiveMatchReadSerializer(BaseModelSerializer):
     def get_active_side(obj):
         if obj.status != MatchStatus.ACTIVE:
             return None
-        return 'a' if obj.active_player_id == obj.player_a_id else 'b'
+        return active_side(obj)
+
+    def get_guest_mode(self, obj):
+        return bool(obj.guest_session_id)
+
+    def get_player_a(self, obj):
+        return GUEST_PLAYER if obj.guest_session_id else UserReadSerializer(obj.player_a, context=self.context).data
+
+    def get_your_side(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return None
+        if obj.guest_session_id:
+            return 'a' if owns_guest_match(obj, guest_session(request)) else None
+        if request.user.is_authenticated:
+            if obj.player_a_id == request.user.id:
+                return 'a'
+            if obj.player_b_id == request.user.id:
+                return 'b'
+        return None
 
     @staticmethod
     def get_computer_name(obj):

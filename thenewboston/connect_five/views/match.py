@@ -6,10 +6,11 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from thenewboston.general.enums import NotificationType
+from thenewboston.general.guest_games import GameAccess, GuestGameResponseMixin, guest_session
 from thenewboston.general.pagination import CustomPageNumberPagination
 from thenewboston.general.views.base import CustomGenericViewSet
 from thenewboston.notifications.models import Notification
@@ -49,9 +50,10 @@ from ..services.rules import apply_move, check_win, is_board_full
 from ..services.streaming import stream_challenge_update, stream_chat_message, stream_match_update
 
 
-class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
+class ConnectFiveMatchViewSet(GuestGameResponseMixin, ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
     pagination_class = CustomPageNumberPagination
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [GameAccess]
+    guest_actions = {'computer', 'move', 'resign', 'rematch'}
     queryset = ConnectFiveMatch.objects.select_related(
         'active_player',
         'active_player__connect_five_stats',
@@ -71,33 +73,33 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
                 Prefetch('players', queryset=ConnectFiveMatchPlayer.objects.select_related('user__connect_five_stats'))
             )
         user = self.request.user
-        queryset = (
-            queryset.filter(Q(mode='human') | Q(player_a_id=user.id))
-            if user.is_authenticated
-            else queryset.filter(mode='human')
-        )
+        session = guest_session(self.request)
+        participants = Q(player_a=user) | Q(player_b=user) if user.is_authenticated else Q(pk__in=[])
+        if session:
+            participants = Q(guest_session=session)
+        queryset = queryset.filter(Q(mode='human') | participants)
 
         mine_filter = self.request.query_params.get('mine')
         if mine_filter in {'1', 'self', 'true'}:
-            # Signed-out visitors have no matches of their own
-            if user.is_authenticated:
-                queryset = queryset.filter(Q(player_a=user) | Q(player_b=user))
-            else:
-                queryset = queryset.none()
-        elif mine_filter == 'exclude' and user.is_authenticated:
-            queryset = queryset.exclude(Q(player_a=user) | Q(player_b=user))
+            queryset = queryset.filter(participants)
+        elif mine_filter == 'exclude':
+            queryset = queryset.exclude(participants)
 
         if status_filter := self.request.query_params.get('status'):
             queryset = queryset.filter(status=status_filter)
 
         return queryset
 
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], url_path='computer')
+    @action(detail=False, methods=['post'], url_path='computer')
     @transaction.atomic
     def computer(self, request):
         serializer = ConnectFiveComputerCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        match = create_computer_match(user=request.user, **serializer.validated_data)
+        match = create_computer_match(
+            user=request.user if request.user.is_authenticated else None,
+            guest_session=guest_session(request),
+            **serializer.validated_data,
+        )
         match.refresh_from_db()
         return Response(self.get_serializer(match).data, status=status.HTTP_201_CREATED)
 
@@ -116,7 +118,13 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         )
         serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        perform_computer_action(match, user=request.user, action=action_name, data=serializer.validated_data)
+        perform_computer_action(
+            match,
+            user=request.user,
+            action=action_name,
+            data=serializer.validated_data,
+            guest_session=guest_session(request),
+        )
         match.refresh_from_db()
         return Response(self.get_serializer(match).data)
 
@@ -365,7 +373,9 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
             )
 
             if match.mode == 'computer':
-                rematch = rematch_computer(match, request.user)
+                rematch = rematch_computer(
+                    match, request.user if request.user.is_authenticated else None, guest_session(request)
+                )
                 rematch.refresh_from_db()
                 return Response(self.get_serializer(rematch).data, status=status.HTTP_201_CREATED)
 

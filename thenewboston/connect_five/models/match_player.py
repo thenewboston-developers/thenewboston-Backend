@@ -8,6 +8,7 @@ class ConnectFiveMatchPlayer(CreatedModified):
     user = models.ForeignKey(
         'users.User', on_delete=models.CASCADE, related_name='connect_five_match_players', null=True, blank=True
     )
+    is_guest = models.BooleanField(default=False)
     spent_total = models.PositiveBigIntegerField(default=0)
     inventory_h2 = models.PositiveIntegerField(default=0)
     inventory_v2 = models.PositiveIntegerField(default=0)
@@ -15,9 +16,18 @@ class ConnectFiveMatchPlayer(CreatedModified):
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                fields=['match'], condition=models.Q(is_guest=True), name='connect_five_one_guest_player'
+            ),
+            models.CheckConstraint(
+                condition=models.Q(is_guest=False) | models.Q(user__isnull=True),
+                name='connect_five_guest_player_no_user',
+            ),
             models.UniqueConstraint(fields=['match', 'user'], name='unique_match_user'),
             models.UniqueConstraint(
-                fields=['match'], condition=models.Q(user__isnull=True), name='connect_five_one_cpu_player'
+                fields=['match'],
+                condition=models.Q(user__isnull=True, is_guest=False),
+                name='connect_five_one_cpu_player',
             ),
         ]
         verbose_name = 'Connect Five match player'
