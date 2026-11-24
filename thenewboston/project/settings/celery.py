@@ -15,6 +15,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.sweep_dots_and_boxes_matches',
         'schedule': 10.0,
     },
+    'sweep_hex_matches': {
+        'task': 'tasks.sweep_hex_matches',
+        'schedule': 10.0,
+    },
     'sweep_battleship_matches': {
         'task': 'tasks.sweep_battleship_matches',
         'schedule': 15,

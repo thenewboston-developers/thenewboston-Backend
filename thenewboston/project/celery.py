@@ -14,6 +14,7 @@ app = Celery(
         'thenewboston.dots_and_boxes.tasks',
         'thenewboston.exchange.tasks',
         'thenewboston.general.tasks',
+        'thenewboston.hex.tasks',
         'thenewboston.mancala.tasks',
         'thenewboston.reversi.tasks',
         'thenewboston.social.tasks',

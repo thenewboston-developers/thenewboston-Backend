@@ -23,13 +23,15 @@ from thenewboston.connect_five.models import ConnectFiveMatch
 from thenewboston.connect_five.services.computer import run_computer_turn
 from thenewboston.game_rewards.models import GameFund, GameRewardDecision
 from thenewboston.general.models import GuestGameSession
+from thenewboston.hex.models import HexMatch
+from thenewboston.hex.services import run_computer as run_hex
 from thenewboston.mancala.models import MancalaMatch
 from thenewboston.mancala.services import run_computer as run_mancala
 from thenewboston.wallets.models import Wallet
 
 pytestmark = pytest.mark.django_db
-GAMES = ['battleship', 'backgammon', 'connect-five', 'checkers', 'mancala']
-MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch, CheckersMatch, MancalaMatch]))
+GAMES = ['battleship', 'backgammon', 'connect-five', 'checkers', 'mancala', 'hex']
+MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch, CheckersMatch, MancalaMatch, HexMatch]))
 
 
 @pytest.fixture(autouse=True)
@@ -40,6 +42,7 @@ def queues():
         patch('thenewboston.checkers.services.queue_computer'),
         patch('thenewboston.backgammon.services.queue_computer'),
         patch('thenewboston.mancala.services.queue_computer'),
+        patch('thenewboston.hex.services.queue_computer'),
         patch('thenewboston.connect_five.services.computer.queue_computer_turn'),
         patch('thenewboston.connect_five.services.computer.randbelow', return_value=0),
     ):
@@ -81,9 +84,14 @@ def test_guest_creation_is_private_idempotent_and_never_creates_account(game):
     assert response.data['guest_mode']
     assert (
         response.data['your_side']
-        == {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'a', 'checkers': 'white', 'mancala': 'host'}[
-            game
-        ]
+        == {
+            'battleship': 'host',
+            'backgammon': 'white',
+            'connect-five': 'a',
+            'checkers': 'white',
+            'mancala': 'host',
+            'hex': 'red',
+        }[game]
     )
     assert (
         response.data[
@@ -93,6 +101,7 @@ def test_guest_creation_is_private_idempotent_and_never_creates_account(game):
                 'connect-five': 'player_a',
                 'checkers': 'white',
                 'mancala': 'host',
+                'hex': 'red',
             }[game]
         ]['id']
         == 0
@@ -187,6 +196,12 @@ def test_guest_can_win_without_touching_fund_or_receiving_money(game, funded, tn
         match.board[42], match.board[35] = 1, -1
         match.save()
         response = act(client, game, match, 'move', path=[42, 28])
+    elif game == 'hex':
+        # The guest's column is one stone short of the bottom edge.
+        size = match.board_size
+        match.board = [1 if cell % size == 3 and cell < size * (size - 1) else 0 for cell in range(size * size)]
+        match.save()
+        response = act(client, game, match, 'move', cell=size * (size - 1) + 3)
     elif game == 'backgammon':
         match.board = winning_board()
         match.active_side = 'white'
@@ -364,3 +379,30 @@ def test_guest_checkers_worker_plays_and_stale_worker_cannot_replay():
     match.refresh_from_db()
     assert match.version == version + 1
     assert not match.ledger_entries.exists()
+
+
+def test_guest_hex_worker_plays_and_guests_cannot_swap_or_be_watched(bucky):
+    client = guest_client()
+    match = HexMatch.objects.get(pk=create(client, 'hex', board_size=7).data['id'])
+    # Guest sessions only reach the actions of a free computer game.
+    assert act(client, 'hex', match, 'swap').status_code == 401
+    response = act(client, 'hex', match, 'move', cell=24)
+    assert response.status_code == 200, response.data
+    assert response.data['active_side'] == 'blue' and response.data['can_swap'] is False
+    assert response['Cache-Control'] == 'private, no-store'
+    match.refresh_from_db()
+    version = match.version
+    run_hex(match.id, version)
+    match.refresh_from_db()
+    assert match.active_side == 'red' and match.version == version + 1
+    assert match.board[24] == 1 and match.board.count(2) == 1
+    run_hex(match.id, version)
+    match.refresh_from_db()
+    assert match.version == version + 1
+    assert not match.ledger_entries.exists()
+    # Members' matches can be watched; a signed-out visitor's game cannot, in a list or by its address.
+    member = APIClient()
+    member.force_authenticate(bucky)
+    for viewer in (member, APIClient(), guest_client()):
+        assert viewer.get('/api/hex/matches').data['count'] == 0
+        assert viewer.get(f'/api/hex/matches/{match.pk}').status_code == 404

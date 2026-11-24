@@ -15,6 +15,7 @@ import thenewboston.dots_and_boxes.urls
 import thenewboston.exchange.urls
 import thenewboston.game_rewards.urls
 import thenewboston.general.urls
+import thenewboston.hex.urls
 import thenewboston.invitations.urls
 import thenewboston.mancala.urls
 import thenewboston.notifications.urls
@@ -38,6 +39,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.exchange.urls)),
     path(API_PREFIX, include(thenewboston.game_rewards.urls)),
     path(API_PREFIX, include(thenewboston.general.urls)),
+    path(API_PREFIX, include(thenewboston.hex.urls)),
     path(API_PREFIX, include(thenewboston.invitations.urls)),
     path(API_PREFIX, include(thenewboston.mancala.urls)),
     path(API_PREFIX, include(thenewboston.notifications.urls)),

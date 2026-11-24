@@ -13,11 +13,12 @@ from rest_framework.test import APIClient
 from thenewboston.backgammon.models import BackgammonEvent, BackgammonLedgerEntry, BackgammonMatch
 from thenewboston.battleship.models import BattleshipEvent, BattleshipLedgerEntry, BattleshipMatch
 from thenewboston.checkers.models import CheckersEvent, CheckersLedgerEntry, CheckersMatch
+from thenewboston.hex.models import HexEvent, HexLedgerEntry, HexMatch
 from thenewboston.mancala.models import MancalaEvent, MancalaLedgerEntry, MancalaMatch
 from thenewboston.reversi.models import ReversiEvent, ReversiLedgerEntry, ReversiMatch
 
 pytestmark = pytest.mark.django_db
-GAMES = ['backgammon', 'battleship', 'checkers', 'mancala', 'reversi']
+GAMES = ['backgammon', 'battleship', 'checkers', 'hex', 'mancala', 'reversi']
 GAME_MODELS = [
     BackgammonEvent,
     BackgammonLedgerEntry,
@@ -28,6 +29,9 @@ GAME_MODELS = [
     CheckersEvent,
     CheckersLedgerEntry,
     CheckersMatch,
+    HexEvent,
+    HexLedgerEntry,
+    HexMatch,
     MancalaEvent,
     MancalaLedgerEntry,
     MancalaMatch,
