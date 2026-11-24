@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     # Apps
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.backgammon.apps.BackgammonConfig',
+    'thenewboston.battleship.apps.BattleshipConfig',
     'thenewboston.connect_five.apps.ConnectFiveConfig',
     'thenewboston.currencies.apps.CurrenciesConfig',
     'thenewboston.exchange.apps.ExchangeConfig',
