@@ -12,6 +12,8 @@ class ConnectFiveMatch(CreatedModified):
         'connect_five.ConnectFiveChallenge',
         on_delete=models.CASCADE,
         related_name='match',
+        null=True,
+        blank=True,
     )
     player_a = models.ForeignKey(
         'users.User',
@@ -22,6 +24,19 @@ class ConnectFiveMatch(CreatedModified):
         'users.User',
         on_delete=models.CASCADE,
         related_name='connect_five_matches_as_player_b',
+        null=True,
+        blank=True,
+    )
+    mode = models.CharField(max_length=8, choices=[('human', 'Human'), ('computer', 'Computer')], default='human')
+    difficulty = models.CharField(
+        max_length=6, choices=[('easy', 'Easy'), ('normal', 'Normal'), ('hard', 'Hard')], default='normal'
+    )
+    request_id = models.UUIDField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    winner_side = models.CharField(max_length=1, choices=[('a', 'Player'), ('b', 'Computer')], null=True, blank=True)
+    computer_reward = models.JSONField(null=True, blank=True)
+    computer_rematch_of = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='computer_rematches'
     )
     status = models.CharField(max_length=20, choices=MatchStatus.choices, default=MatchStatus.ACTIVE)
     winner = models.ForeignKey(
@@ -53,6 +68,27 @@ class ConnectFiveMatch(CreatedModified):
     player_b_elo_after = models.IntegerField(null=True, blank=True)
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['player_a', 'request_id'],
+                condition=models.Q(mode='computer'),
+                name='connect_five_cpu_request_once',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(mode='human', player_b__isnull=False, challenge__isnull=False)
+                    | models.Q(
+                        mode='computer',
+                        player_b__isnull=True,
+                        challenge__isnull=True,
+                        request_id__isnull=False,
+                        prize_pool_total=0,
+                        max_spend_amount=0,
+                    )
+                ),
+                name='connect_five_mode_players',
+            ),
+        ]
         ordering = ['-created_date']
         verbose_name = 'Connect Five match'
         verbose_name_plural = 'Connect Five matches'

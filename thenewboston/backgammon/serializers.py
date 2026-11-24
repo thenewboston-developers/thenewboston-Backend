@@ -58,6 +58,7 @@ class MatchReadSerializer(serializers.ModelSerializer):
             'id',
             'mode',
             'difficulty',
+            'computer_reward',
             'white',
             'black',
             'computer_name',

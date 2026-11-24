@@ -196,6 +196,15 @@ def accept_match(match):
 def finish_match(match, winning_side, reason):
     if match.settled:
         raise StateConflict('The match has already settled.')
+    if match.mode == 'computer':
+        from thenewboston.game_rewards.services import settle_computer_reward
+
+        match.computer_reward = settle_computer_reward(
+            game='backgammon',
+            match_id=match.id,
+            user_id=match.white_id,
+            won=winning_side == 'white' and reason in {'single', 'gammon', 'backgammon', 'double_declined'},
+        )
     winning_user_id = match.white_id if winning_side == 'white' else match.black_id
     _transfer(match, winning_user_id, match.prize_pool_total, 'payout')
     match.settled = True

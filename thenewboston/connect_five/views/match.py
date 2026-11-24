@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
@@ -35,7 +36,13 @@ from ..serializers import (
     ConnectFiveMoveSerializer,
     ConnectFivePurchaseSerializer,
 )
+from ..serializers.computer import (
+    ConnectFiveComputerActionSerializer,
+    ConnectFiveComputerCreateSerializer,
+    ConnectFiveComputerMoveSerializer,
+)
 from ..services.clocks import apply_elapsed_time, switch_turn, touch_turn
+from ..services.computer import create_computer_match, expire_computer_match, perform_computer_action, rematch_computer
 from ..services.escrow import create_escrow, get_wallet_for_update, lock_stake, purchase_special
 from ..services.match import finish_match_connect5, finish_match_full_board, finish_match_resign, finish_match_timeout
 from ..services.rules import apply_move, check_win, is_board_full
@@ -64,6 +71,11 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
                 Prefetch('players', queryset=ConnectFiveMatchPlayer.objects.select_related('user__connect_five_stats'))
             )
         user = self.request.user
+        queryset = (
+            queryset.filter(Q(mode='human') | Q(player_a_id=user.id))
+            if user.is_authenticated
+            else queryset.filter(mode='human')
+        )
 
         mine_filter = self.request.query_params.get('mine')
         if mine_filter in {'1', 'self', 'true'}:
@@ -80,16 +92,48 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
 
         return queryset
 
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], url_path='computer')
+    @transaction.atomic
+    def computer(self, request):
+        serializer = ConnectFiveComputerCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        match = create_computer_match(user=request.user, **serializer.validated_data)
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, *args, **kwargs):
+        match = self.get_object()
+        if match.mode == 'computer':
+            with transaction.atomic():
+                match = get_object_or_404(ConnectFiveMatch.objects.select_for_update(), pk=match.pk)
+                expire_computer_match(match)
+                return Response(self.get_serializer(match).data)
+        return Response(self.get_serializer(match).data)
+
+    def _computer_action(self, request, match, action_name):
+        serializer_class = (
+            ConnectFiveComputerMoveSerializer if action_name == 'move' else ConnectFiveComputerActionSerializer
+        )
+        serializer = serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        perform_computer_action(match, user=request.user, action=action_name, data=serializer.validated_data)
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data)
+
     @action(detail=True, methods=['post'], url_path='move')
     def move(self, request, pk=None):
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
 
         with transaction.atomic():
-            match = (
-                ConnectFiveMatch.objects.select_for_update()
-                .select_related('challenge', 'player_a', 'player_b')
-                .get(pk=pk)
+            match = get_object_or_404(
+                ConnectFiveMatch.objects.select_for_update(of=('self',)).select_related(
+                    'challenge', 'player_a', 'player_b'
+                ),
+                pk=pk,
             )
+
+            if match.mode == 'computer':
+                return self._computer_action(request, match, 'move')
 
             if match.status != MatchStatus.ACTIVE:
                 raise GoneError({'detail': 'Match is no longer active.'})
@@ -189,11 +233,14 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
 
         with transaction.atomic():
-            match = (
-                ConnectFiveMatch.objects.select_for_update()
-                .select_related('challenge', 'player_a', 'player_b')
-                .get(pk=pk)
+            match = get_object_or_404(
+                ConnectFiveMatch.objects.select_for_update(of=('self',)).select_related(
+                    'challenge', 'player_a', 'player_b'
+                ),
+                pk=pk,
             )
+            if match.mode == 'computer':
+                raise ValidationError('Computer matches use free specials and do not support purchases.')
             escrow = ConnectFiveEscrow.objects.select_for_update().get(challenge=match.challenge)
 
             if match.status != MatchStatus.ACTIVE:
@@ -273,11 +320,15 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
 
         with transaction.atomic():
-            match = (
-                ConnectFiveMatch.objects.select_for_update()
-                .select_related('challenge', 'player_a', 'player_b')
-                .get(pk=pk)
+            match = get_object_or_404(
+                ConnectFiveMatch.objects.select_for_update(of=('self',)).select_related(
+                    'challenge', 'player_a', 'player_b'
+                ),
+                pk=pk,
             )
+
+            if match.mode == 'computer':
+                return self._computer_action(request, match, 'resign')
 
             if match.status != MatchStatus.ACTIVE:
                 raise GoneError({'detail': 'Match is no longer active.'})
@@ -306,11 +357,17 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         assert transaction.get_connection().in_atomic_block, "Ensure `'ATOMIC_REQUESTS': True`"
 
         with transaction.atomic():
-            match = (
-                ConnectFiveMatch.objects.select_for_update()
-                .select_related('challenge', 'challenge__currency', 'player_a', 'player_b')
-                .get(pk=pk)
+            match = get_object_or_404(
+                ConnectFiveMatch.objects.select_for_update(of=('self',)).select_related(
+                    'challenge', 'challenge__currency', 'player_a', 'player_b'
+                ),
+                pk=pk,
             )
+
+            if match.mode == 'computer':
+                rematch = rematch_computer(match, request.user)
+                rematch.refresh_from_db()
+                return Response(self.get_serializer(rematch).data, status=status.HTTP_201_CREATED)
 
             if match.status not in {
                 MatchStatus.FINISHED_CONNECT5,
@@ -395,6 +452,9 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
         if request.user.id not in {match.player_a_id, match.player_b_id}:
             raise PermissionDenied({'detail': 'You are not a participant in this match.'})
 
+        if match.mode == 'computer':
+            return Response({'can_rematch': True, 'challenge': None, 'insufficient_funds': False})
+
         latest_rematch = _get_latest_rematch(match)
         has_funds = _has_rematch_funds(match)
         response_data = {
@@ -412,6 +472,8 @@ class ConnectFiveMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericV
     @action(detail=True, methods=['get', 'post'], url_path='chat')
     def chat(self, request, pk=None):
         match = self.get_object()
+        if match.mode == 'computer':
+            raise ValidationError('Chat is available in player matches.')
 
         if request.method == 'GET':
             queryset = (
