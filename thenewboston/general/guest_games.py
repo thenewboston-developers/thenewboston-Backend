@@ -28,6 +28,9 @@ def guest_session(request):
         except (signing.BadSignature, GuestGameSession.DoesNotExist, ValueError, TypeError) as error:
             raise AuthenticationFailed('Your guest session expired. Start a new guest game.') from error
     request._guest_game_session = session
+    # Pass only the verified owner ID into request-scoped analytics, never the capability token.
+    if hasattr(request, '_request'):
+        request._request._analytics_guest_session_id = session.pk if session else None
     return session
 
 

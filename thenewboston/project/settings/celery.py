@@ -3,6 +3,10 @@ from celery.schedules import crontab
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    'deliver_product_analytics': {
+        'task': 'tasks.deliver_product_analytics',
+        'schedule': 15,
+    },
     'delete_expired_guest_games': {
         'task': 'tasks.delete_expired_guest_games',
         'schedule': 60 * 60,

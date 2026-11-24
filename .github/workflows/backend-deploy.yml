@@ -22,8 +22,13 @@ jobs:
         env:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          POSTHOG_API_KEY: ${{ secrets.PROD_POSTHOG_KEY }}
+          POSTHOG_HOST: ${{ secrets.PROD_POSTHOG_HOST }}
         run: |
-          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
+          test -n "$POSTHOG_API_KEY" || { echo "Missing PROD_POSTHOG_KEY"; exit 1; }
+          test -n "$POSTHOG_HOST" || { echo "Missing PROD_POSTHOG_HOST"; exit 1; }
+          POSTHOG_CONFIG=$(python3 -c 'import base64,json,os; print(base64.b64encode(json.dumps({"api_key": os.environ["POSTHOG_API_KEY"], "host": os.environ["POSTHOG_HOST"]}).encode()).decode())')
+          ssh -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" "POSTHOG_CONFIG='$POSTHOG_CONFIG' bash -s" << 'EOF'
             set -e
 
             cd ~/thenewboston-Backend
@@ -32,6 +37,9 @@ jobs:
             git checkout master
             git reset --hard origin/master
 
+            printf '%s' "$POSTHOG_CONFIG" | sudo python3 .github/scripts/configure_posthog.py
             make deploy
+            DEPLOY_SHA=$(git rev-parse HEAD)
+            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_product_analytics --deployment-sha "$DEPLOY_SHA"
             make deploy-cleanup
           EOF

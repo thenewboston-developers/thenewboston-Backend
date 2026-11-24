@@ -5,7 +5,21 @@ SECRET_KEY = NotImplemented
 
 ALLOWED_HOSTS: list[str] = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_HEADERS = (*default_headers, 'sentry-trace', 'baggage', 'x-guest-token')
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    'sentry-trace',
+    'baggage',
+    'x-guest-token',
+    'x-posthog-distinct-id',
+    'x-posthog-session-id',
+    'x-posthog-opt-out',
+    'x-posthog-internal-traffic',
+    'x-posthog-game',
+    'x-posthog-game-source',
+    'x-posthog-game-match-id',
+    'x-posthog-reward-offer-seen',
+    'x-posthog-reward-signup-clicked',
+)
 CSRF_TRUSTED_ORIGINS: list[str] = []
 
 INTERNAL_IPS = ['127.0.0.1']
@@ -41,6 +55,7 @@ INSTALLED_APPS = [
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.mancala.apps.MancalaConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
+    'thenewboston.product_analytics.apps.ProductAnalyticsConfig',
     'thenewboston.reversi.apps.ReversiConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
@@ -56,6 +71,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'thenewboston.product_analytics.context.AnalyticsContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

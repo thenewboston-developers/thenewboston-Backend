@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from thenewboston.general.authentication import get_user_auth_data
 from thenewboston.general.permissions import IsSelfOrReadOnly
+from thenewboston.product_analytics.events import record_signup, safely_record
 
 from ..models import User
 from ..serializers.user import UserReadSerializer, UserUpdateSerializer, UserWriteSerializer
@@ -20,6 +21,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        safely_record(record_signup, user)
 
         return Response(get_user_auth_data(user, request), status=status.HTTP_201_CREATED)
 
