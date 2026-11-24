@@ -71,6 +71,14 @@ class GameRewardDecision(CreatedModified):
     amount = models.PositiveBigIntegerField(default=0)
 
     class Meta:
+        indexes = [
+            models.Index(
+                fields=['game', 'user'],
+                condition=models.Q(status='paid'),
+                include=['amount'],
+                name='game_rewards_paid_earners',
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(fields=['game', 'match_id'], name='game_reward_match_once'),
             models.CheckConstraint(
