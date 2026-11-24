@@ -49,7 +49,7 @@ class GameRewardDecision(CreatedModified):
     user = models.ForeignKey('users.User', on_delete=models.PROTECT)
     wallet = models.ForeignKey('wallets.Wallet', on_delete=models.PROTECT, null=True, blank=True)
     game = models.CharField(
-        max_length=16, choices=[(game, game) for game in ('connect_five', 'backgammon', 'battleship')]
+        max_length=16, choices=[(game, game) for game in ('connect_five', 'backgammon', 'battleship', 'checkers')]
     )
     match_id = models.PositiveBigIntegerField()
     status = models.CharField(
