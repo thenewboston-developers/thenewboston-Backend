@@ -1,9 +1,12 @@
 from datetime import timedelta
+from itertools import permutations
 
 import pytest
 from django.utils import timezone
 from freezegun import freeze_time
+from model_bakery import baker
 
+from thenewboston.exchange.business_logic.trade_history import update_trade_history
 from thenewboston.exchange.models import AssetPair, ExchangeOrder, Trade, TradeHistoryItem
 from thenewboston.exchange.models.exchange_order import ExchangeOrderSide
 
@@ -78,7 +81,8 @@ def test_trade_history_batches_prices_and_preserves_cutoff_edges(
     item = create_history_item(pair)
     other_item = create_history_item(other_pair)
 
-    # One SELECT gets all historical prices, followed by volume/mint totals and the locked update.
+    # A savepoint pair around: the item lock, the trade moments with the volume, their prices, the mint totals
+    # and the write.
     with django_assert_num_queries(7):
         TradeHistoryItem.objects.update_for_currency_pair(pair.id)
     with django_assert_num_queries(7):
@@ -116,7 +120,7 @@ def test_trade_history_new_item_has_constant_queries_and_missing_cutoffs(
         [(now - timedelta(seconds=index), 42, 3) for index in range(trade_count)],
     )
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(7):
         TradeHistoryItem.objects.update_for_currency_pair(pair.id)
 
     item = TradeHistoryItem.objects.get(asset_pair=pair)
@@ -135,7 +139,7 @@ def test_trade_history_without_trades_is_unchanged(
     pair = AssetPair.objects.create(primary_currency=tnb_currency, secondary_currency=yyy_currency)
     original = create_history_item(pair) if has_existing_item else None
 
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(4):
         TradeHistoryItem.objects.update_for_currency_pair(pair.id)
 
     if original is None:
@@ -146,3 +150,61 @@ def test_trade_history_without_trades_is_unchanged(
         assert item.price == original.price
         assert item.sparkline == original.sparkline
         assert item.modified_date == original.modified_date
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures('tnb_mint')
+@pytest.mark.parametrize('pair_count', [1, 6])
+@freeze_time('2026-09-22 12:00:00')
+def test_update_trade_history_has_constant_queries_for_any_number_of_pairs(
+    django_assert_num_queries, bucky, tnb_currency, yyy_currency, zzz_currency, pair_count
+):
+    now = timezone.now()
+    pairs = [
+        AssetPair.objects.create(primary_currency=primary_currency, secondary_currency=secondary_currency)
+        for primary_currency, secondary_currency in list(permutations([tnb_currency, yyy_currency, zzz_currency], 2))[
+            :pair_count
+        ]
+    ]
+    for index, pair in enumerate(pairs, start=1):
+        create_trades(pair, bucky, [(now - timedelta(hours=30), index, 1), (now - timedelta(hours=2), index * 3, 5)])
+    # A pair whose item exists already is updated in place, the others get a new item
+    original = create_history_item(pairs[0])
+
+    # Two queries find the pairs to update, the rest is the same as for a single pair.
+    with django_assert_num_queries(9):
+        update_trade_history()
+
+    items = {item.asset_pair_id: item for item in TradeHistoryItem.objects.all()}
+    assert set(items) == {pair.id for pair in pairs}
+    assert items[pairs[0].id].pk == original.pk
+    for index, pair in enumerate(pairs, start=1):
+        item = items[pair.id]
+        assert item.price == index * 3
+        assert item.change_1h == 0
+        assert item.change_24h == pytest.approx(200)
+        assert item.change_7d == 0
+        assert item.sparkline == [None] * 22 + [index] * 5 + [index * 3]
+        assert item.volume_24h == 5
+        assert item.market_cap == (index * 3 * 100_000 if pair.primary_currency_id == tnb_currency.id else 0)
+
+
+@pytest.mark.django_db
+@freeze_time('2026-09-22 12:00:00')
+def test_update_trade_history_updates_other_pairs_when_one_pair_fails(bucky, tnb_currency, yyy_currency, zzz_currency):
+    now = timezone.now()
+    broken_pair = AssetPair.objects.create(primary_currency=tnb_currency, secondary_currency=yyy_currency)
+    pair = AssetPair.objects.create(primary_currency=yyy_currency, secondary_currency=zzz_currency)
+    create_trades(broken_pair, bucky, [(now, 2, 1)])
+    create_trades(pair, bucky, [(now, 7, 3)])
+    # The market cap of this currency does not fit into the column
+    baker.make('currencies.Mint', currency=tnb_currency, owner=bucky, amount=2**62)
+    baker.make('currencies.Mint', currency=yyy_currency, owner=bucky, amount=10)
+
+    update_trade_history()
+
+    item = TradeHistoryItem.objects.get()
+    assert item.asset_pair_id == pair.id
+    assert item.price == 7
+    assert item.volume_24h == 3
+    assert item.market_cap == 70

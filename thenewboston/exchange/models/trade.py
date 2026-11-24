@@ -18,6 +18,9 @@ class TradeQuerySet(CustomQuerySet):
         # TODO(dmu) LOW: We can optimize performance by storing the asset pair in the Trade model
         return self.filter(buy_order__asset_pair_id=asset_pair_id)
 
+    def filter_by_asset_pair_ids(self, asset_pair_ids):
+        return self.filter(buy_order__asset_pair_id__in=asset_pair_ids)
+
 
 class TradeManager(CustomManager.from_queryset(TradeQuerySet)):  # type: ignore
     pass
