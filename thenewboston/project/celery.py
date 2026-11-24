@@ -11,6 +11,7 @@ app = Celery(
         'thenewboston.battleship.tasks',
         'thenewboston.checkers.tasks',
         'thenewboston.connect_five.tasks',
+        'thenewboston.dots_and_boxes.tasks',
         'thenewboston.exchange.tasks',
         'thenewboston.general.tasks',
         'thenewboston.mancala.tasks',
