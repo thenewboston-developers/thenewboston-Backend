@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'thenewboston.game_rewards.apps.GameRewardsConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
+    'thenewboston.reversi.apps.ReversiConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
     'thenewboston.wallets.apps.WalletsConfig',
