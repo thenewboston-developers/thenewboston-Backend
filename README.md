@@ -107,11 +107,25 @@ The computer is a local opponent. Easy plays a random legal move, normal picks t
 
 Run the game tests with `poetry run pytest thenewboston/reversi/tests`.
 
+# Mancala
+
+Mancala is the Kalah game: six pits a side with four stones each. A move sows one pit counter-clockwise, one stone per pit, through the mover's own store and past the opponent's. A last stone in the mover's store earns another turn. A last stone in an empty pit on the mover's side captures it together with the stones opposite, if there are any. When one row is empty the stones left in the other row go to that row's owner, and the fuller store wins. Equal stores are a draw.
+
+The API is under `/api/mancala/matches` and follows the Backgammon and Battleship conventions: creation takes a UUID `request_id` (reuse it when retrying), `mode`, `opponent_id` for human games, `difficulty`, `stake_amount`, and `time_limit_seconds` (300, 600, 900, or 1800). Pending matches are invitations with `accept`, `decline`, and `cancel`. Active matches take `move` with `pit` (0-5, counted in sowing order, so 5 is next to the mover's store) and `resign`; a finished match can create a `rematch`. Every action carries `expected_version`. The side that moves first is chosen at random when the game starts.
+
+`board` is a list of 14 counts in sowing order: indexes 0-5 are the host's pits, 6 the host's store, 7-12 the guest's pits, and 13 the guest's store. The detail response also carries `recent_moves`, the last eight moves with the board after each one, so a client can show every pit the computer played between two polls. Boards are public and started matches can be watched; pending invitations are visible only to their two players.
+
+Human matches can carry equal, fixed TNB stakes. The challenger's stake is locked when the challenge is sent and the opponent's when it is accepted. The winner receives both; a draw refunds both; a cancelled, declined, or expired challenge refunds the challenger. Each player has one clock for the whole match that runs only on their turns. Running out of time or resigning loses the match. Stakes, refunds, and payouts are recorded in the match ledger.
+
+Computer games are free. Signed-out visitors can play them too, with the guest session described in `DEPLOY.md` (`X-Guest-Token`): a guest game is private to its session, cannot carry a stake, and a win only previews the reward an account would have earned. Easy plays any legal pit, normal looks two moves ahead, and hard searches deeper within a fixed budget of positions. Computer turns run through Celery, one pit per task, and the 15-second sweep also settles expired challenges and clocks and retries computer turns that were not delivered. Keep the worker and Beat running.
+
+Run the game tests with `poetry run pytest thenewboston/mancala/tests`.
+
 # Computer games and the community game fund
 
 Connect Five now supports private computer matches at easy, normal, and hard difficulty. Create one with `POST /api/connect-five/matches/computer`, a UUID `request_id`, `difficulty`, and `time_limit_seconds` (300, 600, 900, or 1800). Reuse the request ID after a network failure. Both sides start with two of each special; computer matches have no stakes, paid purchases, or ranked statistics. Moves and resignations require `expected_version`. The detail response includes `active_side`, `winner_side`, `version`, and `server_time`; the frontend polls private computer matches. Celery runs computer turns and the existing timeout sweep retries missed work. Keep both the worker and Beat running.
 
-The shared TNB fund pays **10 TNB for a completed computer-match win** in Connect Five, Backgammon, Battleship, or Reversi, at any difficulty. Connect Five requires five connected pieces; Battleship requires sinking the fleet; Backgammon requires winning the whole match (including a computer declining a double); Reversi requires finishing the game with more disks. Timeouts, resignations, draws, partial Backgammon rounds, and human matches do not earn fund rewards. Human stakes continue to use their existing settlement paths.
+The shared TNB fund pays **10 TNB for a completed computer-match win** in Connect Five, Backgammon, Battleship, Reversi, or Mancala, at any difficulty. Connect Five requires five connected pieces; Battleship requires sinking the fleet; Backgammon requires winning the whole match (including a computer declining a double); Reversi requires finishing the game with more disks; Mancala requires finishing the game with the fuller store. Timeouts, resignations, draws, partial Backgammon rounds, and human matches do not earn fund rewards. Human stakes continue to use their existing settlement paths.
 
 `GET /api/game-fund` publicly reports the balance, reward amount, funded wins, deposited/paid totals, and availability. Authenticated players contribute from their TNB wallet with `POST /api/game-fund/deposits` and `{amount, request_id}`. Amounts must be whole TNB from 1 through 1,000,000,000. Contributions are final and cannot be withdrawn. Reusing a donor's request ID with the same amount returns the original receipt; changing the amount returns 409.
 

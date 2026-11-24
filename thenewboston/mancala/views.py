@@ -1,0 +1,113 @@
+from django.db import transaction
+from django.db.models import Q
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+from thenewboston.general.guest_games import GameAccess, GuestGameResponseMixin, guest_session
+from thenewboston.general.views.base import CustomGenericViewSet
+
+from .models import MancalaMatch
+from .serializers import MatchActionSerializer, MatchCreateSerializer, MatchMoveSerializer, MatchReadSerializer
+from .services import advance_deadlines, create_match, deadline_passed, perform_action
+
+
+class MatchPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
+class MancalaMatchViewSet(GuestGameResponseMixin, ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
+    permission_classes = [GameAccess]
+    guest_actions = {'create', 'move', 'resign', 'rematch'}
+    pagination_class = MatchPagination
+    serializer_class = MatchReadSerializer
+    queryset = MancalaMatch.objects.select_related('host', 'guest').all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        participants = Q(host_id=user.id) | Q(guest_id=user.id) if user.is_authenticated else Q(pk__in=[])
+        session = guest_session(self.request)
+        if session:
+            participants = Q(guest_session=session)
+        # A signed-out visitor's game is private to the session that started it.
+        queryset = queryset.filter(Q(guest_session__isnull=True) | participants)
+        # The board is public information, so members' matches can be watched. Invitations stay between the two players.
+        queryset = queryset.filter(~Q(status='pending') | participants)
+        mine = self.request.query_params.get('mine')
+        if mine in {'1', 'true', 'self'}:
+            queryset = queryset.filter(participants)
+        elif mine == 'exclude':
+            queryset = queryset.exclude(participants)
+        if statuses := self.request.query_params.get('status'):
+            queryset = queryset.filter(status__in=statuses.split(','))
+        return queryset
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), 'detail': self.action != 'list'}
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        serializer = MatchCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        match = create_match(
+            user=request.user if request.user.is_authenticated else None,
+            guest_session=guest_session(request),
+            **serializer.validated_data,
+        )
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, *args, **kwargs):
+        match = self.get_object()
+        if deadline_passed(match):
+            # Settle a finished clock right away instead of leaving the board frozen until the next sweep.
+            # The viewer was already allowed to see this match; list filters must not hide the locked row.
+            with transaction.atomic():
+                match = self.queryset.select_for_update(of=('self',)).get(pk=match.pk)
+                advance_deadlines(match)
+        return Response(self.get_serializer(match).data)
+
+    @transaction.atomic
+    def _perform(self, request, action_name, serializer_class=MatchActionSerializer):
+        serializer = serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # Avoid locking the nullable joined opponent row; serialize on the match itself.
+        self.queryset = self.queryset.select_for_update(of=('self',))
+        match = perform_action(
+            self.get_object(),
+            request.user if request.user.is_authenticated else None,
+            action_name,
+            serializer.validated_data,
+            guest_session(request),
+        )
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data)
+
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        return self._perform(request, 'accept')
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        return self._perform(request, 'decline')
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        return self._perform(request, 'cancel')
+
+    @action(detail=True, methods=['post'])
+    def move(self, request, pk=None):
+        return self._perform(request, 'move', MatchMoveSerializer)
+
+    @action(detail=True, methods=['post'])
+    def resign(self, request, pk=None):
+        return self._perform(request, 'resign')
+
+    @action(detail=True, methods=['post'])
+    def rematch(self, request, pk=None):
+        return self._perform(request, 'rematch')

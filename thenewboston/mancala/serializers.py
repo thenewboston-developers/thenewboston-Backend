@@ -1,0 +1,131 @@
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import serializers
+
+from thenewboston.general.guest_games import GUEST_PLAYER, guest_session
+
+from .models import MancalaMatch
+from .rules import PITS
+
+RECENT_MOVES = 8
+
+
+class MatchCreateSerializer(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    mode = serializers.ChoiceField(choices=['computer', 'human'])
+    opponent_id = serializers.PrimaryKeyRelatedField(
+        queryset=get_user_model().objects.filter(is_active=True), required=False, source='opponent'
+    )
+    difficulty = serializers.ChoiceField(choices=['easy', 'normal', 'hard'], default='normal')
+    stake_amount = serializers.IntegerField(min_value=0, max_value=1000000000, default=0)
+    time_limit_seconds = serializers.ChoiceField(choices=[300, 600, 900, 1800], default=600)
+
+    def validate(self, attrs):
+        if not self.context['request'].user.is_authenticated and attrs['mode'] != 'computer':
+            raise serializers.ValidationError('Sign in to challenge another player.')
+        if attrs['mode'] == 'human':
+            if not attrs.get('opponent'):
+                raise serializers.ValidationError({'opponent_id': 'Choose an opponent.'})
+            if attrs['opponent'] == self.context['request'].user:
+                raise serializers.ValidationError({'opponent_id': 'You cannot challenge yourself.'})
+        elif attrs['stake_amount'] or attrs.get('opponent'):
+            raise serializers.ValidationError('Computer practice is free and cannot have a human opponent.')
+        return attrs
+
+
+class MatchActionSerializer(serializers.Serializer):
+    expected_version = serializers.IntegerField(min_value=1)
+
+
+class MatchMoveSerializer(MatchActionSerializer):
+    pit = serializers.IntegerField(min_value=0, max_value=PITS - 1)
+
+
+class MatchReadSerializer(serializers.ModelSerializer):
+    computer_name = serializers.SerializerMethodField()
+    guest = serializers.SerializerMethodField()
+    guest_mode = serializers.SerializerMethodField()
+    host = serializers.SerializerMethodField()
+    recent_moves = serializers.SerializerMethodField()
+    server_time = serializers.SerializerMethodField()
+    your_side = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MancalaMatch
+        fields = [
+            'id',
+            'mode',
+            'guest_mode',
+            'guest_session_id',
+            'difficulty',
+            'computer_reward',
+            'host',
+            'guest',
+            'computer_name',
+            'your_side',
+            'status',
+            'stake_amount',
+            'prize_pool_total',
+            'version',
+            'board',
+            'active_side',
+            'time_limit_seconds',
+            'clock_host_ms',
+            'clock_guest_ms',
+            'turn_started_at',
+            'expires_at',
+            'server_time',
+            'created_date',
+            'finished_at',
+            'winner',
+            'result_reason',
+            'last_move',
+            'recent_moves',
+            'rematch_of',
+        ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if not self.context.get('detail'):
+            # Lobby lists do not replay moves and must not run a query per match.
+            fields.pop('recent_moves')
+        return fields
+
+    def _user(self, user):
+        if user is None:
+            return None
+        avatar = user.avatar.url if user.avatar else None
+        if avatar and (request := self.context.get('request')):
+            avatar = request.build_absolute_uri(avatar)
+        return {'id': user.id, 'username': user.username, 'avatar': avatar}
+
+    def get_computer_name(self, obj):
+        return 'Computer' if obj.mode == 'computer' else None
+
+    def get_guest(self, obj):
+        return self._user(obj.guest)
+
+    def get_guest_mode(self, obj):
+        return bool(obj.guest_session_id)
+
+    def get_host(self, obj):
+        return GUEST_PLAYER if obj.guest_session_id else self._user(obj.host)
+
+    def get_recent_moves(self, obj):
+        # The computer can play several pits between two polls. These let a client show each one.
+        # Capped at the serialized snapshot, which may already be stale.
+        events = (
+            obj.events.filter(event_type='move', version__lte=obj.version)
+            .order_by('-version')
+            .values('version', 'payload')[:RECENT_MOVES]
+        )
+        return [{'version': event['version'], **event['payload']} for event in reversed(events)]
+
+    def get_server_time(self, obj):
+        return timezone.now()
+
+    def get_your_side(self, obj):
+        from .services import player_side
+
+        request = self.context.get('request')
+        return player_side(obj, request.user.id, guest_session(request)) if request else None

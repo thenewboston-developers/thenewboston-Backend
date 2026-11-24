@@ -23,11 +23,13 @@ from thenewboston.connect_five.models import ConnectFiveMatch
 from thenewboston.connect_five.services.computer import run_computer_turn
 from thenewboston.game_rewards.models import GameFund, GameRewardDecision
 from thenewboston.general.models import GuestGameSession
+from thenewboston.mancala.models import MancalaMatch
+from thenewboston.mancala.services import run_computer as run_mancala
 from thenewboston.wallets.models import Wallet
 
 pytestmark = pytest.mark.django_db
-GAMES = ['battleship', 'backgammon', 'connect-five', 'checkers']
-MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch, CheckersMatch]))
+GAMES = ['battleship', 'backgammon', 'connect-five', 'checkers', 'mancala']
+MODELS = dict(zip(GAMES, [BattleshipMatch, BackgammonMatch, ConnectFiveMatch, CheckersMatch, MancalaMatch]))
 
 
 @pytest.fixture(autouse=True)
@@ -37,6 +39,7 @@ def queues():
         patch('thenewboston.battleship.services.queue_computer'),
         patch('thenewboston.checkers.services.queue_computer'),
         patch('thenewboston.backgammon.services.queue_computer'),
+        patch('thenewboston.mancala.services.queue_computer'),
         patch('thenewboston.connect_five.services.computer.queue_computer_turn'),
         patch('thenewboston.connect_five.services.computer.randbelow', return_value=0),
     ):
@@ -78,11 +81,19 @@ def test_guest_creation_is_private_idempotent_and_never_creates_account(game):
     assert response.data['guest_mode']
     assert (
         response.data['your_side']
-        == {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'a', 'checkers': 'white'}[game]
+        == {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'a', 'checkers': 'white', 'mancala': 'host'}[
+            game
+        ]
     )
     assert (
         response.data[
-            {'battleship': 'host', 'backgammon': 'white', 'connect-five': 'player_a', 'checkers': 'white'}[game]
+            {
+                'battleship': 'host',
+                'backgammon': 'white',
+                'connect-five': 'player_a',
+                'checkers': 'white',
+                'mancala': 'host',
+            }[game]
         ]['id']
         == 0
     )
@@ -183,6 +194,12 @@ def test_guest_can_win_without_touching_fund_or_receiving_money(game, funded, tn
         match.dice = [1, 2]
         match.save()
         response = act(client, game, match, 'move', moves=legal_turns(match.board, 'white', match.dice)[0])
+    elif game == 'mancala':
+        # The guest's last stone ends the game 27 to 21.
+        match.board = [0, 0, 0, 0, 0, 1, 26, 1, 2, 3, 0, 0, 0, 15]
+        match.active_side = 'host'
+        match.save()
+        response = act(client, game, match, 'move', pit=5)
     else:
         match.board_state[0][:4] = [1, 1, 1, 1]
         match.save()
@@ -239,6 +256,49 @@ def test_guest_existing_worker_plays_computer(game):
         match.refresh_from_db()
         assert match.active_side == 'white'
         assert match.events.filter(event_type='move').exists()
+
+
+def test_guest_mancala_worker_plays_and_guest_games_cannot_be_watched(bucky):
+    client = guest_client()
+    with patch('thenewboston.mancala.services.randbelow', return_value=1):
+        response = create(client, 'mancala')
+    assert response.data['active_side'] == 'guest' and response.data['your_side'] == 'host'
+    match = MancalaMatch.objects.get(pk=response.data['id'])
+    version = match.version
+    with patch('thenewboston.mancala.ai.choose_pit', return_value=0):
+        run_mancala(match.id, version)
+        run_mancala(match.id, version)
+    match.refresh_from_db()
+    assert match.active_side == 'host' and match.version == version + 1
+    assert act(client, 'mancala', match, 'move', pit=0).status_code == 200
+    assert not match.ledger_entries.exists()
+    # Members' matches can be watched, a signed-out visitor's game cannot, in a list or by its address.
+    member = APIClient()
+    member.force_authenticate(bucky)
+    for viewer in (member, APIClient(), guest_client()):
+        assert viewer.get('/api/mancala/matches').data['count'] == 0
+        assert viewer.get(f'/api/mancala/matches/{match.pk}').status_code == 404
+    assert client.get('/api/mancala/matches?mine=exclude').data['count'] == 0
+
+
+def test_guest_mancala_clock_runs_out_without_reward_or_payout(tnb_currency):
+    GameFund.objects.update_or_create(pk=1, defaults={'balance': 100, 'total_deposited': 100, 'currency': tnb_currency})
+    client = guest_client()
+    with patch('thenewboston.mancala.services.randbelow', return_value=0):
+        match = MancalaMatch.objects.get(pk=create(client, 'mancala').data['id'])
+    match.clock_host_ms = 1
+    match.turn_started_at = timezone.now() - timedelta(seconds=1)
+    match.save()
+    response = client.get(f'/api/mancala/matches/{match.pk}')
+    assert (response.data['status'], response.data['winner'], response.data['result_reason']) == (
+        'finished',
+        'guest',
+        'timeout',
+    )
+    assert response.data['computer_reward'] == {'status': 'not_eligible', 'amount': 0, 'currency': 'TNB'}
+    assert response['Cache-Control'] == 'private, no-store'
+    assert not GameRewardDecision.objects.exists()
+    assert GameFund.objects.get().balance == 100
 
 
 def test_session_endpoint_is_throttled():
