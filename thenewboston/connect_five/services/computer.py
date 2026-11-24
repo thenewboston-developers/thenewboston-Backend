@@ -4,15 +4,15 @@ import logging
 import uuid
 from secrets import randbelow
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from thenewboston.general.guest_games import lock_match_owner, match_owner, owns_guest_match
 from thenewboston.general.utils.database import apply_on_commit
 
-from .clocks import apply_elapsed_time, switch_turn
+from .clocks import active_side, apply_elapsed_time, switch_turn
 from .computer_ai import INVENTORY_FIELDS, choose_move
 from .rules import apply_move, check_win, is_board_full
 from ..enums import MatchEventType, MatchStatus
@@ -23,22 +23,25 @@ logger = logging.getLogger(__name__)
 FREE_SPECIALS = 2
 
 
-def create_computer_match(*, user, request_id, difficulty='normal', time_limit_seconds=900, rematch_of=None):
+def create_computer_match(
+    *, user, request_id, difficulty='normal', time_limit_seconds=900, rematch_of=None, guest_session=None
+):
+    owner = match_owner(user, guest_session, 'player_a')
     previous = None
     if rematch_of:
         previous = get_object_or_404(
             ConnectFiveMatch.objects.select_for_update(of=('self',)),
             pk=rematch_of,
             mode='computer',
-            player_a=user,
+            **owner,
         )
         if previous.status == MatchStatus.ACTIVE:
             raise ConflictError('Finish the current match before playing again.')
         if previous.difficulty != difficulty or previous.time_limit_seconds != time_limit_seconds:
             raise ValidationError('A rematch must use the same difficulty and clock.')
     # NO KEY UPDATE allows foreign-key checks in simultaneous matches without deadlocks.
-    get_user_model().objects.select_for_update(no_key=True).get(pk=user.pk)
-    existing = ConnectFiveMatch.objects.filter(mode='computer', player_a=user, request_id=request_id).first()
+    lock_match_owner(user, guest_session)
+    existing = ConnectFiveMatch.objects.filter(mode='computer', **owner, request_id=request_id).first()
     if existing:
         if (
             existing.difficulty != difficulty
@@ -51,16 +54,19 @@ def create_computer_match(*, user, request_id, difficulty='normal', time_limit_s
         active_rematch = previous.computer_rematches.filter(status=MatchStatus.ACTIVE).first()
         if active_rematch:
             return active_rematch
-    if ConnectFiveMatch.objects.filter(mode='computer', player_a=user, status=MatchStatus.ACTIVE).count() >= 10:
+    if ConnectFiveMatch.objects.filter(mode='computer', **owner, status=MatchStatus.ACTIVE).count() >= 10:
         raise ValidationError('Finish an existing computer game before creating another (maximum 10).')
+    player_starts = randbelow(2) == 0
     match = ConnectFiveMatch.objects.create(
         mode='computer',
         difficulty=difficulty,
         request_id=request_id,
         player_a=user,
+        guest_session=guest_session,
+        guest_active_side=('a' if player_starts else 'b') if guest_session else None,
         player_b=None,
         challenge=None,
-        active_player=user if randbelow(2) == 0 else None,
+        active_player=user if player_starts else None,
         time_limit_seconds=time_limit_seconds,
         clock_a_remaining_ms=time_limit_seconds * 1000,
         clock_b_remaining_ms=time_limit_seconds * 1000,
@@ -68,10 +74,11 @@ def create_computer_match(*, user, request_id, difficulty='normal', time_limit_s
         max_spend_amount=0,
         computer_rematch_of=previous,
     )
-    for player in (user, None):
+    for side, player in (('a', user), ('b', None)):
         ConnectFiveMatchPlayer.objects.create(
             match=match,
             user=player,
+            is_guest=bool(guest_session and side == 'a'),
             inventory_h2=FREE_SPECIALS,
             inventory_v2=FREE_SPECIALS,
             inventory_bomb=FREE_SPECIALS,
@@ -117,7 +124,7 @@ def finish_computer_match(*, match, winner_side, status):
 def expire_computer_match(match):
     if match.mode != 'computer' or match.status != MatchStatus.ACTIVE:
         return False
-    side = 'a' if match.active_player_id == match.player_a_id else 'b'
+    side = active_side(match)
     elapsed = max(0, int((timezone.now() - match.turn_started_at).total_seconds() * 1000))
     if elapsed < getattr(match, f'clock_{side}_remaining_ms'):
         return False
@@ -130,9 +137,11 @@ def apply_computer_move(match, *, side, move):
     if expire_computer_match(match):
         return
     user_id = match.player_a_id if side == 'a' else None
-    if match.active_player_id != user_id:
+    if active_side(match) != side:
         raise PermissionDenied('It is not your turn.')
-    player = ConnectFiveMatchPlayer.objects.select_for_update().get(match=match, user_id=user_id)
+    player = ConnectFiveMatchPlayer.objects.select_for_update().get(
+        match=match, user_id=user_id, is_guest=bool(match.guest_session_id and side == 'a')
+    )
     inventory_field = INVENTORY_FIELDS.get(move['move_type'])
     if inventory_field and getattr(player, inventory_field) <= 0:
         raise ValidationError('No free inventory remains for this special.')
@@ -173,8 +182,14 @@ def apply_computer_move(match, *, side, move):
     queue_computer_turn(match)
 
 
-def perform_computer_action(match, *, user, action, data):
-    if match.player_a_id != user.id:
+def can_play(match, user, guest_session=None):
+    if match.guest_session_id:
+        return owns_guest_match(match, guest_session)
+    return bool(user and user.is_authenticated and match.player_a_id == user.id)
+
+
+def perform_computer_action(match, *, user, action, data, guest_session=None):
+    if not can_play(match, user, guest_session):
         raise PermissionDenied('Only the player can change this computer match.')
     if data['expected_version'] != match.version:
         raise ConflictError('The match changed. Refresh it before trying again.')
@@ -191,7 +206,7 @@ def perform_computer_action(match, *, user, action, data):
 
 
 def computer_ready(match):
-    return match.mode == 'computer' and match.status == MatchStatus.ACTIVE and match.active_player_id is None
+    return match.mode == 'computer' and match.status == MatchStatus.ACTIVE and active_side(match) == 'b'
 
 
 def queue_computer_turn(match):
@@ -216,17 +231,16 @@ def run_computer_turn(match_id, expected_version):
     match = ConnectFiveMatch.objects.select_for_update().filter(pk=match_id).first()
     if match is None or match.version != expected_version or not computer_ready(match) or expire_computer_match(match):
         return
-    players = {player.user_id: player for player in match.players.all()}
-    inventories = [
-        {field: getattr(players[user_id], field) for field in INVENTORY_FIELDS.values()}
-        for user_id in (None, match.player_a_id)
-    ]
+    players = {
+        ('a' if player.is_guest or player.user_id is not None else 'b'): player for player in match.players.all()
+    }
+    inventories = [{field: getattr(players[side], field) for field in INVENTORY_FIELDS.values()} for side in ('b', 'a')]
     move = choose_move(match.board_state, *inventories, difficulty=match.difficulty)
     apply_computer_move(match, side='b', move=move)
 
 
-def rematch_computer(match, user):
-    if match.player_a_id != user.id:
+def rematch_computer(match, user, guest_session=None):
+    if not can_play(match, user, guest_session):
         raise PermissionDenied('Only the player can rematch the computer.')
     return create_computer_match(
         user=user,
@@ -234,4 +248,5 @@ def rematch_computer(match, user):
         difficulty=match.difficulty,
         time_limit_seconds=match.time_limit_seconds,
         rematch_of=match.id,
+        guest_session=guest_session,
     )

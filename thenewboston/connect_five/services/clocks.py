@@ -1,13 +1,19 @@
 from django.utils import timezone
 
 
+def active_side(match):
+    if match.guest_session_id:
+        return match.guest_active_side
+    return 'a' if match.active_player_id == match.player_a_id else 'b'
+
+
 def apply_elapsed_time(match, *, now=None):
     now = now or timezone.now()
     elapsed_ms = int((now - match.turn_started_at).total_seconds() * 1000)
     if elapsed_ms < 0:
         elapsed_ms = 0
 
-    if match.active_player_id == match.player_a_id:
+    if active_side(match) == 'a':
         remaining = match.clock_a_remaining_ms - elapsed_ms
         match.clock_a_remaining_ms = max(remaining, 0)
     else:
@@ -19,7 +25,10 @@ def apply_elapsed_time(match, *, now=None):
 
 def switch_turn(match, *, now=None):
     now = now or timezone.now()
-    match.active_player = match.player_b if match.active_player_id == match.player_a_id else match.player_a
+    if match.guest_session_id:
+        match.guest_active_side = 'b' if active_side(match) == 'a' else 'a'
+    else:
+        match.active_player = match.player_b if match.active_player_id == match.player_a_id else match.player_a
     match.turn_started_at = now
     match.turn_number += 1
     return now

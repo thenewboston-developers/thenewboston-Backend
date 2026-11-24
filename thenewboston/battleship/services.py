@@ -15,6 +15,7 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 
 from thenewboston.currencies.models import Currency
+from thenewboston.general.guest_games import lock_match_owner, match_owner, owns_guest_match
 from thenewboston.general.utils.database import apply_on_commit
 from thenewboston.wallets.models import Wallet
 
@@ -30,8 +31,10 @@ class StateConflict(APIException):
     default_detail = 'The match changed. Refresh it before trying again.'
 
 
-def player_side(match, user_id):
-    if user_id == match.host_id:
+def player_side(match, user_id, guest_session=None):
+    if match.guest_session_id:
+        return 'host' if owns_guest_match(match, guest_session) else None
+    if user_id is not None and user_id == match.host_id:
         return 'host'
     if user_id is not None and user_id == match.guest_id:
         return 'guest'
@@ -75,11 +78,15 @@ def create_match(
     time_limit_seconds=900,
     rematch_of=None,
     request_id=None,
+    guest_session=None,
 ):
     # Serialize creates from this player, including retries, before debiting money.
-    type(user).objects.select_for_update(no_key=True).get(pk=user.pk)
+    owner = match_owner(user, guest_session, 'host')
+    if guest_session and (mode != 'computer' or stake_amount or opponent):
+        raise PermissionDenied('Guests can only play free computer games.')
+    lock_match_owner(user, guest_session)
     request_id = request_id or uuid.uuid4()
-    existing = BattleshipMatch.objects.filter(host=user, request_id=request_id).first()
+    existing = BattleshipMatch.objects.filter(**owner, request_id=request_id).first()
     if existing:
         if not (
             existing.mode == mode
@@ -91,7 +98,7 @@ def create_match(
         ):
             raise StateConflict('This request ID was already used with different match settings.')
         return existing
-    if BattleshipMatch.objects.filter(host=user, status__in=UNFINISHED).count() >= 10:
+    if BattleshipMatch.objects.filter(**owner, status__in=UNFINISHED).count() >= 10:
         raise ValidationError('Finish or cancel an existing match before creating another (maximum 10).')
     currency = None
     if stake_amount:
@@ -100,6 +107,7 @@ def create_match(
             raise ValidationError('TNB is not configured yet.')
     match = BattleshipMatch.objects.create(
         host=user,
+        guest_session=guest_session,
         guest=opponent,
         mode=mode,
         difficulty=difficulty,
@@ -113,7 +121,7 @@ def create_match(
         rematch_of=rematch_of,
         request_id=request_id,
     )
-    _transfer(match, user.id, -stake_amount, 'stake')
+    _transfer(match, user.id if user else None, -stake_amount, 'stake')
     if mode == 'computer':
         _start_placement(match)
     _record(match, 'created', initial=True)
@@ -236,8 +244,8 @@ def fire(match, side, row, column):
     _record(match, 'shot', match.last_shot)
 
 
-def perform_action(match, user, action, data):
-    side = player_side(match, user.id)
+def perform_action(match, user, action, data, guest_session=None):
+    side = player_side(match, user.id if user else None, guest_session)
     if side is None:
         raise PermissionDenied('Only the players can change this match.')
     if data['expected_version'] != match.version:
@@ -272,6 +280,7 @@ def perform_action(match, user, action, data):
             stake_amount=match.stake_amount,
             time_limit_seconds=match.time_limit_seconds,
             rematch_of=match,
+            guest_session=guest_session,
         )
     else:
         if match.status != 'active':

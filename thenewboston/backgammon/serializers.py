@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
+from thenewboston.general.guest_games import GUEST_PLAYER, guest_session
+
 from .models import BackgammonMatch
 from .rules import legal_turns
 
@@ -18,6 +20,8 @@ class MatchCreateSerializer(serializers.Serializer):
     time_limit_seconds = serializers.ChoiceField(choices=[300, 600, 900, 1800], default=900)
 
     def validate(self, attrs):
+        if not self.context['request'].user.is_authenticated and attrs['mode'] != 'computer':
+            raise serializers.ValidationError('Sign in to challenge another player.')
         if attrs['mode'] == 'human':
             if not attrs.get('opponent'):
                 raise serializers.ValidationError({'opponent_id': 'Choose an opponent.'})
@@ -41,6 +45,8 @@ class DoubleResponseSerializer(MatchActionSerializer):
 
 
 class MatchReadSerializer(serializers.ModelSerializer):
+    guest_mode = serializers.SerializerMethodField()
+    your_side = serializers.SerializerMethodField()
     black = serializers.SerializerMethodField()
     can_double = serializers.SerializerMethodField()
     clock_side = serializers.SerializerMethodField()
@@ -57,6 +63,9 @@ class MatchReadSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'mode',
+            'guest_mode',
+            'guest_session_id',
+            'your_side',
             'difficulty',
             'computer_reward',
             'white',
@@ -106,6 +115,9 @@ class MatchReadSerializer(serializers.ModelSerializer):
             fields.pop('last_turn')
         return fields
 
+    def get_guest_mode(self, obj):
+        return bool(obj.guest_session_id)
+
     def _user(self, user):
         if user is None:
             return None
@@ -120,7 +132,7 @@ class MatchReadSerializer(serializers.ModelSerializer):
         from .services import player_side
 
         request = self.context.get('request')
-        return player_side(obj, request.user.id) if request and request.user.is_authenticated else None
+        return player_side(obj, request.user.id, guest_session(request)) if request else None
 
     def get_black(self, obj):
         return self._user(obj.black)
@@ -178,5 +190,8 @@ class MatchReadSerializer(serializers.ModelSerializer):
     def get_server_time(self, obj):
         return timezone.now()
 
+    def get_your_side(self, obj):
+        return self._side(obj)
+
     def get_white(self, obj):
-        return self._user(obj.white)
+        return GUEST_PLAYER if obj.guest_session_id else self._user(obj.white)

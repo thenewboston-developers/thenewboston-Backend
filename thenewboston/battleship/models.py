@@ -14,10 +14,13 @@ class BattleshipMatch(CreatedModified):
         DECLINED = 'declined', 'Declined'
         EXPIRED = 'expired', 'Expired'
 
-    host = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='battleship_as_host')
+    host = models.ForeignKey(
+        'users.User', on_delete=models.PROTECT, related_name='battleship_as_host', null=True, blank=True
+    )
     guest = models.ForeignKey(
         'users.User', on_delete=models.PROTECT, related_name='battleship_as_guest', null=True, blank=True
     )
+    guest_session = models.ForeignKey('general.GuestGameSession', on_delete=models.CASCADE, null=True, blank=True)
     request_id = models.UUIDField(default=uuid.uuid4)
     mode = models.CharField(max_length=8, choices=[('computer', 'Computer'), ('human', 'Human')])
     difficulty = models.CharField(max_length=6, default='normal')
@@ -49,6 +52,12 @@ class BattleshipMatch(CreatedModified):
     class Meta:
         ordering = ['-created_date']
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(host__isnull=False, guest_session__isnull=True)
+                | models.Q(host__isnull=True, guest_session__isnull=False, mode='computer', stake_amount=0),
+                name='battleship_owner',
+            ),
+            models.UniqueConstraint(fields=['guest_session', 'request_id'], name='battleship_guest_request_once'),
             models.UniqueConstraint(fields=['host', 'request_id'], name='battleship_create_request_once'),
             models.CheckConstraint(condition=~models.Q(host=models.F('guest')), name='battleship_distinct_players'),
             models.CheckConstraint(

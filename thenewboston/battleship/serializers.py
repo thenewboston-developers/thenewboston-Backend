@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
+from thenewboston.general.guest_games import GUEST_PLAYER, guest_session
+
 from .models import BattleshipMatch
 from .rules import BOARD_SIZE, SHIP_LENGTHS, opponent, sunk_ships
 from .services import player_side
@@ -18,6 +20,8 @@ class MatchCreateSerializer(serializers.Serializer):
     time_limit_seconds = serializers.ChoiceField(choices=[300, 600, 900, 1800], default=900)
 
     def validate(self, attrs):
+        if not self.context['request'].user.is_authenticated and attrs['mode'] != 'computer':
+            raise serializers.ValidationError('Sign in to challenge another player.')
         if attrs['mode'] == 'human':
             if not attrs.get('opponent'):
                 raise serializers.ValidationError({'opponent_id': 'Choose an opponent.'})
@@ -49,6 +53,7 @@ class MatchFireSerializer(MatchActionSerializer):
 
 
 class MatchReadSerializer(serializers.ModelSerializer):
+    guest_mode = serializers.SerializerMethodField()
     board = serializers.SerializerMethodField()
     computer_name = serializers.SerializerMethodField()
     guest = serializers.SerializerMethodField()
@@ -63,6 +68,8 @@ class MatchReadSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'mode',
+            'guest_mode',
+            'guest_session_id',
             'difficulty',
             'computer_reward',
             'host',
@@ -92,6 +99,9 @@ class MatchReadSerializer(serializers.ModelSerializer):
             'guest_ready',
             'last_shot',
         ]
+
+    def get_guest_mode(self, obj):
+        return bool(obj.guest_session_id)
 
     def _user(self, user):
         if user is None:
@@ -124,7 +134,7 @@ class MatchReadSerializer(serializers.ModelSerializer):
         return bool(obj.fleet_guest)
 
     def get_host(self, obj):
-        return self._user(obj.host)
+        return GUEST_PLAYER if obj.guest_session_id else self._user(obj.host)
 
     def get_host_ready(self, obj):
         return bool(obj.fleet_host)
@@ -134,4 +144,4 @@ class MatchReadSerializer(serializers.ModelSerializer):
 
     def get_your_side(self, obj):
         request = self.context.get('request')
-        return player_side(obj, request.user.id) if request and request.user.is_authenticated else None
+        return player_side(obj, request.user.id, guest_session(request)) if request else None
