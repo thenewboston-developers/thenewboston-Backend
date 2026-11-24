@@ -55,3 +55,6 @@ jobs:
           THENEWBOSTON_SETTING_DATABASES: '{"default":{"HOST":"db"}}'
           THENEWBOSTON_SETTING_CHANNEL_LAYERS: '{"default":{"CONFIG":{"hosts":[["redis", 6379]]}}}'
           THENEWBOSTON_SETTING_ORDER_PROCESSING_REDIS_URL: 'redis://redis:6379'
+
+      - name: Test deployment configuration
+        run: python -m unittest discover -s .github/scripts -p 'test_*.py'

@@ -31,6 +31,7 @@ django-restql = "^0.16.2"
 django-model-utils = "^5.0.0"
 celery = {extras = ["redis"], version = "^5.5.3"}
 redis = "<=5.2.1"  # Celery requires this version of Redis
+posthog = ">=8,<9"
 
 [tool.poetry.group.dev.dependencies]
 colorlog = "^6.9.0"
