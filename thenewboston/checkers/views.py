@@ -1,0 +1,100 @@
+from django.db import transaction
+from django.db.models import Q
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+
+from thenewboston.general.views.base import CustomGenericViewSet
+
+from .models import CheckersMatch
+from .serializers import (
+    MatchActionSerializer,
+    MatchCreateSerializer,
+    MatchMoveSerializer,
+    MatchReadSerializer,
+)
+from .services import advance_deadlines, create_match, perform_action
+
+
+class MatchPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
+class CheckersMatchViewSet(ListModelMixin, RetrieveModelMixin, CustomGenericViewSet):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = MatchPagination
+    serializer_class = MatchReadSerializer
+    queryset = CheckersMatch.objects.select_related('white', 'black').all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        participants = Q(white_id=user.id) | Q(black_id=user.id) if user.is_authenticated else Q(pk__in=[])
+        # Pending invitations are visible only to their participants.
+        queryset = queryset.filter(~Q(status='pending') | participants)
+        mine = self.request.query_params.get('mine')
+        if mine in {'1', 'true', 'self'}:
+            queryset = queryset.filter(participants)
+        elif mine == 'exclude':
+            queryset = queryset.exclude(participants)
+        if statuses := self.request.query_params.get('status'):
+            queryset = queryset.filter(status__in=statuses.split(','))
+        return queryset
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), 'detail': self.action != 'list'}
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        serializer = MatchCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        match = create_match(user=request.user, **serializer.validated_data)
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data, status=status.HTTP_201_CREATED)
+
+    @transaction.atomic
+    def retrieve(self, request, *args, **kwargs):
+        self.queryset = self.queryset.select_for_update(of=('self',))
+        match = self.get_object()
+        advance_deadlines(match)
+        return Response(self.get_serializer(match).data)
+
+    @transaction.atomic
+    def _perform(self, request, action_name, serializer_class=MatchActionSerializer):
+        serializer = serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # Avoid locking nullable joined opponent rows; serialize on the match itself.
+        self.queryset = self.queryset.select_for_update(of=('self',))
+        match = self.get_object()
+        match = perform_action(match, request.user, action_name, serializer.validated_data)
+        match.refresh_from_db()
+        return Response(self.get_serializer(match).data)
+
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        return self._perform(request, 'accept')
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        return self._perform(request, 'decline')
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        return self._perform(request, 'cancel')
+
+    @action(detail=True, methods=['post'])
+    def move(self, request, pk=None):
+        return self._perform(request, 'move', MatchMoveSerializer)
+
+    @action(detail=True, methods=['post'])
+    def resign(self, request, pk=None):
+        return self._perform(request, 'resign')
+
+    @action(detail=True, methods=['post'])
+    def rematch(self, request, pk=None):
+        return self._perform(request, 'rematch')

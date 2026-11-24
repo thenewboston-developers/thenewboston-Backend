@@ -94,7 +94,7 @@ def settle_computer_reward(*, game, match_id, user_id, won):
     No public claim endpoint exists. Persist the result on the match in that same
     transaction; never call from reads or retry previously completed games.
     """
-    if game not in {'connect_five', 'backgammon', 'battleship'}:
+    if game not in {'connect_five', 'backgammon', 'battleship', 'checkers'}:
         raise ValueError('Unsupported reward game.')
     fund = _locked_fund()
     existing = GameRewardDecision.objects.filter(game=game, match_id=match_id).first()
