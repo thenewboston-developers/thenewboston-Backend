@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'thenewboston.exchange.apps.ExchangeConfig',
     'thenewboston.general.apps.GeneralConfig',
     'thenewboston.game_rewards.apps.GameRewardsConfig',
+    'thenewboston.hex.apps.HexConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.mancala.apps.MancalaConfig',
     'thenewboston.notifications.apps.NotificationsConfig',

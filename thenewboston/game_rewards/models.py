@@ -52,7 +52,16 @@ class GameRewardDecision(CreatedModified):
         max_length=16,
         choices=[
             (game, game)
-            for game in ('connect_five', 'backgammon', 'battleship', 'checkers', 'reversi', 'mancala', 'dots_and_boxes')
+            for game in (
+                'connect_five',
+                'backgammon',
+                'battleship',
+                'checkers',
+                'reversi',
+                'mancala',
+                'dots_and_boxes',
+                'hex',
+            )
         ],
     )
     match_id = models.PositiveBigIntegerField()
