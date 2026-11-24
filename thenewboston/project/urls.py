@@ -11,6 +11,7 @@ import thenewboston.battleship.urls
 import thenewboston.connect_five.urls
 import thenewboston.currencies.urls
 import thenewboston.exchange.urls
+import thenewboston.game_rewards.urls
 import thenewboston.general.urls
 import thenewboston.invitations.urls
 import thenewboston.notifications.urls
@@ -29,6 +30,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.connect_five.urls)),
     path(API_PREFIX, include(thenewboston.currencies.urls)),
     path(API_PREFIX, include(thenewboston.exchange.urls)),
+    path(API_PREFIX, include(thenewboston.game_rewards.urls)),
     path(API_PREFIX, include(thenewboston.general.urls)),
     path(API_PREFIX, include(thenewboston.invitations.urls)),
     path(API_PREFIX, include(thenewboston.notifications.urls)),

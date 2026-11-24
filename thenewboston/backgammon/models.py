@@ -24,6 +24,7 @@ class BackgammonMatch(CreatedModified):
     )
     mode = models.CharField(max_length=8, choices=[('computer', 'Computer'), ('human', 'Human')])
     difficulty = models.CharField(max_length=6, default='normal')
+    computer_reward = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
     phase = models.CharField(max_length=16, default='finished')
     currency = models.ForeignKey('currencies.Currency', on_delete=models.PROTECT, null=True, blank=True)

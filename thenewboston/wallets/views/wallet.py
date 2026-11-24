@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -36,6 +37,7 @@ class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def deposit(self, request, pk=None):
         wallet = self.get_object()
         minimum_balance = TRANSACTION_FEE + 1
@@ -89,11 +91,16 @@ class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        wallet.deposit_balance = deposit_balance
-        wallet.save()
-        read_serializer = WalletReadSerializer(wallet, context={'request': request})
+        # Fetching the external balance can overlap a game payout or contribution.
+        # Lock and reload afterwards, before timestamp adjustment takes its own lock.
+        with transaction.atomic():
+            wallet = Wallet.objects.select_for_update().get(pk=wallet.pk)
+            wallet.deposit_balance = deposit_balance
+            wallet.save(update_fields=['deposit_balance', 'modified_date'])
+            read_serializer = WalletReadSerializer(wallet, context={'request': request})
+            response_data = read_serializer.data
 
-        return Response(read_serializer.data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='default')
     def default_wallet(self, request):
@@ -108,11 +115,16 @@ class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
 
     def get_queryset(self):
         user = self.request.user
-        return (
+        queryset = (
             Wallet.objects.filter(owner=user)
             .select_related('currency__owner__connect_five_stats')
             .order_by('currency__ticker', 'id')
         )
+        if self.action in {'deposit', 'withdraw'}:
+            # Read and validate the spendable balance under the same lock used by
+            # game stakes, rewards, and transfers. Lock only the wallet, not its joins.
+            queryset = queryset.select_for_update(of=('self',))
+        return queryset
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -121,6 +133,7 @@ class WalletViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.L
         return WalletReadSerializer
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def withdraw(self, request, pk=None):
         wallet = self.get_object()
         serializer = WithdrawSerializer(data=request.data, context={'wallet': wallet})

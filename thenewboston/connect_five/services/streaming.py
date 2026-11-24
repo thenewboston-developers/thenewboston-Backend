@@ -25,6 +25,10 @@ def stream_match_update(*, match, request=None, match_data=None):
     if match_data is None:
         match_data = ConnectFiveMatchReadSerializer(match, context={'request': request}).data
 
+    # Computer matches are polled by their owner and never enter public/user websocket groups.
+    if match.mode == 'computer':
+        return match_data
+
     ConnectFiveConsumer.stream_match(
         message_type=MessageType.UPDATE_CONNECT_FIVE_MATCH,
         match_data=match_data,

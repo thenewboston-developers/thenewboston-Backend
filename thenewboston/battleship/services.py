@@ -138,6 +138,15 @@ def close_challenge(match, status):
 def finish_match(match, winning_side, reason):
     if match.settled:
         raise StateConflict('The match has already settled.')
+    if match.mode == 'computer':
+        from thenewboston.game_rewards.services import settle_computer_reward
+
+        match.computer_reward = settle_computer_reward(
+            game='battleship',
+            match_id=match.id,
+            user_id=match.host_id,
+            won=winning_side == 'host' and reason in {'fleet_sunk'},
+        )
     if winning_side is None:
         # Order the two wallet locks consistently even when other matches reverse players.
         if match.stake_amount:
