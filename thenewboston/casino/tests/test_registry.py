@@ -34,7 +34,7 @@ def test_registration_order_does_not_change_public_catalog_order_and_ready_can_r
     local.register(SLOTS)
     local.register(SLOTS)
     assert local.games == (SLOTS, ROULETTE)
-    assert len(local.rules) == 3
+    assert len(local.rules) == 4
 
 
 def test_versions_are_not_overwritten_and_registry_is_read_only():
@@ -110,7 +110,7 @@ def test_verification_dispatches_to_every_registered_ruleset(monkeypatch):
     monkeypatch.setattr(type(SLOTS_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(ROULETTE_V1), 'verify', lambda self: called.append((self.game, self.version)))
     call_command('verify_casino', stdout=StringIO())
-    assert called == [('roulette', 1), ('slots', 1), ('slots', 2)]
+    assert called == [('roulette', 1), ('roulette', 2), ('slots', 1), ('slots', 2)]
 
 
 @pytest.mark.django_db
