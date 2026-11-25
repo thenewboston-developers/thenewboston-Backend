@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'thenewboston.slots.apps.SlotsConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
+    'thenewboston.video_poker.apps.VideoPokerConfig',
     'thenewboston.wallets.apps.WalletsConfig',
     'thenewboston.web',
 ]

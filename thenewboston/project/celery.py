@@ -22,6 +22,7 @@ app = Celery(
         'thenewboston.product_analytics.tasks',
         'thenewboston.reversi.tasks',
         'thenewboston.social.tasks',
+        'thenewboston.video_poker.tasks',
     ],
 )
 app.config_from_object('django.conf:settings', namespace='CELERY')

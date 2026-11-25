@@ -21,6 +21,8 @@ from thenewboston.roulette.catalog import ROULETTE
 from thenewboston.roulette.rules import ROULETTE_V1
 from thenewboston.slots.catalog import SLOTS
 from thenewboston.slots.rules import SLOTS_V1, SLOTS_V2
+from thenewboston.video_poker.catalog import VIDEO_POKER
+from thenewboston.video_poker.rules import VIDEO_POKER_V1
 
 
 def test_installed_game_apps_register_catalogs_in_unchanged_order():
@@ -29,7 +31,8 @@ def test_installed_game_apps_register_catalogs_in_unchanged_order():
     assert apps.get_app_config('plinko').name == 'thenewboston.plinko'
     assert apps.get_app_config('blackjack').name == 'thenewboston.blackjack'
     assert apps.get_app_config('let_it_ride').name == 'thenewboston.let_it_ride'
-    assert registry.games == (SLOTS, ROULETTE, PLINKO, BLACKJACK, LET_IT_RIDE)
+    assert apps.get_app_config('video_poker').name == 'thenewboston.video_poker'
+    assert registry.games == (SLOTS, ROULETTE, PLINKO, BLACKJACK, LET_IT_RIDE, VIDEO_POKER)
     assert get_rules('slots', 1) is SLOTS_V1
     assert get_rules('slots', 2) is SLOTS_V2
     assert SLOTS.default_version == 2
@@ -37,12 +40,14 @@ def test_installed_game_apps_register_catalogs_in_unchanged_order():
     assert get_rules('blackjack', 1) is BLACKJACK_V1
     assert get_rules('plinko', 1) is PLINKO_V1
     assert get_rules('let_it_ride', 1) is LET_IT_RIDE_V1
+    assert get_rules('video_poker', 1) is VIDEO_POKER_V1
     assert list(BetSerializer().fields['game'].choices) == [
         'slots',
         'roulette',
         'plinko',
         'blackjack',
         'let_it_ride',
+        'video_poker',
     ]
 
 
@@ -131,6 +136,7 @@ def test_verification_dispatches_to_every_registered_ruleset(monkeypatch):
     monkeypatch.setattr(type(ROULETTE_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(BLACKJACK_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(LET_IT_RIDE_V1), 'verify', lambda self: called.append((self.game, self.version)))
+    monkeypatch.setattr(type(VIDEO_POKER_V1), 'verify', lambda self: called.append((self.game, self.version)))
     call_command('verify_casino', stdout=StringIO())
     assert sorted(called) == [
         ('blackjack', 1),
@@ -140,6 +146,7 @@ def test_verification_dispatches_to_every_registered_ruleset(monkeypatch):
         ('roulette', 2),
         ('slots', 1),
         ('slots', 2),
+        ('video_poker', 1),
     ]
 
 
