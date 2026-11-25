@@ -300,7 +300,7 @@ class TestEnforcementOn:
 
 @pytest.mark.usefixtures('enforcement_off')
 class TestEnforcementOff:
-    """The default, which keeps the frontend that sends no token working until the one that does is deployed."""
+    """The explicit compatibility override keeps legacy clients working during a coordinated rollout or rollback."""
 
     @pytest.mark.parametrize(('path', 'stream', 'message_type'), PRIVATE_SOCKETS)
     async def test_connection_without_token_is_accepted_and_logged(
@@ -539,3 +539,16 @@ async def test_access_token_middleware_is_outermost():
 async def test_unauthenticated_connections_are_visible_in_server_log(settings):
     # The `thenewboston` loggers are limited to warnings, which would hide what the rollout needs to watch
     assert settings.LOGGING['loggers'][authenticated_user.__name__]['level'] == 'INFO'
+
+
+@pytest.mark.parametrize(('path', 'stream', 'message_type'), PRIVATE_SOCKETS)
+async def test_private_streams_reject_unauthenticated_connections_by_default(
+    connect, bucky, path, stream, message_type
+):
+    # No enforcement fixture: an accidental change of the application default must not expose private events.
+    communicator, is_connected, _ = await connect(path.format(user_id=bucky.id))
+
+    assert not is_connected
+    assert not has_group_members()
+    await sync_to_async(stream)(bucky)
+    assert await communicator.receive_nothing()
