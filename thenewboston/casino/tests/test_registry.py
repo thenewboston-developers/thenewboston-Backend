@@ -14,7 +14,7 @@ from thenewboston.casino.views import BetSerializer
 from thenewboston.roulette.catalog import ROULETTE
 from thenewboston.roulette.rules import ROULETTE_V1
 from thenewboston.slots.catalog import SLOTS
-from thenewboston.slots.rules import SLOTS_V1
+from thenewboston.slots.rules import SLOTS_V1, SLOTS_V2
 
 
 def test_installed_game_apps_register_catalogs_in_unchanged_order():
@@ -22,6 +22,8 @@ def test_installed_game_apps_register_catalogs_in_unchanged_order():
     assert apps.get_app_config('roulette').name == 'thenewboston.roulette'
     assert registry.games == (SLOTS, ROULETTE)
     assert get_rules('slots', 1) is SLOTS_V1
+    assert get_rules('slots', 2) is SLOTS_V2
+    assert SLOTS.default_version == 2
     assert get_rules('roulette', 1) is ROULETTE_V1
     assert list(BetSerializer().fields['game'].choices) == ['slots', 'roulette']
 
@@ -32,7 +34,7 @@ def test_registration_order_does_not_change_public_catalog_order_and_ready_can_r
     local.register(SLOTS)
     local.register(SLOTS)
     assert local.games == (SLOTS, ROULETTE)
-    assert len(local.rules) == 2
+    assert len(local.rules) == 3
 
 
 def test_versions_are_not_overwritten_and_registry_is_read_only():
@@ -53,7 +55,7 @@ def test_versions_are_not_overwritten_and_registry_is_read_only():
         replace(SLOTS, rules=()),
         replace(SLOTS, rules=(SLOTS_V1, SLOTS_V1)),
         replace(SLOTS, rules=(ROULETTE_V1,)),
-        replace(SLOTS, default_version=2),
+        replace(SLOTS, default_version=3),
         replace(SLOTS, default_min_bet=0),
         replace(SLOTS, rules=(replace(SLOTS_V1, catalog_multiplier=1),)),
         replace(SLOTS, rules=(replace(SLOTS_V1, max_multiplier=100.5),)),
@@ -95,7 +97,7 @@ def test_missing_configuration_and_uninstalled_version_remain_closed():
     CasinoGameConfig.objects.filter(game='slots').delete()
     CasinoGameConfig.objects.update_or_create(game='roulette', defaults={'rules_version': 99})
     slots, roulette = casino_summary()['games']
-    assert slots['rules_version'] == 1
+    assert slots['rules_version'] == 2
     assert not slots['enabled'] and not slots['available']
     assert roulette['rules_version'] == 99
     assert roulette['max_multiplier'] == 36
@@ -108,7 +110,7 @@ def test_verification_dispatches_to_every_registered_ruleset(monkeypatch):
     monkeypatch.setattr(type(SLOTS_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(ROULETTE_V1), 'verify', lambda self: called.append((self.game, self.version)))
     call_command('verify_casino', stdout=StringIO())
-    assert called == [('roulette', 1), ('slots', 1)]
+    assert called == [('roulette', 1), ('slots', 1), ('slots', 2)]
 
 
 @pytest.mark.django_db

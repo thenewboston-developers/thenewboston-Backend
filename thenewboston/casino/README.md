@@ -49,6 +49,11 @@ Financial rows are read-only in Django admin. Fund enabled/risk settings and gam
 
 Slots outcome intervals, in order, have `(multiplier, weight)` values `(0, 5885), (1, 1600), (2, 2000), (5, 400), (10, 100), (50, 10), (100, 5)`. Multipliers are total return including stake. Weights sum to 10,000 and weighted payouts to 9,600: 96% RTP. The matching reel symbols visualize this weighted outcome; reels are not independently sampled.
 
+Slots rules version 2 is current; version 1 stays installed so its receipts still settle and verify. Both use the same intervals and payouts, and a winning draw shows its three matching symbols (`cherry` 1x, `lemon` 2x, `bell` 5x, `bar` 10x, `diamond` 50x, `seven` 100x). They differ only in the symbols of a losing draw `d`:
+
+- Version 1 always shows `cherry, lemon, bar`.
+- Version 2 shows line `d % 120` of the 120 ordered lines of three different symbols, in `itertools.permutations(('cherry', 'lemon', 'bell', 'bar', 'diamond', 'seven'), 3)` order: line 0 is `cherry, lemon, bell` and line 119 is `seven, diamond, bar`. A losing spin therefore never shows a matching pair, and its symbols never affect a payout.
+
 Roulette is single-zero, uniform 0–36, with 2x outside bets, 3x dozens/columns and 36x single-number total returns. Zero loses all outside bets. Every offered selection has RTP 36/37. All current payouts are exact whole TNB.
 
 Unrevealed seeds are encrypted using a domain-separated key derived from Django `SECRET_KEY`, and excluded from API/admin output. Keep that key stable until outstanding commitments expire and all open bets settle. Settled receipts retain revealed seeds so verification survives later rotation. Verification demonstrates result reproducibility; it does not replace the ledger or funding constraints.
