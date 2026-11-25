@@ -12,6 +12,7 @@ from .services import (
     MAX_AMOUNT,
     CasinoError,
     bet_receipt,
+    bet_receipts,
     casino_summary,
     commitment_receipt,
     create_commitment,
@@ -77,7 +78,7 @@ class BetsView(APIView):
 
     def get(self, request):
         bets = CasinoBet.objects.filter(user=request.user).select_related('commitment').order_by('-id')[:20]
-        return Response([bet_receipt(bet) for bet in bets])
+        return Response(bet_receipts(bets))
 
     @casino_errors
     def post(self, request):

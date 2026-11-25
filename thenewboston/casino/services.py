@@ -177,6 +177,17 @@ def bet_receipt(bet, *, fund=None, wallet=None):
     }
 
 
+def bet_receipts(bets):
+    """Receipts for a page of bets. The fund and the wallets are read once for the whole page, not once per bet;
+    each wallet's balance and revision still come from one row."""
+    bets = list(bets)
+    if not bets:
+        return []
+    fund = CasinoFund.objects.filter(pk=1).first()
+    wallets = Wallet.objects.only('balance', 'modified_date').in_bulk({bet.wallet_id for bet in bets})
+    return [bet_receipt(bet, fund=fund, wallet=wallets[bet.wallet_id]) for bet in bets]
+
+
 @transaction.atomic
 def move_funds(*, user, amount, request_id, kind):
     if not user.is_staff:
