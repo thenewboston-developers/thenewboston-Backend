@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'thenewboston.game_rewards.apps.GameRewardsConfig',
     'thenewboston.hex.apps.HexConfig',
     'thenewboston.invitations.apps.InvitationsConfig',
+    'thenewboston.let_it_ride.apps.LetItRideConfig',
     'thenewboston.mancala.apps.MancalaConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
     'thenewboston.plinko.apps.PlinkoConfig',
