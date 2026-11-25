@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'thenewboston.notifications.apps.NotificationsConfig',
     'thenewboston.product_analytics.apps.ProductAnalyticsConfig',
     'thenewboston.reversi.apps.ReversiConfig',
+    'thenewboston.roulette.apps.RouletteConfig',
+    'thenewboston.slots.apps.SlotsConfig',
     'thenewboston.social.apps.SocialConfig',
     'thenewboston.users.apps.UsersConfig',
     'thenewboston.wallets.apps.WalletsConfig',

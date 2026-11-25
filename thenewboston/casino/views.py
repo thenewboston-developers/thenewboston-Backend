@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import CasinoBet
+from .registry import registry
 from .services import (
     MAX_AMOUNT,
     CasinoError,
@@ -46,9 +47,13 @@ class MovementSerializer(serializers.Serializer):
 class BetSerializer(MovementSerializer):
     commitment_id = serializers.UUIDField()
     client_seed = serializers.CharField(min_length=1, max_length=128, trim_whitespace=False)
-    game = serializers.ChoiceField(choices=['slots', 'roulette'])
+    game = serializers.ChoiceField(choices=[])
     rules_version = WholeIntegerField(min_value=1)
     selection = serializers.JSONField(required=False, default=dict)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['game'].choices = [definition.game for definition in registry.games]
 
 
 class CasinoView(APIView):

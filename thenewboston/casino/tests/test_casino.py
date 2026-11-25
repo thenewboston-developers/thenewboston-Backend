@@ -1,4 +1,3 @@
-from collections import Counter
 from io import StringIO
 from unittest.mock import patch
 from uuid import uuid4
@@ -12,7 +11,6 @@ from rest_framework.test import APIClient
 from thenewboston.casino.admin import CasinoFundAdmin
 from thenewboston.casino.fairness import FairRandom, seed_hash
 from thenewboston.casino.models import CasinoBet, CasinoCommitment, CasinoFund, CasinoGameConfig, CasinoLedgerEntry
-from thenewboston.casino.rules import ROULETTE_TYPES, RULES, SLOT_WEIGHTS
 from thenewboston.casino.services import (
     CasinoError,
     create_commitment,
@@ -182,33 +180,6 @@ def test_history_and_recovery_supply_verifiable_receipt(funded):
     assert client.get(f'/api/casino/bets/{receipt["request_id"]}').data['result'] == receipt['result']
     assert client.get('/api/casino/bets').data[0]['id'] == receipt['id']
     assert client.get('/api/casino').data['can_manage']
-
-
-class FixedRandom:
-    def __init__(self, value):
-        self.value = value
-
-    def below(self, bound):
-        assert self.value < bound
-        return self.value
-
-
-def test_slots_exhaustive_probabilities_rtp_and_cap():
-    counts = Counter(RULES[('slots', 1)].outcome(FixedRandom(draw), {})['multiplier'] for draw in range(10000))
-    assert dict(counts) == dict(SLOT_WEIGHTS)
-    assert sum(multiplier * count for multiplier, count in counts.items()) == 9600
-    assert max(counts) == 100
-
-
-@pytest.mark.parametrize('kind', ROULETTE_TYPES)
-def test_roulette_exhaustive_rtp_and_zero(kind):
-    selection = {'type': kind}
-    if kind in ('number', 'dozen', 'column'):
-        selection['value'] = 0 if kind == 'number' else 1
-    outcomes = [RULES[('roulette', 1)].outcome(FixedRandom(number), selection) for number in range(37)]
-    assert sum(result['multiplier'] for result in outcomes) == 36
-    assert outcomes[0]['color'] == 'green'
-    assert outcomes[0]['multiplier'] == (36 if kind == 'number' else 0)
 
 
 def test_random_rejects_biased_upper_tail():

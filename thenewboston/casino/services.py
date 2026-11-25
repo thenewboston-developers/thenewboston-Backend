@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 from datetime import timedelta
+from functools import partial
 from uuid import UUID
 
 from django.db import transaction
@@ -14,7 +15,7 @@ from thenewboston.wallets.models import Wallet
 
 from .fairness import ALGORITHM, FairRandom, decrypt_seed, encrypt_seed, generate_seed, seed_hash
 from .models import MAX_SAFE_INTEGER, CasinoBet, CasinoCommitment, CasinoFund, CasinoGameConfig, CasinoLedgerEntry
-from .rules import ROULETTE_TYPES, RULES, SLOT_WEIGHTS, get_rules
+from .registry import get_rules, registry
 
 MAX_AMOUNT = 1000000000
 logger = logging.getLogger(__name__)
@@ -66,15 +67,16 @@ def casino_summary(user=None):
     fund = fund_summary()
     configs = {config.game: config for config in CasinoGameConfig.objects.all()}
     games = []
-    for game in ('slots', 'roulette'):
+    for definition in registry.games:
+        game = definition.game
         config = configs.get(game)
-        version = config.rules_version if config else 1
-        rules = RULES.get((game, version))
+        version = config.rules_version if config else definition.default_version
+        rules = registry.rules.get((game, version))
         enabled = bool(config and config.enabled and rules)
         if rules is None:
-            rules = RULES[(game, 1)]
-        minimum = config.min_bet if config else 1
-        maximum = max_bet(fund, 2 if game == 'roulette' else rules.max_multiplier)
+            rules = get_rules(game, definition.default_version)
+        minimum = config.min_bet if config else definition.default_min_bet
+        maximum = max_bet(fund, rules.catalog_multiplier)
         entry = {
             'id': game,
             'name': rules.name,
@@ -86,15 +88,7 @@ def casino_summary(user=None):
             'rules_version': version,
             'house_edge': rules.house_edge,
         }
-        if game == 'slots':
-            entry['payout_table'] = [
-                {'multiplier': multiplier, 'probability': weight / 10000} for multiplier, weight in SLOT_WEIGHTS
-            ]
-        else:
-            entry['bet_types'] = [
-                {'id': kind, 'label': label, 'multiplier': multiplier, 'max_bet': max_bet(fund, multiplier)}
-                for kind, (label, multiplier) in ROULETTE_TYPES.items()
-            ]
+        entry.update(rules.catalog_data(partial(max_bet, fund)))
         games.append(entry)
     return {'fund': fund, 'games': games, 'can_manage': bool(user and user.is_authenticated and user.is_staff)}
 

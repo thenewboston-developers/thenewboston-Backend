@@ -1,17 +1,7 @@
-"""Immutable casino rules. New game behavior is registered under a new (game, version) key."""
+"""Single-zero Roulette version 1. Preserve selections and outcomes for historical receipts."""
 
-from dataclasses import dataclass
+from thenewboston.casino.contracts import GameRules
 
-SLOT_WEIGHTS = ((0, 5885), (1, 1600), (2, 2000), (5, 400), (10, 100), (50, 10), (100, 5))
-SLOT_SYMBOLS = {
-    0: ['cherry', 'lemon', 'bar'],
-    1: ['cherry'] * 3,
-    2: ['lemon'] * 3,
-    5: ['bell'] * 3,
-    10: ['bar'] * 3,
-    50: ['diamond'] * 3,
-    100: ['seven'] * 3,
-}
 RED_NUMBERS = frozenset((1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36))
 ROULETTE_TYPES = {
     'red': ('Red', 2),
@@ -26,20 +16,8 @@ ROULETTE_TYPES = {
 }
 
 
-@dataclass(frozen=True)
-class Rules:
-    game: str
-    version: int
-    name: str
-    max_multiplier: int
-    house_edge: float
-    settlement_mode: str = 'instant'
-
+class RouletteRules(GameRules):
     def normalize_selection(self, selection):
-        if self.game == 'slots':
-            if selection not in (None, {}):
-                raise ValueError('Slots does not accept a selection.')
-            return {}
         if (
             not isinstance(selection, dict)
             or not isinstance(selection.get('type'), str)
@@ -58,17 +36,9 @@ class Rules:
         return {'type': kind}
 
     def multiplier(self, selection):
-        return self.max_multiplier if self.game == 'slots' else ROULETTE_TYPES[selection['type']][1]
+        return ROULETTE_TYPES[selection['type']][1]
 
     def outcome(self, random, selection):
-        if self.game == 'slots':
-            draw = random.below(10000)
-            cursor = 0
-            for multiplier, weight in SLOT_WEIGHTS:
-                cursor += weight
-                if draw < cursor:
-                    return {'draw': draw, 'multiplier': multiplier, 'symbols': SLOT_SYMBOLS[multiplier]}
-            raise AssertionError('Invalid slot probability table')
         number = random.below(37)
         color = 'green' if number == 0 else 'red' if number in RED_NUMBERS else 'black'
         kind, value = selection['type'], selection.get('value')
@@ -85,15 +55,36 @@ class Rules:
         }
         return {'number': number, 'color': color, 'multiplier': self.multiplier(selection) if wins[kind] else 0}
 
+    def catalog_data(self, maximum_bet):
+        return {
+            'bet_types': [
+                {'id': kind, 'label': label, 'multiplier': multiplier, 'max_bet': maximum_bet(multiplier)}
+                for kind, (label, multiplier) in ROULETTE_TYPES.items()
+            ]
+        }
 
-RULES = {
-    ('slots', 1): Rules('slots', 1, 'Slots', 100, 0.04),
-    ('roulette', 1): Rules('roulette', 1, 'Roulette', 36, 1 / 37),
-}
+    def verify(self):
+        if len(RED_NUMBERS) != 18 or not RED_NUMBERS <= set(range(1, 37)):
+            raise ValueError('Roulette must have 18 red numbers on its single-zero wheel.')
+        winning_counts = {
+            'red': 18,
+            'black': 18,
+            'odd': 18,
+            'even': 18,
+            'low': 18,
+            'high': 18,
+            'dozen': 12,
+            'column': 12,
+            'number': 1,
+        }
+        if set(ROULETTE_TYPES) != set(winning_counts) or any(
+            multiplier * winning_counts[kind] != 36 for kind, (_, multiplier) in ROULETTE_TYPES.items()
+        ):
+            raise ValueError('Roulette payout tables must return 36/37 of stakes.')
+        if self.max_multiplier != 36 or self.catalog_multiplier != 2:
+            raise ValueError('Roulette maximum or catalog multiplier is invalid.')
 
 
-def get_rules(game, version):
-    try:
-        return RULES[(game, version)]
-    except (KeyError, TypeError) as exc:
-        raise ValueError('Unsupported game or rules version.') from exc
+ROULETTE_V1 = RouletteRules(
+    game='roulette', version=1, name='Roulette', max_multiplier=36, house_edge=1 / 37, catalog_multiplier=2
+)

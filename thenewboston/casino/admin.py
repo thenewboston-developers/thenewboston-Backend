@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.db import transaction
 
 from .models import CasinoBet, CasinoCommitment, CasinoFund, CasinoGameConfig, CasinoLedgerEntry
-from .rules import RULES
+from .registry import registry
 
 
 class ReadOnlyAdmin(admin.ModelAdmin):
@@ -53,7 +53,7 @@ class GameConfigForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        if (self.instance.game, data.get('rules_version')) not in RULES:
+        if (self.instance.game, data.get('rules_version')) not in registry.rules:
             raise forms.ValidationError('This rules version is not installed.')
         return data
 
