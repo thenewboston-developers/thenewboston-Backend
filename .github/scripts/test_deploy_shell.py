@@ -23,7 +23,7 @@ docker() {
     local checked_command
     for checked_command in "$@"; do
         case "$checked_command" in
-            verify_product_analytics|verify_websocket_authentication|announce_frontend_deployment)
+            verify_product_analytics|verify_websocket_authentication|verify_casino|announce_frontend_deployment)
                 printf '%s\n' "$checked_command" >> "$DEPLOY_TEST_LOG"
                 cat >/dev/null
                 if [ "$checked_command" = "$DEPLOY_TEST_FAIL" ]; then
@@ -67,7 +67,13 @@ class DeployShellTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
             commands,
-            ['make:deploy', 'verify_product_analytics', 'verify_websocket_authentication', 'make:deploy-cleanup'],
+            [
+                'make:deploy',
+                'verify_product_analytics',
+                'verify_websocket_authentication',
+                'verify_casino',
+                'make:deploy-cleanup',
+            ],
         )
 
     def test_announcement_does_not_consume_cleanup(self):
@@ -79,6 +85,7 @@ class DeployShellTests(unittest.TestCase):
                 'make:deploy',
                 'verify_product_analytics',
                 'verify_websocket_authentication',
+                'verify_casino',
                 'announce_frontend_deployment',
                 'make:deploy-cleanup',
             ],
@@ -93,6 +100,13 @@ class DeployShellTests(unittest.TestCase):
         result, commands = self.run_deploy(announce='7', fail='announce_frontend_deployment')
         self.assertEqual(result.returncode, 23)
         self.assertEqual(commands[-1], 'announce_frontend_deployment')
+        self.assertNotIn('make:deploy-cleanup', commands)
+
+    def test_failed_casino_verification_fails_deployment(self):
+        result, commands = self.run_deploy(announce='7', fail='verify_casino')
+        self.assertEqual(result.returncode, 23)
+        self.assertEqual(commands[-1], 'verify_casino')
+        self.assertNotIn('announce_frontend_deployment', commands)
         self.assertNotIn('make:deploy-cleanup', commands)
 
 

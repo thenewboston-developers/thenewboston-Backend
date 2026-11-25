@@ -9,6 +9,7 @@ app = Celery(
     include=[
         'thenewboston.backgammon.tasks',
         'thenewboston.battleship.tasks',
+        'thenewboston.casino.tasks',
         'thenewboston.checkers.tasks',
         'thenewboston.connect_five.tasks',
         'thenewboston.dots_and_boxes.tasks',
