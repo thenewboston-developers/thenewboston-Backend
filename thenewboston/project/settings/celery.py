@@ -7,6 +7,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.expire_blackjack_hands',
         'schedule': 60,
     },
+    'expire_video_poker_hands': {
+        'task': 'tasks.expire_video_poker_hands',
+        'schedule': 60,
+    },
     'reconcile_casino': {
         'task': 'tasks.reconcile_casino',
         'schedule': 60,
