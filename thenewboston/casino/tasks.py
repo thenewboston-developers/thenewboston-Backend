@@ -5,7 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from .models import CasinoBet, CasinoCommitment
-from .rules import RULES
+from .registry import registry
 from .services import reconcile_fund, settle_bet
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ def reconcile_casino():
     )
     for bet_id in candidates:
         candidate = CasinoBet.objects.only('game', 'rules_version').get(pk=bet_id)
-        rules = RULES.get((candidate.game, candidate.rules_version))
+        rules = registry.rules.get((candidate.game, candidate.rules_version))
         if rules is None or rules.settlement_mode != 'instant':
             continue
         try:

@@ -2,6 +2,8 @@
 
 The casino is independent of `game_rewards.GameFund`. Migrations create an **empty** fund and enable Slots and Roulette; they never mint or transfer coins. A staff user deposits existing TNB through the casino UI/API. With 100,000 TNB available and the default 1% exposure limit, maximum wagers are 10 TNB on 100x Slots, 1,000 TNB on even-money Roulette, and 28 TNB on a single number.
 
+`casino` owns the shared fund, ledger, commitments, bets, API, settlement, and reconciliation. `slots` and `roulette` are separate Django apps that own their game rules, catalog metadata, and gameplay tests. Each app registers an immutable `GameDefinition` from `AppConfig.ready()`; shared services consume `GameRules` through the generic registry. The extraction does not move database tables or change stored game IDs, rules versions, fairness receipts, or `/api/casino` endpoints.
+
 ## Money and locking
 
 All financial operations run in `transaction.atomic()` and acquire the singleton casino fund first, then an existing bet/config/commitment as needed, then the wallet. Wallet mutations use the existing wallet service and publish only after commit. Never acquire the casino fund after locking a wallet.
@@ -17,7 +19,7 @@ All financial operations run in `transaction.atomic()` and acquire the singleton
 
 Version 1 games settle in the same transaction as acceptance. Animations are presentation only. A lost response is recovered by request ID or by replaying the exact request, including its seed and selection. A new ID means a new wager.
 
-`verify_casino` performs read-only ledger/reservation reconciliation and verifies the slot probability table. A Celery task repeats reconciliation every minute and recovers unexpectedly open **instant** games from their persisted, verified outcome. A corrupt outcome retains its reservation and emits an error; it is never rerolled or silently refunded. Game closure only blocks new bets.
+`verify_casino` performs read-only ledger/reservation reconciliation and invokes every installed ruleset's own mathematical checks. A Celery task repeats reconciliation every minute and recovers unexpectedly open **instant** games from their persisted, verified outcome. A corrupt outcome retains its reservation and emits an error; it is never rerolled or silently refunded. Game closure only blocks new bets.
 
 ## API
 
@@ -53,4 +55,6 @@ Unrevealed seeds are encrypted using a domain-separated key derived from Django 
 
 ## Adding games
 
-Register immutable `(game, version)` rules, configure the game, and add its normalized selection and maximum liability calculation. Never modify historical rules. The current rules registry records settlement mode, and instant recovery deliberately excludes future interactive games. An interactive game must implement its own action IDs, revision checks, timeout behavior and settlement handler; it must protect permitted future actions at acceptance and preserve the lock order and ledger invariants. Future additional stakes use unique per-action ledger event keys and increase both fund balance and reservation without increasing precommitted house exposure.
+Create a Django game app that implements `casino.contracts.GameRules`, provides a `GameDefinition` catalog descriptor, and registers it in `AppConfig.ready()`. Install the app and explicitly configure its shared `CasinoGameConfig` row. The registry exposes installed game IDs to serializers and supplies rules to the catalog, admin validation, settlement, recovery, and deployment verification; shared casino code needs no branches for a new game name. Treasury limit arithmetic stays shared, while game-specific catalog data receives a callback for displaying those limits.
+
+Register all historical immutable `(game, version)` rules, even after selecting a newer version in configuration. Never change a historical game's identity, selection normalization, outcome mapping, or fairness draw sequence. The current rules registry records settlement mode, and instant recovery deliberately excludes future interactive games. An interactive game must implement its own action IDs, revision checks, timeout behavior and settlement handler; it must protect permitted future actions at acceptance and preserve the lock order and ledger invariants. Future additional stakes use unique per-action ledger event keys and increase both fund balance and reservation without increasing precommitted house exposure.
