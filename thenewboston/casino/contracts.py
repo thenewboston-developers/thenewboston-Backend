@@ -51,6 +51,18 @@ class GameRules(ABC):
     def outcome(self, random: RandomSource, selection: dict) -> dict:
         """Produce a deterministic result containing its total-return multiplier."""
 
+    def prepare_selection(self, selection, amount: int) -> dict:
+        """Canonical selection for a wager of `amount`. Override when the selection itself carries stakes."""
+        return self.normalize_selection(selection)
+
+    def exposure(self, selection: dict, amount: int) -> int:
+        """Largest net amount this wager can cost the casino beyond its own stake; never negative."""
+        return (self.multiplier(selection) - 1) * amount
+
+    def payout(self, amount: int, result: dict) -> int:
+        """Total returned for a result this ruleset produced, including the stake."""
+        return amount * result['multiplier']
+
     @abstractmethod
     def catalog_data(self, maximum_bet: Callable[[int], int]) -> dict:
         """Game-specific public metadata; the casino supplies the treasury limit calculation."""

@@ -1,4 +1,6 @@
-"""Single-zero Roulette version 1. Preserve selections and outcomes for historical receipts."""
+"""Single-zero Roulette. Version 1 settles one spot per spin; version 2 settles chips on several spots.
+
+Preserve each version's selections and outcomes for historical receipts."""
 
 from thenewboston.casino.contracts import GameRules
 
@@ -14,6 +16,33 @@ ROULETTE_TYPES = {
     'column': ('Column', 3),
     'number': ('Single number', 36),
 }
+
+
+TYPE_ORDER = {kind: position for position, kind in enumerate(ROULETTE_TYPES)}
+
+
+def pocket_color(number):
+    if number == 0:
+        return 'green'
+    return 'red' if number in RED_NUMBERS else 'black'
+
+
+def spot_wins(kind, value, number):
+    """Whether a bet on one spot wins when the ball lands on `number`. Zero loses every outside bet."""
+    if kind == 'number':
+        return number == value
+    if kind == 'dozen':
+        return number > 0 and (number - 1) // 12 + 1 == value
+    if kind == 'column':
+        return number > 0 and (number - 1) % 3 + 1 == value
+    return {
+        'red': number in RED_NUMBERS,
+        'black': number > 0 and number not in RED_NUMBERS,
+        'odd': number % 2 == 1,
+        'even': number > 0 and number % 2 == 0,
+        'low': 1 <= number <= 18,
+        'high': 19 <= number <= 36,
+    }[kind]
 
 
 class RouletteRules(GameRules):
@@ -85,6 +114,83 @@ class RouletteRules(GameRules):
             raise ValueError('Roulette maximum or catalog multiplier is invalid.')
 
 
+class RouletteTableRules(RouletteRules):
+    """Version 2: one spin settles chips on several spots. Each bet in the selection carries its own stake."""
+
+    def normalize_selection(self, selection):
+        if (
+            not isinstance(selection, dict)
+            or set(selection) != {'bets'}
+            or not isinstance(selection['bets'], list)
+            or not selection['bets']
+        ):
+            raise ValueError('Place at least one roulette bet.')
+        bets = {}
+        for bet in selection['bets']:
+            if not isinstance(bet, dict) or type(bet.get('amount')) is not int or bet['amount'] < 1:
+                raise ValueError('Each roulette bet needs a whole stake of at least 1 TNB.')
+            spot = super().normalize_selection({key: value for key, value in bet.items() if key != 'amount'})
+            key = (TYPE_ORDER[spot['type']], spot.get('value', 0))
+            if key in bets:
+                raise ValueError('Each roulette spot can hold one bet.')
+            bets[key] = {**spot, 'amount': bet['amount']}
+        # Table order, so the same chips always make the same receipt whatever order they were placed in.
+        return {'bets': [bets[key] for key in sorted(bets)]}
+
+    def prepare_selection(self, selection, amount):
+        if isinstance(selection, dict) and 'bets' not in selection:
+            # A table that predates version 2 sends a single spot and stakes the whole wager on it.
+            selection = {'bets': [{**selection, 'amount': amount}]}
+        selection = self.normalize_selection(selection)
+        if sum(bet['amount'] for bet in selection['bets']) != amount:
+            raise ValueError('The roulette bets must add up to the wager.')
+        return selection
+
+    def returned(self, selection, number):
+        """Total paid for a number, including the stakes of the winning bets."""
+        return sum(
+            bet['amount'] * ROULETTE_TYPES[bet['type']][1]
+            for bet in selection['bets']
+            if spot_wins(bet['type'], bet.get('value'), number)
+        )
+
+    def multiplier(self, selection):
+        return max(ROULETTE_TYPES[bet['type']][1] for bet in selection['bets'])
+
+    def exposure(self, selection, amount):
+        # Bets that cover each other reduce what the casino can lose; a fully hedged table risks nothing.
+        return max(0, max(self.returned(selection, number) for number in range(37)) - amount)
+
+    def payout(self, amount, result):
+        return result['payout']
+
+    def outcome(self, random, selection):
+        number = random.below(37)
+        return {'number': number, 'color': pocket_color(number), 'payout': self.returned(selection, number)}
+
+    def catalog_data(self, maximum_bet):
+        return {**super().catalog_data(maximum_bet), 'multiple_bets': True}
+
+    def verify(self):
+        super().verify()
+        for kind, (_, multiplier) in ROULETTE_TYPES.items():
+            for value in {'number': range(37), 'dozen': range(1, 4), 'column': range(1, 4)}.get(kind, [None]):
+                bet = {'type': kind, 'amount': 1} if value is None else {'type': kind, 'value': value, 'amount': 1}
+                selection = self.prepare_selection({'bets': [bet]}, 1)
+                if sum(self.returned(selection, number) for number in range(37)) != 36:
+                    raise ValueError('Every roulette spot must return 36/37 of its stakes.')
+                if self.exposure(selection, 1) != multiplier - 1:
+                    raise ValueError('A single roulette bet must risk its multiplier less the stake.')
+        every_number = self.prepare_selection(
+            {'bets': [{'type': 'number', 'value': value, 'amount': 1} for value in range(37)]}, 37
+        )
+        if any(self.returned(every_number, number) != 36 for number in range(37)) or self.exposure(every_number, 37):
+            raise ValueError('Covering every number must return 36 of 37 chips and risk nothing.')
+
+
 ROULETTE_V1 = RouletteRules(
     game='roulette', version=1, name='Roulette', max_multiplier=36, house_edge=1 / 37, catalog_multiplier=2
+)
+ROULETTE_V2 = RouletteTableRules(
+    game='roulette', version=2, name='Roulette', max_multiplier=36, house_edge=1 / 37, catalog_multiplier=2
 )

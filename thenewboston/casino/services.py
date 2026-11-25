@@ -57,10 +57,13 @@ def fund_summary(fund=None):
     }
 
 
+def risk_capacity(fund):
+    # The most one wager may cost the casino. Determined BEFORE crediting the incoming stake: never count it twice.
+    return fund['available'] * fund['risk_limit_bps'] // 10000
+
+
 def max_bet(fund, multiplier):
-    # Determine the cap BEFORE crediting the incoming stake. Do not count the stake twice.
-    capacity = fund['available'] * fund['risk_limit_bps'] // 10000
-    return min(MAX_AMOUNT, capacity // (multiplier - 1), MAX_SAFE_INTEGER - fund['balance'])
+    return min(MAX_AMOUNT, risk_capacity(fund) // (multiplier - 1), MAX_SAFE_INTEGER - fund['balance'])
 
 
 def casino_summary(user=None):
@@ -237,7 +240,7 @@ def _settle_locked(*, fund, bet, wallet):
     expected = rules.outcome(random, bet.selection)
     if expected != bet.result:
         raise RuntimeError('Casino result verification failed; reservation retained')
-    payout = bet.amount * bet.result['multiplier']
+    payout = rules.payout(bet.amount, bet.result)
     protected = bet.protected_amount
     if payout > protected or fund.reserved < protected or wallet.balance + payout > MAX_SAFE_INTEGER:
         raise RuntimeError('Casino settlement invariant failed; reservation retained')
@@ -267,7 +270,7 @@ def place_bet(*, user, request_id, commitment_id, client_seed, game, amount, sel
         raise CasinoError('Client seed must contain printable ASCII characters.')
     try:
         rules = get_rules(game, rules_version)
-        selection = rules.normalize_selection(selection)
+        selection = rules.prepare_selection(selection, amount)
         rules.validate_amount(amount)
     except ValueError as exc:
         raise CasinoError(str(exc)) from exc
@@ -286,14 +289,16 @@ def place_bet(*, user, request_id, commitment_id, client_seed, game, amount, sel
         raise CasinoError('This game is temporarily closed.', code='game_closed', fund=fund_summary(fund))
     if config.rules_version != rules_version:
         raise CasinoError('The game rules changed. Refresh before betting.', code='rules_changed', status=409)
-    maximum = max_bet(fund_summary(fund), rules.multiplier(selection))
-    if amount < config.min_bet or amount > maximum:
+    limits = fund_summary(fund)
+    # The casino's worst case decides the limit, so a wager spread over several outcomes is judged as a whole.
+    exposure = rules.exposure(selection, amount)
+    if amount < config.min_bet or exposure > risk_capacity(limits) or amount > MAX_SAFE_INTEGER - fund.balance:
         raise CasinoError(
             'The wager is outside the currently permitted range.',
             code='bet_limit',
             min_bet=config.min_bet,
-            max_bet=maximum,
-            fund=fund_summary(fund),
+            max_bet=max_bet(limits, rules.multiplier(selection)),
+            fund=limits,
         )
     if CasinoBet.objects.filter(user=user, status='open').exists():
         raise CasinoError('Finish the existing casino game first.', code='game_in_progress', status=409)
@@ -305,7 +310,6 @@ def place_bet(*, user, request_id, commitment_id, client_seed, game, amount, sel
     wallet = Wallet.objects.select_for_update().filter(owner=user, currency_id=fund.currency_id).first()
     if wallet is None or wallet.balance < amount:
         raise CasinoError('Insufficient TNB balance.', code='insufficient_balance')
-    exposure = (rules.multiplier(selection) - 1) * amount
     # These checks occur before deriving any outcome, so near-limit balances cannot selectively reject wins.
     if wallet.balance + exposure > MAX_SAFE_INTEGER:
         raise CasinoError('The potential payout would exceed the wallet balance limit.', code='wallet_limit')
