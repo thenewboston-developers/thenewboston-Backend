@@ -84,7 +84,7 @@ class BetsView(APIView):
         serializer = BetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         bet, fund, wallet = place_bet(user=request.user, **serializer.validated_data)
-        return Response(bet_receipt(bet, fund=fund, wallet_balance=wallet.balance), status=status.HTTP_201_CREATED)
+        return Response(bet_receipt(bet, fund=fund, wallet=wallet), status=status.HTTP_201_CREATED)
 
 
 class BetView(APIView):
@@ -127,7 +127,7 @@ class BetActionView(APIView):
             )
         except ValueError as exc:
             raise CasinoError(str(exc)) from exc
-        return Response(bet_receipt(bet, fund=fund, wallet_balance=wallet.balance))
+        return Response(bet_receipt(bet, fund=fund, wallet=wallet))
 
 
 class FundDepositView(APIView):
