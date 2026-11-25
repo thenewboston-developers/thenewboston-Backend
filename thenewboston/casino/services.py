@@ -78,7 +78,7 @@ def casino_summary(user=None):
         enabled = bool(config and config.enabled and rules)
         if rules is None:
             rules = get_rules(game, definition.default_version)
-        minimum = config.min_bet if config else definition.default_min_bet
+        minimum = rules.minimum_bet(config.min_bet if config else definition.default_min_bet)
         maximum = max_bet(fund, rules.catalog_multiplier)
         entry = {
             'id': game,
@@ -156,10 +156,11 @@ def bet_receipt(bet, *, fund=None, wallet_balance=None):
         'selection': bet.selection,
         'payout': bet.payout,
         'profit': bet.payout - bet.total_stake if bet.status == 'settled' else None,
-        'result': bet.result if bet.status == 'settled' else {},
+        'result': get_rules(bet.game, bet.rules_version).public_result(bet),
         'rules_version': bet.rules_version,
         'created_at': bet.created_date,
         'settled_at': bet.settled_at,
+        'settlement_reason': bet.settlement_reason,
         'fairness': {
             'commitment_id': str(bet.commitment_id),
             'server_seed_hash': bet.commitment.server_seed_hash,
@@ -270,6 +271,7 @@ def place_bet(*, user, request_id, commitment_id, client_seed, game, amount, sel
     try:
         rules = get_rules(game, rules_version)
         selection = rules.prepare_selection(selection, amount)
+        rules.validate_amount(amount)
     except ValueError as exc:
         raise CasinoError(str(exc)) from exc
     payload = [game, rules_version, amount, selection, str(commitment_id), client_seed]
@@ -340,7 +342,10 @@ def place_bet(*, user, request_id, commitment_id, client_seed, game, amount, sel
         result=rules.outcome(random, selection),
     )
     _ledger(fund, wallet, 'stake', amount, bet=bet)
-    _settle_locked(fund=fund, bet=bet, wallet=wallet)
+    if rules.settlement_mode == 'instant':
+        _settle_locked(fund=fund, bet=bet, wallet=wallet)
+    else:
+        rules.start_bet(fund=fund, bet=bet, wallet=wallet)
     _publish_wallet(wallet)
     return bet, fund, wallet
 

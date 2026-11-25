@@ -13,5 +13,5 @@ def use_roulette_version_1(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [('casino', '0003_slots_rules_version_2')]
+    dependencies = [('casino', '0004_plinko')]
     operations = [migrations.RunPython(use_roulette_version_2, use_roulette_version_1)]

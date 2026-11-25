@@ -1,12 +1,13 @@
 from functools import wraps
 
+from django.http import JsonResponse
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import CasinoBet
-from .registry import registry
+from .registry import get_rules, registry
 from .services import (
     MAX_AMOUNT,
     CasinoError,
@@ -94,6 +95,39 @@ class BetView(APIView):
         if bet is None:
             return Response({'code': 'not_found', 'detail': 'No accepted bet has this request ID.'}, status=404)
         return Response(bet_receipt(bet))
+
+
+class ActiveBetView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        bet = CasinoBet.objects.select_related('commitment').filter(user=request.user, status='open').first()
+        return Response(bet_receipt(bet)) if bet else JsonResponse(None, safe=False)
+
+
+class ActionSerializer(serializers.Serializer):
+    action_id = serializers.UUIDField()
+    action = serializers.CharField(max_length=32)
+    expected_revision = WholeIntegerField(min_value=0)
+
+
+class BetActionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @casino_errors
+    def post(self, request, request_id):
+        serializer = ActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        bet = CasinoBet.objects.filter(user=request.user, request_id=request_id).first()
+        if bet is None:
+            return Response({'code': 'not_found', 'detail': 'No accepted bet has this request ID.'}, status=404)
+        try:
+            bet, fund, wallet = get_rules(bet.game, bet.rules_version).act(
+                user=request.user, request_id=request_id, **serializer.validated_data
+            )
+        except ValueError as exc:
+            raise CasinoError(str(exc)) from exc
+        return Response(bet_receipt(bet, fund=fund, wallet_balance=wallet.balance))
 
 
 class FundDepositView(APIView):
