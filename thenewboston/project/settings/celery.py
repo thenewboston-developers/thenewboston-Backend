@@ -3,6 +3,10 @@ from celery.schedules import crontab
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    'expire_blackjack_hands': {
+        'task': 'tasks.expire_blackjack_hands',
+        'schedule': 60,
+    },
     'reconcile_casino': {
         'task': 'tasks.reconcile_casino',
         'schedule': 60,

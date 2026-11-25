@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'thenewboston.authentication.apps.AuthenticationConfig',
     'thenewboston.backgammon.apps.BackgammonConfig',
     'thenewboston.battleship.apps.BattleshipConfig',
+    'thenewboston.blackjack.apps.BlackjackConfig',
     'thenewboston.casino.apps.CasinoConfig',
     'thenewboston.checkers.apps.CheckersConfig',
     'thenewboston.connect_five.apps.ConnectFiveConfig',

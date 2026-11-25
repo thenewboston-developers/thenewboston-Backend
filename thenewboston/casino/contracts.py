@@ -20,6 +20,25 @@ class GameRules(ABC):
     catalog_multiplier: int
     settlement_mode: str = 'instant'
 
+    def validate_amount(self, amount: int) -> None:
+        """Validate game-specific stake denominations before any money is moved."""
+
+    def minimum_bet(self, configured: int) -> int:
+        """Return the first playable denomination at or above the configured minimum."""
+        return configured
+
+    def public_result(self, bet) -> dict:
+        """Only settled instant outcomes are public. Interactive games must redact their state."""
+        return bet.result if bet.status == 'settled' else {}
+
+    def start_bet(self, *, fund, bet, wallet) -> None:
+        """Interactive acceptance hook, under the casino fund, bet and wallet locks."""
+        raise ValueError('This game does not support interactive play.')
+
+    def act(self, *, user, request_id, action_id, action, expected_revision):
+        """Game-owned action handler; must enforce ownership, locking and idempotency."""
+        raise ValueError('This game does not support interactive play.')
+
     @abstractmethod
     def normalize_selection(self, selection) -> dict:
         """Return the canonical selection used by idempotency and historical receipts."""
