@@ -16,6 +16,7 @@ app = Celery(
         'thenewboston.general.tasks',
         'thenewboston.hex.tasks',
         'thenewboston.mancala.tasks',
+        'thenewboston.product_analytics.tasks',
         'thenewboston.reversi.tasks',
         'thenewboston.social.tasks',
     ],
