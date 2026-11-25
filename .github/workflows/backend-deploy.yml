@@ -54,10 +54,10 @@ jobs:
             printf '%s' "$POSTHOG_CONFIG" | sudo python3 .github/scripts/configure_posthog.py
             make deploy
             DEPLOY_SHA=$(git rev-parse HEAD)
-            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_product_analytics --deployment-sha "$DEPLOY_SHA"
-            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_websocket_authentication
+            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_product_analytics --deployment-sha "$DEPLOY_SHA" </dev/null
+            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_websocket_authentication </dev/null
             if [ -n "$ANNOUNCE_PREVIOUS_ID" ]; then
-              docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage announce_frontend_deployment --expected-previous-id "$ANNOUNCE_PREVIOUS_ID"
+              docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage announce_frontend_deployment --expected-previous-id "$ANNOUNCE_PREVIOUS_ID" </dev/null
             fi
             make deploy-cleanup
           EOF
