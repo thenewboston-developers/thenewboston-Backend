@@ -13,6 +13,8 @@ from thenewboston.casino.models import CasinoGameConfig
 from thenewboston.casino.registry import GameRegistry, get_rules, registry
 from thenewboston.casino.services import casino_summary
 from thenewboston.casino.views import BetSerializer
+from thenewboston.plinko.catalog import PLINKO
+from thenewboston.plinko.rules import PLINKO_V1
 from thenewboston.roulette.catalog import ROULETTE
 from thenewboston.roulette.rules import ROULETTE_V1
 from thenewboston.slots.catalog import SLOTS
@@ -22,13 +24,16 @@ from thenewboston.slots.rules import SLOTS_V1, SLOTS_V2
 def test_installed_game_apps_register_catalogs_in_unchanged_order():
     assert apps.get_app_config('slots').name == 'thenewboston.slots'
     assert apps.get_app_config('roulette').name == 'thenewboston.roulette'
-    assert registry.games == (SLOTS, ROULETTE, BLACKJACK)
+    assert apps.get_app_config('plinko').name == 'thenewboston.plinko'
+    assert apps.get_app_config('blackjack').name == 'thenewboston.blackjack'
+    assert registry.games == (SLOTS, ROULETTE, PLINKO, BLACKJACK)
     assert get_rules('slots', 1) is SLOTS_V1
     assert get_rules('slots', 2) is SLOTS_V2
     assert SLOTS.default_version == 2
     assert get_rules('roulette', 1) is ROULETTE_V1
     assert get_rules('blackjack', 1) is BLACKJACK_V1
-    assert list(BetSerializer().fields['game'].choices) == ['slots', 'roulette', 'blackjack']
+    assert get_rules('plinko', 1) is PLINKO_V1
+    assert list(BetSerializer().fields['game'].choices) == ['slots', 'roulette', 'plinko', 'blackjack']
 
 
 def test_registration_order_does_not_change_public_catalog_order_and_ready_can_repeat():
@@ -111,11 +116,12 @@ def test_missing_configuration_and_uninstalled_version_remain_closed():
 @pytest.mark.django_db
 def test_verification_dispatches_to_every_registered_ruleset(monkeypatch):
     called = []
+    monkeypatch.setattr(type(PLINKO_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(SLOTS_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(ROULETTE_V1), 'verify', lambda self: called.append((self.game, self.version)))
     monkeypatch.setattr(type(BLACKJACK_V1), 'verify', lambda self: called.append((self.game, self.version)))
     call_command('verify_casino', stdout=StringIO())
-    assert sorted(called) == [('blackjack', 1), ('roulette', 1), ('slots', 1), ('slots', 2)]
+    assert sorted(called) == [('blackjack', 1), ('plinko', 1), ('roulette', 1), ('slots', 1), ('slots', 2)]
 
 
 @pytest.mark.django_db

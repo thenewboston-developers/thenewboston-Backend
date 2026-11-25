@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'thenewboston.invitations.apps.InvitationsConfig',
     'thenewboston.mancala.apps.MancalaConfig',
     'thenewboston.notifications.apps.NotificationsConfig',
+    'thenewboston.plinko.apps.PlinkoConfig',
     'thenewboston.product_analytics.apps.ProductAnalyticsConfig',
     'thenewboston.reversi.apps.ReversiConfig',
     'thenewboston.roulette.apps.RouletteConfig',
