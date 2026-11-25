@@ -23,7 +23,9 @@ def initialize_client():
     try:
         from posthog import Posthog
 
-        # Only the outbox worker uses this synchronous client. HTTP requests never send analytics.
+        # Only the outbox worker uses this synchronous client. HTTP requests never send analytics. The backend
+        # captures events and never evaluates feature flags, so the flag poller stays off: the SDK would otherwise
+        # start it in every forked Celery process and warn every 30 seconds that there is no personal API key.
         _client = Posthog(
             settings.POSTHOG_API_KEY,
             host=settings.POSTHOG_HOST,
@@ -32,6 +34,7 @@ def initialize_client():
             max_retries=0,
             disable_geoip=True,
             enable_exception_autocapture=False,
+            enable_local_evaluation=False,
         )
     except Exception:
         logger.exception('Could not initialize product analytics')
