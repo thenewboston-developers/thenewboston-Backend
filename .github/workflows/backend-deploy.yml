@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      announce_previous_deployment_id:
+        description: 'After frontend assets deploy, announce an update only if this is still the latest deployment ID'
+        required: false
+        type: string
+
+concurrency:
+  group: backend-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -24,11 +34,15 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           POSTHOG_API_KEY: ${{ secrets.PROD_POSTHOG_KEY }}
           POSTHOG_HOST: ${{ secrets.PROD_POSTHOG_HOST }}
+          ANNOUNCE_PREVIOUS_ID: ${{ inputs.announce_previous_deployment_id }}
         run: |
           test -n "$POSTHOG_API_KEY" || { echo "Missing PROD_POSTHOG_KEY"; exit 1; }
           test -n "$POSTHOG_HOST" || { echo "Missing PROD_POSTHOG_HOST"; exit 1; }
+          if [[ -n "$ANNOUNCE_PREVIOUS_ID" && ! "$ANNOUNCE_PREVIOUS_ID" =~ ^[0-9]+$ ]]; then
+            echo "Frontend deployment ID must contain only digits"; exit 1
+          fi
           POSTHOG_CONFIG=$(python3 -c 'import base64,json,os; print(base64.b64encode(json.dumps({"api_key": os.environ["POSTHOG_API_KEY"], "host": os.environ["POSTHOG_HOST"]}).encode()).decode())')
-          ssh -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" "POSTHOG_CONFIG='$POSTHOG_CONFIG' bash -s" << 'EOF'
+          ssh -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" "POSTHOG_CONFIG='$POSTHOG_CONFIG' ANNOUNCE_PREVIOUS_ID='$ANNOUNCE_PREVIOUS_ID' bash -s" << 'EOF'
             set -e
 
             cd ~/thenewboston-Backend
@@ -41,5 +55,9 @@ jobs:
             make deploy
             DEPLOY_SHA=$(git rev-parse HEAD)
             docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_product_analytics --deployment-sha "$DEPLOY_SHA"
+            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_websocket_authentication
+            if [ -n "$ANNOUNCE_PREVIOUS_ID" ]; then
+              docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage announce_frontend_deployment --expected-previous-id "$ANNOUNCE_PREVIOUS_ID"
+            fi
             make deploy-cleanup
           EOF

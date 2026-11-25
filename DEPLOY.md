@@ -201,6 +201,47 @@ When `THENEWBOSTON_SETTING_SENTRY_DSN` is set, the Django and Celery integration
 
 The API allows the `sentry-trace` and `baggage` CORS headers so requests from the frontend can continue the same trace. Deploy these backend settings before enabling cross-origin trace propagation in the frontend. In Sentry's Traces view, filter to the backend and frontend projects and the production environment, then load an authenticated page and inspect a sampled request and its database spans. Incoming sampled traces inherit their parent's sampling decision.
 
+Events and traces can include request headers and stack variables. Before sending them, access/refresh JWTs and signed guest-game capability tokens are replaced with `[Filtered]`, including copies in ASGI headers and stack locals. Named credential fields are also scrubbed when their value is malformed or incomplete. The existing recursive Sentry scrubber remains enabled for other sensitive fields. Errors are still reported normally.
+
+## WebSocket authentication
+
+The three user-specific streams (`ws/notifications/<user_id>`, `ws/wallet/<user_id>` and `ws/connect-five/<user_id>`) authenticate with the REST API access token. The frontend offers `Sec-WebSocket-Protocol: access_token, <token>`, and the backend selects only `access_token`. This keeps tokens out of nginx request-line logs; the middleware also removes them from the ASGI scope before Sentry observes it.
+
+The public trade, order-book, deployment, Connect Five spectator and chat streams remain public. Computer and guest matches use their existing authenticated/capability-scoped REST polling and do not enter the public Connect Five stream. Authentication is checked when a private connection opens. Existing connections are not revoked when a token expires or the account is disabled; logout and token replacement close the frontend's sockets, and reconnects validate credentials again.
+
+Deploy in three stages through CI:
+
+1. Deploy the backend with `ENFORCE_WEBSOCKET_AUTHENTICATION=False`. It accepts old clients and logs connections that would be rejected, while allowing the updated frontend to offer the token subprotocol.
+2. Verify subprotocol negotiation, then deploy the frontend that sends its access token. Deploying that frontend before the compatible backend can break socket handshakes. Ask existing tabs to reload using the frontend deployment notification below.
+3. After the frontend is deployed and verified, deploy the backend change that turns the default enforcement on. From then on missing, invalid or mismatched credentials receive HTTP 403 before joining any private group.
+
+`THENEWBOSTON_SETTING_ENFORCE_WEBSOCKET_AUTHENTICATION` in `/etc/thenewboston/.env` overrides the code default. If explicitly set to `false`, remove that override or change it to `true` at the final stage, then recreate the application containers. The environment template enables enforcement for installations running both updated releases.
+
+To verify the proxy and backend negotiate the protocol, offer it without a token to a public socket:
+
+```bash
+curl -s -o /dev/null -D - --http1.1 --max-time 3 \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H 'Sec-WebSocket-Protocol: access_token' \
+  https://thenewboston.network/ws/trades
+```
+
+The response must be `HTTP/1.1 101 Switching Protocols` with `Sec-WebSocket-Protocol: access_token`.
+
+The backend deployment workflow runs `verify_websocket_authentication` against the real TLS/nginx endpoint after every deployment. It verifies all public streams plus authenticated, missing-token, invalid-token, and wrong-user private handshakes. A passing log reports `WebSocket authentication verified: compatibility` during the first stage and `WebSocket authentication verified: enforced` after the final stage. It uses short-lived in-process credentials and never prints or stores them.
+
+After frontend assets have finished deploying, announce the update through **Actions → Backend CI/CD Deploy → Run workflow**. Read the current `id` from `GET https://thenewboston.network/api/frontend-deployments/status` (use `0` if the response is `null`) and pass it as `announce_previous_deployment_id`. This redeploys and verifies the backend, then creates and broadcasts a frontend deployment record only if that previous ID is still current. The workflow serializes deployment runs and reports the new deployment ID. No member's access token is needed.
+
+The frontend automatically reloads existing tabs after its update notice countdown. Wait for that countdown and verify the updated frontend before enabling enforcement. If the announcement reports a stale previous ID, inspect the status endpoint again before dispatching another announcement; do not replay a successful one.
+
+Before enabling enforcement, inspect the compatibility logs for old clients:
+
+```bash
+cd && docker compose logs --since 1h app 2>&1 | grep 'unauthenticated websocket connection'
+```
+
+A tab still running the old frontend loses private live updates after enforcement until it refreshes. Rejected connections are recorded at INFO without creating Sentry issues. Roll back enforcement with the environment override if necessary; public streams and REST authorization are unaffected.
+
 ## Certificate renewal checks
 
 Run these checks on the EC2 host:

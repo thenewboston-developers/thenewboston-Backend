@@ -7,6 +7,8 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
     from sentry_sdk.integrations.logging import LoggingIntegration
     from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
+    from thenewboston.general.utils.sentry import hide_tokens_from_sentry
+
     logging_integration = LoggingIntegration(
         level=logging.DEBUG,  # Breadcrumbs level
         event_level=SENTRY_EVENT_LEVEL,  # type: ignore # noqa: F821
@@ -27,4 +29,6 @@ if SENTRY_DSN:  # type: ignore # noqa: F821
         in_app_include=['thenewboston'],
         max_request_body_size='always',
         max_value_length=10240,  # 10Kb
+        before_send=hide_tokens_from_sentry,
+        before_send_transaction=hide_tokens_from_sentry,
     )

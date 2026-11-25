@@ -1,23 +1,10 @@
 from asgiref.sync import async_to_sync
-from channels.generic.websocket import JsonWebsocketConsumer
 from channels.layers import get_channel_layer
 
+from thenewboston.general.consumers import AuthenticatedUserConsumer
 
-class WalletConsumer(JsonWebsocketConsumer):
-    def connect(self):
-        """
-        Accept the incoming connection, retrieve the user ID from the URL route, construct a unique group name, and
-        add the client to the group.
-        """
-        self.user_id = self.scope['url_route']['kwargs']['user_id']
-        self.group_name = self.get_group_name(self.user_id)
-        self.accept()
-        async_to_sync(get_channel_layer().group_add)(self.group_name, self.channel_name)
 
-    def disconnect(self, close_code):
-        """Remove the client from the group on disconnection."""
-        async_to_sync(get_channel_layer().group_discard)(self.group_name, self.channel_name)
-
+class WalletConsumer(AuthenticatedUserConsumer):
     @staticmethod
     def get_group_name(user_id):
         return f'user_{user_id}_wallet'
