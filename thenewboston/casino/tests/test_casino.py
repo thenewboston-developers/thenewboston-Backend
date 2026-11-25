@@ -93,7 +93,8 @@ def test_funding_is_admin_only_atomic_idempotent_and_reconciled(bucky_tnb_wallet
 
 def test_limits_at_one_hundred_thousand(funded):
     data = APIClient().get('/api/casino').data
-    slots, roulette, _ = data['games']
+    games = {game['id']: game for game in data['games']}
+    slots, roulette = games['slots'], games['roulette']
     assert slots['max_bet'] == 10
     assert slots['max_multiplier'] == 100
     types = {item['id']: item['max_bet'] for item in roulette['bet_types']}

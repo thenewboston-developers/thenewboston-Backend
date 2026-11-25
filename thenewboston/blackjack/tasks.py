@@ -1,0 +1,30 @@
+import logging
+from datetime import timedelta
+
+from celery import shared_task
+from django.utils import timezone
+
+from thenewboston.casino.models import CasinoBet
+
+from .engine import TIMEOUT_SECONDS
+from .services import expire_hand
+
+logger = logging.getLogger(__name__)
+
+
+@shared_task(name='tasks.expire_blackjack_hands')
+def expire_blackjack_hands():
+    candidates = (
+        CasinoBet.objects.filter(
+            game='blackjack', status='open', created_date__lte=timezone.now() - timedelta(seconds=TIMEOUT_SECONDS)
+        )
+        .order_by('id')
+        .values_list('id', flat=True)[:100]
+    )
+    settled = 0
+    for bet_id in list(candidates):
+        try:
+            settled += expire_hand(bet_id=bet_id).status == 'settled'
+        except Exception:
+            logger.exception('Blackjack hand %s timeout failed; reservation retained', bet_id)
+    return {'settled': settled}
