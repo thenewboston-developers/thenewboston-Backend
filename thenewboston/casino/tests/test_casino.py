@@ -8,7 +8,8 @@ import pytest
 from django.apps import apps
 from django.contrib import admin
 from django.core.management import call_command
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from thenewboston.casino.admin import CasinoFundAdmin
@@ -205,6 +206,35 @@ def test_receipt_keeps_balance_and_revision_from_the_same_wallet_snapshot(funded
     with django_assert_num_queries(1):
         current = bet_receipt(bet, fund=fund)
     assert (current['wallet_balance'], current['wallet_modified_date']) == (later_balance, later_revision)
+
+
+def test_history_reads_the_fund_and_wallet_once_however_many_bets_it_lists(funded):
+    client = APIClient()
+    client.force_authenticate(funded)
+
+    def history_queries():
+        with CaptureQueriesContext(connection) as queries:
+            receipts = client.get('/api/casino/bets').data
+        return receipts, [query['sql'] for query in queries]
+
+    assert history_queries()[0] == []
+    place_bet(**wager(funded))
+    one_receipt, one_bet_queries = history_queries()
+    assert len(one_receipt) == 1
+    for _ in range(5):
+        place_bet(**wager(funded))
+    receipts, queries = history_queries()
+    assert len(receipts) == 6
+    # Five more bets cost no more queries: one read of the fund and one of the wallet serve every receipt.
+    assert len(queries) == len(one_bet_queries)
+    assert sum('FROM "wallets_wallet"' in sql for sql in queries) == 1
+    assert sum('FROM "casino_casinofund"' in sql for sql in queries) == 1
+    wallet = Wallet.objects.get(owner=funded, currency__ticker='TNB')
+    fund = CasinoFund.objects.get()
+    for receipt in receipts:
+        assert (receipt['wallet_balance'], receipt['wallet_modified_date']) == (wallet.balance, wallet.modified_date)
+        assert (receipt['fund']['balance'], receipt['fund']['reserved']) == (fund.balance, fund.reserved)
+    assert [receipt['id'] for receipt in receipts] == sorted((receipt['id'] for receipt in receipts), reverse=True)
 
 
 def test_rapid_plinko_receipts_and_replay_use_the_latest_wallet_revision(funded, monkeypatch):
