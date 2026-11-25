@@ -1,4 +1,6 @@
-"""Slots version 1. Preserve these mappings for replaying historical fairness receipts."""
+"""Slots rules. Preserve every installed version's mappings for replaying historical fairness receipts."""
+
+from itertools import permutations
 
 from thenewboston.casino.contracts import GameRules
 
@@ -12,6 +14,9 @@ SLOT_SYMBOLS = {
     50: ['diamond'] * 3,
     100: ['seven'] * 3,
 }
+SLOT_REEL_SYMBOLS = ('cherry', 'lemon', 'bell', 'bar', 'diamond', 'seven')
+# Every ordered line of three different symbols, in itertools.permutations order (120 lines).
+SLOT_LOSING_LINES = tuple(list(line) for line in permutations(SLOT_REEL_SYMBOLS, 3))
 
 
 class SlotsRules(GameRules):
@@ -50,4 +55,27 @@ class SlotsRules(GameRules):
 
 SLOTS_V1 = SlotsRules(
     game='slots', version=1, name='Slots', max_multiplier=100, house_edge=0.04, catalog_multiplier=100
+)
+
+
+class VariedLossSlotsRules(SlotsRules):
+    """Version 2: the draws and payouts of version 1; a losing draw shows a line of three different symbols."""
+
+    def outcome(self, random, selection):
+        result = super().outcome(random, selection)
+        if result['multiplier'] == 0:
+            # Display only: the draw has already decided the loss, so the line can never change a payout.
+            result = {**result, 'symbols': list(SLOT_LOSING_LINES[result['draw'] % len(SLOT_LOSING_LINES)])}
+        return result
+
+    def verify(self):
+        super().verify()
+        if len({tuple(line) for line in SLOT_LOSING_LINES}) != 120 or any(
+            len(set(line)) != 3 for line in SLOT_LOSING_LINES
+        ):
+            raise ValueError('Losing slot lines must be 120 distinct lines of three different symbols.')
+
+
+SLOTS_V2 = VariedLossSlotsRules(
+    game='slots', version=2, name='Slots', max_multiplier=100, house_edge=0.04, catalog_multiplier=100
 )

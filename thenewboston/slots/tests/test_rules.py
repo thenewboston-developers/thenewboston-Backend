@@ -5,7 +5,7 @@ from collections import Counter
 import pytest
 
 from thenewboston.casino.fairness import FairRandom
-from thenewboston.slots.rules import SLOTS_V1
+from thenewboston.slots.rules import SLOT_LOSING_LINES, SLOT_SYMBOLS, SLOTS_V1, SLOTS_V2
 
 
 class FixedRandom:
@@ -65,3 +65,47 @@ def test_slots_catalog_and_installed_math():
             {'multiplier': 100, 'probability': 0.0005},
         ]
     }
+
+
+def test_version_two_only_varies_the_symbols_of_losing_draws():
+    lines = Counter()
+    for draw in range(10000):
+        old = SLOTS_V1.outcome(FixedRandom(draw), {})
+        new = SLOTS_V2.outcome(FixedRandom(draw), {})
+        assert (new['draw'], new['multiplier']) == (old['draw'], old['multiplier'])
+        if new['multiplier']:
+            assert new['symbols'] == old['symbols'] == SLOT_SYMBOLS[new['multiplier']]
+        else:
+            assert old['symbols'] == ['cherry', 'lemon', 'bar']
+            # Three different symbols: a loss never shows a pair that looks like it almost won.
+            assert len(set(new['symbols'])) == 3
+            lines[tuple(new['symbols'])] += 1
+    assert len(SLOT_LOSING_LINES) == len(lines) == 120
+    assert set(lines.values()) == {49, 50}
+    assert SLOT_LOSING_LINES[0] == ['cherry', 'lemon', 'bell']
+    assert SLOT_LOSING_LINES[-1] == ['seven', 'diamond', 'bar']
+    assert SLOTS_V1.outcome(FixedRandom(4999), {})['symbols'] == ['cherry', 'lemon', 'bar']
+
+
+def test_version_two_fairness_vectors_match_the_browser_verifier():
+    # The frontend verifier tests replay these exact receipts.
+    def outcome(client_seed):
+        random = FairRandom(
+            server_seed='00' * 32,
+            client_seed=client_seed,
+            commitment_id='00000000-0000-0000-0000-000000000001',
+            game='slots',
+            rules_version=2,
+        )
+        return SLOTS_V2.outcome(random, {})
+
+    assert outcome('test-client') == {'draw': 1640, 'multiplier': 0, 'symbols': ['diamond', 'cherry', 'lemon']}
+    assert outcome('v2-b') == {'draw': 8368, 'multiplier': 2, 'symbols': ['lemon', 'lemon', 'lemon']}
+
+
+def test_version_two_keeps_the_version_one_contract():
+    SLOTS_V2.verify()
+    assert (SLOTS_V2.version, SLOTS_V2.max_multiplier, SLOTS_V2.catalog_multiplier) == (2, 100, 100)
+    assert SLOTS_V2.house_edge == SLOTS_V1.house_edge
+    assert SLOTS_V2.catalog_data(lambda multiplier: 10) == SLOTS_V1.catalog_data(lambda multiplier: 10)
+    assert SLOTS_V2.normalize_selection(None) == {}

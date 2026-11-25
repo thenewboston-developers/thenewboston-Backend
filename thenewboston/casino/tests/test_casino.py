@@ -1,8 +1,10 @@
+from importlib import import_module
 from io import StringIO
 from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from django.apps import apps
 from django.contrib import admin
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
@@ -26,8 +28,9 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def configs():
-    for game in ('slots', 'roulette'):
-        CasinoGameConfig.objects.get_or_create(game=game)
+    # Migrations leave slots on rules version 2; set both games explicitly so test order never matters.
+    for game, version in (('slots', 2), ('roulette', 1)):
+        CasinoGameConfig.objects.update_or_create(game=game, defaults={'enabled': True, 'rules_version': version})
 
 
 @pytest.fixture
@@ -50,7 +53,7 @@ def wager(user, **changes):
         'client_seed': 'test-client',
         'game': 'slots',
         'amount': 10,
-        'rules_version': 1,
+        'rules_version': 2 if changes.get('game', 'slots') == 'slots' else 1,
         **changes,
     }
 
@@ -214,3 +217,21 @@ def test_read_only_management_verification(funded):
     call_command('verify_casino', stdout=output)
     assert 'Casino verified' in output.getvalue()
     assert CasinoLedgerEntry.objects.count() == before
+
+
+def test_slot_bets_use_version_2_and_version_1_receipts_still_settle(funded):
+    CasinoGameConfig.objects.filter(game='slots').update(rules_version=1)
+    old, _, _ = place_bet(**wager(funded, rules_version=1))
+    migration = import_module('thenewboston.casino.migrations.0003_slots_rules_version_2')
+    migration.use_slots_version_2(apps, None)
+    assert CasinoGameConfig.objects.get(game='slots').rules_version == 2
+    assert APIClient().get('/api/casino').data['games'][0]['rules_version'] == 2
+    with pytest.raises(CasinoError) as error:
+        place_bet(**wager(funded, rules_version=1))
+    assert error.value.data['code'] == 'rules_changed'
+    new, _, _ = place_bet(**wager(funded))
+    assert (old.rules_version, new.rules_version) == (1, 2)
+    assert settle_bet(bet_id=old.id).result == old.result
+    assert reconcile_fund()['reserved'] == 0
+    migration.use_slots_version_1(apps, None)
+    assert CasinoGameConfig.objects.get(game='slots').rules_version == 1
