@@ -1,3 +1,4 @@
+from datetime import timedelta
 from importlib import import_module
 from io import StringIO
 from unittest.mock import patch
@@ -15,6 +16,7 @@ from thenewboston.casino.fairness import FairRandom, seed_hash
 from thenewboston.casino.models import CasinoBet, CasinoCommitment, CasinoFund, CasinoGameConfig, CasinoLedgerEntry
 from thenewboston.casino.services import (
     CasinoError,
+    bet_receipt,
     create_commitment,
     move_funds,
     place_bet,
@@ -22,6 +24,8 @@ from thenewboston.casino.services import (
     settle_bet,
 )
 from thenewboston.game_rewards.models import GameFund
+from thenewboston.wallets.models import Wallet
+from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 pytestmark = pytest.mark.django_db
 
@@ -184,6 +188,59 @@ def test_history_and_recovery_supply_verifiable_receipt(funded):
     assert client.get(f'/api/casino/bets/{receipt["request_id"]}').data['result'] == receipt['result']
     assert client.get('/api/casino/bets').data[0]['id'] == receipt['id']
     assert client.get('/api/casino').data['can_manage']
+
+
+def test_receipt_keeps_balance_and_revision_from_the_same_wallet_snapshot(funded, django_assert_num_queries):
+    bet, fund, wallet = place_bet(**wager(funded))
+    original_balance, original_revision = wallet.balance, wallet.modified_date
+    later_balance, later_revision = original_balance + 7, original_revision + timedelta(microseconds=1)
+    Wallet.objects.filter(pk=wallet.pk).update(balance=later_balance, modified_date=later_revision)
+
+    # A write response must retain the transaction's pair even when the database has changed before serialization.
+    with django_assert_num_queries(0):
+        receipt = bet_receipt(bet, fund=fund, wallet=wallet)
+    assert (receipt['wallet_balance'], receipt['wallet_modified_date']) == (original_balance, original_revision)
+
+    # Read/recovery responses fetch both values together, never a balance and revision in separate queries.
+    with django_assert_num_queries(1):
+        current = bet_receipt(bet, fund=fund)
+    assert (current['wallet_balance'], current['wallet_modified_date']) == (later_balance, later_revision)
+
+
+def test_rapid_plinko_receipts_and_replay_use_the_latest_wallet_revision(funded, monkeypatch):
+    CasinoGameConfig.objects.update_or_create(game='plinko', defaults={'enabled': True, 'rules_version': 1})
+    monkeypatch.setattr(FairRandom, 'below', lambda self, bound: 63)
+    client = APIClient()
+    client.force_authenticate(funded)
+    first_payload = wager(funded, game='plinko')
+    del first_payload['user']
+    first = client.post('/api/casino/bets', first_payload, format='json')
+    assert first.status_code == 201
+    first_receipt = first.json()
+    first_wallet = WalletReadSerializer(Wallet.objects.get(owner=funded, currency__ticker='TNB')).data
+    assert first_receipt['wallet_balance'] == first_wallet['balance'] == 99_990
+    assert first_receipt['wallet_modified_date'] == first_wallet['modified_date']
+
+    next_payload = wager(funded, game='plinko')
+    del next_payload['user']
+    second = client.post('/api/casino/bets', next_payload, format='json')
+    assert second.status_code == 201
+    latest_wallet = WalletReadSerializer(Wallet.objects.get(owner=funded, currency__ticker='TNB')).data
+    assert latest_wallet['modified_date'] != first_wallet['modified_date']
+    replay = client.post('/api/casino/bets', first_payload, format='json')
+    assert replay.status_code == 201 and replay.json()['id'] == first_receipt['id']
+    receipts = [
+        second.json(),
+        replay.json(),
+        client.get(f'/api/casino/bets/{first_receipt["request_id"]}').json(),
+        *client.get('/api/casino/bets').json(),
+    ]
+    for receipt in receipts:
+        assert receipt['wallet_balance'] == latest_wallet['balance'] == 99_980
+        assert receipt['wallet_modified_date'] == latest_wallet['modified_date']
+    assert CasinoBet.objects.count() == 2
+    assert CasinoLedgerEntry.objects.filter(kind='stake').count() == 2
+    assert reconcile_fund()['reserved'] == 0
 
 
 def test_random_rejects_biased_upper_tail():

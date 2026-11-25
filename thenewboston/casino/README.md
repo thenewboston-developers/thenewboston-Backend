@@ -41,6 +41,8 @@ Roulette (rules version 2) takes `selection: {bets: [...]}`: one entry per spot,
 
 Financial rows are read-only in Django admin. Fund enabled/risk settings and game enabled/minimum/rules version are editable under locks, and stale admin forms cannot overwrite money. Only installed rules versions may be selected. Admin funding is not a community donation or an investment scheme; no automatic transfer to GameFund exists.
 
+Every bet receipt includes `wallet_balance` and `wallet_modified_date` from the same wallet snapshot. The timestamp is the wallet's ISO 8601 update revision, matching wallet REST/WebSocket responses, not the bet's settlement time. Clients can apply this pair immediately and reject older wallet updates. Replaying an existing request or reading historical/active bets returns the current wallet snapshot; it does not restore the wallet balance from when that bet was placed.
+
 ## Published fairness algorithm: hmac-sha256-v1
 
 1. Before wagering, receive the server commitment hash and UUID. The secret is 32 random bytes encoded as 64 lowercase hexadecimal characters. The commitment hash is SHA-256 of those **64 ASCII characters**.

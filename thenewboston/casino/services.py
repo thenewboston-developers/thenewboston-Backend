@@ -145,7 +145,10 @@ def commitment_receipt(commitment):
     }
 
 
-def bet_receipt(bet, *, fund=None, wallet_balance=None):
+def bet_receipt(bet, *, fund=None, wallet=None):
+    # Keep the balance and its revision from one snapshot. A later wallet query must never label an older
+    # balance with a newer timestamp, since clients use this revision to reject delayed wallet updates.
+    wallet = wallet if wallet is not None else Wallet.objects.only('balance', 'modified_date').get(pk=bet.wallet_id)
     return {
         'id': bet.pk,
         'request_id': str(bet.request_id),
@@ -169,9 +172,8 @@ def bet_receipt(bet, *, fund=None, wallet_balance=None):
             'algorithm': ALGORITHM,
         },
         'fund': fund_summary(fund),
-        'wallet_balance': wallet_balance
-        if wallet_balance is not None
-        else Wallet.objects.values_list('balance', flat=True).get(pk=bet.wallet_id),
+        'wallet_balance': wallet.balance,
+        'wallet_modified_date': wallet.modified_date,
     }
 
 

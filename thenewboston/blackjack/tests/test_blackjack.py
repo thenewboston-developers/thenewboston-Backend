@@ -23,6 +23,7 @@ from thenewboston.casino.services import (
 )
 from thenewboston.casino.tests.test_financial_safety import accepted, race
 from thenewboston.wallets.models import Wallet
+from thenewboston.wallets.serializers.wallet import WalletReadSerializer
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -100,6 +101,38 @@ def test_open_hand_is_recoverable_and_never_leaks_hidden_cards_or_seed(treasury,
     with pytest.raises(CasinoError) as error:
         place_bet(**request(user))
     assert error.value.data['code'] == 'game_in_progress'
+
+
+def test_open_and_settled_action_receipts_include_the_matching_wallet_revision(treasury, dmitry_tnb_wallet):
+    user = dmitry_tnb_wallet.owner
+    client = APIClient()
+    client.force_authenticate(user)
+    payload = request(user)
+    del payload['user']
+    placed = client.post('/api/casino/bets', payload, format='json')
+    assert placed.status_code == 201 and placed.json()['status'] == 'open'
+    request_id = placed.json()['request_id']
+    open_wallet = WalletReadSerializer(Wallet.objects.get(pk=dmitry_tnb_wallet.pk)).data
+    open_receipts = [
+        placed.json(),
+        client.get(f'/api/casino/bets/{request_id}').json(),
+        client.get('/api/casino/bets/active').json(),
+        client.get('/api/casino/bets').json()[0],
+    ]
+    for receipt in open_receipts:
+        assert receipt['wallet_balance'] == open_wallet['balance'] == 900
+        assert receipt['wallet_modified_date'] == open_wallet['modified_date']
+
+    play = {'action': 'double', 'action_id': str(uuid4()), 'expected_revision': 0}
+    settled = client.post(f'/api/casino/bets/{request_id}/actions', play, format='json')
+    assert settled.status_code == 200 and settled.json()['status'] == 'settled'
+    settled_wallet = WalletReadSerializer(Wallet.objects.get(pk=dmitry_tnb_wallet.pk)).data
+    assert settled_wallet['modified_date'] != open_wallet['modified_date']
+    replay = client.post(f'/api/casino/bets/{request_id}/actions', play, format='json')
+    assert replay.status_code == 200
+    for receipt in (settled.json(), replay.json()):
+        assert receipt['wallet_balance'] == settled_wallet['balance'] == 1200
+        assert receipt['wallet_modified_date'] == settled_wallet['modified_date']
 
 
 @pytest.mark.parametrize('amount', [1, 3, 101, 501])
