@@ -56,6 +56,7 @@ jobs:
             DEPLOY_SHA=$(git rev-parse HEAD)
             docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_product_analytics --deployment-sha "$DEPLOY_SHA" </dev/null
             docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_websocket_authentication --expect-enforcement on </dev/null
+            docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage verify_casino </dev/null
             if [ -n "$ANNOUNCE_PREVIOUS_ID" ]; then
               docker compose -f ~/docker-compose.yml exec -T app poetry run python -m thenewboston.manage announce_frontend_deployment --expected-previous-id "$ANNOUNCE_PREVIOUS_ID" </dev/null
             fi
