@@ -223,6 +223,40 @@ def move_funds(*, user, amount, request_id, kind):
     return entry, fund, wallet
 
 
+def pay_out(*, fund, bet, wallet, payout, seed, reason='completed', update_fields=()):
+    """The one transfer that closes a bet, for every game. The caller holds the fund, bet and wallet locks, has
+    verified the outcome against the commitment, and passes the total returned including any stake."""
+    protected = bet.protected_amount
+    if (
+        type(payout) is not int
+        or not 0 <= payout <= protected
+        or fund.reserved < protected
+        or wallet.balance + payout > MAX_SAFE_INTEGER
+    ):
+        raise RuntimeError('Casino settlement invariant failed; reservation retained')
+    fund.balance -= payout
+    fund.reserved -= protected
+    fund.save(update_fields=['balance', 'reserved', 'modified_date'])
+    wallet.change_balance(payout, should_stream=False)
+    bet.payout = payout
+    bet.status = 'settled'
+    bet.settlement_reason = reason
+    bet.settled_at = timezone.now()
+    bet.revealed_server_seed = seed
+    bet.save(
+        update_fields=[
+            *update_fields,
+            'payout',
+            'status',
+            'settlement_reason',
+            'settled_at',
+            'revealed_server_seed',
+            'modified_date',
+        ]
+    )
+    _ledger(fund, wallet, 'payout', payout, bet=bet)
+
+
 def _settle_locked(*, fund, bet, wallet):
     if bet.status == 'settled':
         return bet
@@ -243,22 +277,7 @@ def _settle_locked(*, fund, bet, wallet):
     if expected != bet.result:
         raise RuntimeError('Casino result verification failed; reservation retained')
     payout = rules.payout(bet.amount, bet.result)
-    protected = bet.protected_amount
-    if payout > protected or fund.reserved < protected or wallet.balance + payout > MAX_SAFE_INTEGER:
-        raise RuntimeError('Casino settlement invariant failed; reservation retained')
-    fund.balance -= payout
-    fund.reserved -= protected
-    fund.save(update_fields=['balance', 'reserved', 'modified_date'])
-    wallet.change_balance(payout, should_stream=False)
-    bet.payout = payout
-    bet.status = 'settled'
-    bet.settlement_reason = 'completed'
-    bet.settled_at = timezone.now()
-    bet.revealed_server_seed = seed
-    bet.save(
-        update_fields=['payout', 'status', 'settlement_reason', 'settled_at', 'revealed_server_seed', 'modified_date']
-    )
-    _ledger(fund, wallet, 'payout', payout, bet=bet)
+    pay_out(fund=fund, bet=bet, wallet=wallet, payout=payout, seed=seed)
     return bet
 
 

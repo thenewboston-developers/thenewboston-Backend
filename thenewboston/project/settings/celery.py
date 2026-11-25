@@ -51,6 +51,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tasks.delete_unattached_post_images',
         'schedule': 60 * 60,  # 1 hour
     },
+    'expire_let_it_ride_hands': {
+        'task': 'tasks.expire_let_it_ride_hands',
+        'schedule': 30,
+    },
     'expire_connect_five_challenges': {
         'task': 'tasks.expire_connect_five_challenges',
         'schedule': 30,
