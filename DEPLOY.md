@@ -209,11 +209,11 @@ The three user-specific streams (`ws/notifications/<user_id>`, `ws/wallet/<user_
 
 The public trade, order-book, deployment, Connect Five spectator and chat streams remain public. Computer and guest matches use their existing authenticated/capability-scoped REST polling and do not enter the public Connect Five stream. Authentication is checked when a private connection opens. Existing connections are not revoked when a token expires or the account is disabled; logout and token replacement close the frontend's sockets, and reconnects validate credentials again.
 
-Deploy in three stages through CI:
+Enforcement is enabled by default. Upgrading from a frontend that does not send tokens requires this order:
 
-1. Deploy the backend with `ENFORCE_WEBSOCKET_AUTHENTICATION=False`. It accepts old clients and logs connections that would be rejected, while allowing the updated frontend to offer the token subprotocol.
+1. Deploy the compatibility backend release with enforcement off. It accepts old clients and logs connections that would be rejected, while allowing the updated frontend to offer the token subprotocol. An explicit `THENEWBOSTON_SETTING_ENFORCE_WEBSOCKET_AUTHENTICATION=false` override provides the same temporary compatibility behavior.
 2. Verify subprotocol negotiation, then deploy the frontend that sends its access token. Deploying that frontend before the compatible backend can break socket handshakes. Ask existing tabs to reload using the frontend deployment notification below.
-3. After the frontend is deployed and verified, deploy the backend change that turns the default enforcement on. From then on missing, invalid or mismatched credentials receive HTTP 403 before joining any private group.
+3. Only after the frontend and refresh announcement are verified, deploy this enforcement release. Remove any explicit `false` environment override first. Missing, invalid or mismatched credentials receive HTTP 403 before joining any private group.
 
 `THENEWBOSTON_SETTING_ENFORCE_WEBSOCKET_AUTHENTICATION` in `/etc/thenewboston/.env` overrides the code default. If explicitly set to `false`, remove that override or change it to `true` at the final stage, then recreate the application containers. The environment template enables enforcement for installations running both updated releases.
 
@@ -228,7 +228,7 @@ curl -s -o /dev/null -D - --http1.1 --max-time 3 \
 
 The response must be `HTTP/1.1 101 Switching Protocols` with `Sec-WebSocket-Protocol: access_token`.
 
-The backend deployment workflow runs `verify_websocket_authentication` against the real TLS/nginx endpoint after every deployment. It verifies all public streams plus authenticated, missing-token, invalid-token, and wrong-user private handshakes. A passing log reports `WebSocket authentication verified: compatibility` during the first stage and `WebSocket authentication verified: enforced` after the final stage. It uses short-lived in-process credentials and never prints or stores them.
+The backend deployment workflow runs `verify_websocket_authentication --expect-enforcement on` against the real TLS/nginx endpoint after every deployment. It verifies all public streams plus authenticated, missing-token, invalid-token, and wrong-user private handshakes. Success reports `WebSocket authentication verified: enforced`; an environment override that leaves enforcement off fails the deployment check. The compatibility release reports `WebSocket authentication verified: compatibility`. Checks use short-lived in-process credentials and never print or store them.
 
 After frontend assets have finished deploying, announce the update through **Actions → Backend CI/CD Deploy → Run workflow**. Read the current `id` from `GET https://thenewboston.network/api/frontend-deployments/status` (use `0` if the response is `null`) and pass it as `announce_previous_deployment_id`. This redeploys and verifies the backend, then creates and broadcasts a frontend deployment record only if that previous ID is still current. The workflow serializes deployment runs and reports the new deployment ID. No member's access token is needed.
 
@@ -240,7 +240,7 @@ Before enabling enforcement, inspect the compatibility logs for old clients:
 cd && docker compose logs --since 1h app 2>&1 | grep 'unauthenticated websocket connection'
 ```
 
-A tab still running the old frontend loses private live updates after enforcement until it refreshes. Rejected connections are recorded at INFO without creating Sentry issues. Roll back enforcement with the environment override if necessary; public streams and REST authorization are unaffected.
+A tab still running the old frontend loses private live updates after enforcement until it refreshes. Rejected connections are recorded at INFO without creating Sentry issues. A temporary `false` override can roll back enforcement, but the production check will fail until enforcement is restored; public streams and REST authorization are unaffected.
 
 ## Certificate renewal checks
 
