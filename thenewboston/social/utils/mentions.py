@@ -97,6 +97,10 @@ def sync_mentioned_users(*, instance, content: str, mentioned_user_ids: Optional
     return validated_ids
 
 
+def get_post_owner_summary(owner):
+    return {'id': owner.id, 'username': owner.username}
+
+
 def notify_mentioned_users_in_post(post, mentioned_user_ids, request):
     recipient_ids = [user_id for user_id in mentioned_user_ids if user_id != post.owner_id]
     if not recipient_ids:
@@ -133,6 +137,8 @@ def notify_mentioned_users_in_comment(comment, mentioned_user_ids, request):
     post = comment.post
     payload = {
         'post_id': post.id,
+        # The post can belong to the mentioned person, the commenter or someone else, so the notification names it
+        'post_owner': get_post_owner_summary(post.owner),
         'comment_id': comment.id,
         'mentioner': UserReadSerializer(comment.owner, context={'request': request}).data,
         'comment': CommentReadSerializer(comment, context={'request': request}).data,
