@@ -143,7 +143,9 @@ def test_the_limit_is_the_worst_case_of_the_whole_table(player):
     assert not CasinoBet.objects.filter(status='open').exists()
 
 
-def test_a_fully_hedged_table_is_accepted_even_when_the_fund_can_risk_nothing(player):
+def test_a_fully_hedged_table_is_accepted_even_when_the_fund_can_risk_nothing(player, monkeypatch):
+    # A nonzero pocket returns the hedged stake, preserving the 9,999 TNB fund and its zero risk capacity.
+    monkeypatch.setattr(FairRandom, 'below', lambda self, bound: 1)
     CasinoFund.objects.filter(pk=1).update(risk_limit_bps=1)
     fund = CasinoFund.objects.get(pk=1)
     CasinoFund.objects.filter(pk=1).update(balance=9999)
