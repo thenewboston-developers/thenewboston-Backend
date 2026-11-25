@@ -32,3 +32,10 @@ LOGGING = {
         'handlers': ['console'],
     },
 }
+
+# Websocket connections that are rejected, or would be once ENFORCE_WEBSOCKET_AUTHENTICATION is on. INFO keeps them in
+# the server log without turning each one into a Sentry event.
+LOGGING['loggers']['thenewboston.general.consumers.authenticated_user'] = {
+    'level': 'INFO',
+    'propagate': True,
+}

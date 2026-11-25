@@ -27,6 +27,11 @@ ORDER_PROCESSING_CHANNEL_NAME = 'order_processing'
 ORDER_PROCESSING_CHANNEL_GET_MESSAGE_TIMEOUT_SECONDS = 10  # None is an option for infinite timeout
 ONE_TRADE_PER_ITERATION = False
 
+# The sockets that stream the private events of one user (notifications, wallet, Connect Five) accept only that user
+# once this is on. While it is off they accept every connection, as they always did, and log the ones that would be
+# rejected, so the backend can be deployed before the frontend that sends the access token.
+ENFORCE_WEBSOCKET_AUTHENTICATION = False
+
 # Misc
 DEFAULT_CURRENCY_TICKER = 'TNB'
 IS_DEPLOYED = False
