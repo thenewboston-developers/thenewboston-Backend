@@ -3,6 +3,7 @@ from celery.schedules import crontab
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    'sweep_tribes': {'task': 'tasks.sweep_tribes', 'schedule': 30},
     'expire_blackjack_hands': {
         'task': 'tasks.expire_blackjack_hands',
         'schedule': 60,
