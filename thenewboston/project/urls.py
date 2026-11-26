@@ -22,6 +22,7 @@ import thenewboston.mancala.urls
 import thenewboston.notifications.urls
 import thenewboston.reversi.urls
 import thenewboston.social.urls
+import thenewboston.tribes.urls
 import thenewboston.users.urls
 import thenewboston.wallets.urls
 import thenewboston.web.urls
@@ -47,6 +48,7 @@ urlpatterns = [
     path(API_PREFIX, include(thenewboston.notifications.urls)),
     path(API_PREFIX, include(thenewboston.reversi.urls)),
     path(API_PREFIX, include(thenewboston.social.urls)),
+    path(API_PREFIX, include(thenewboston.tribes.urls)),
     path(API_PREFIX, include(thenewboston.users.urls)),
     path(API_PREFIX, include(thenewboston.wallets.urls)),
     path('', include(thenewboston.web.urls)),

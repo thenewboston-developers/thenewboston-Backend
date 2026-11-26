@@ -23,7 +23,7 @@ docker() {
     local checked_command
     for checked_command in "$@"; do
         case "$checked_command" in
-            verify_product_analytics|verify_websocket_authentication|verify_casino|announce_frontend_deployment)
+            verify_product_analytics|verify_websocket_authentication|verify_casino|verify_tribes|announce_frontend_deployment)
                 printf '%s\n' "$checked_command" >> "$DEPLOY_TEST_LOG"
                 cat >/dev/null
                 if [ "$checked_command" = "$DEPLOY_TEST_FAIL" ]; then
@@ -72,6 +72,7 @@ class DeployShellTests(unittest.TestCase):
                 'verify_product_analytics',
                 'verify_websocket_authentication',
                 'verify_casino',
+                'verify_tribes',
                 'make:deploy-cleanup',
             ],
         )
@@ -86,6 +87,7 @@ class DeployShellTests(unittest.TestCase):
                 'verify_product_analytics',
                 'verify_websocket_authentication',
                 'verify_casino',
+                'verify_tribes',
                 'announce_frontend_deployment',
                 'make:deploy-cleanup',
             ],
@@ -106,6 +108,13 @@ class DeployShellTests(unittest.TestCase):
         result, commands = self.run_deploy(announce='7', fail='verify_casino')
         self.assertEqual(result.returncode, 23)
         self.assertEqual(commands[-1], 'verify_casino')
+        self.assertNotIn('announce_frontend_deployment', commands)
+        self.assertNotIn('make:deploy-cleanup', commands)
+
+    def test_failed_tribes_verification_fails_deployment(self):
+        result, commands = self.run_deploy(announce='7', fail='verify_tribes')
+        self.assertEqual(result.returncode, 23)
+        self.assertEqual(commands[-1], 'verify_tribes')
         self.assertNotIn('announce_frontend_deployment', commands)
         self.assertNotIn('make:deploy-cleanup', commands)
 
