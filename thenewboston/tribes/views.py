@@ -1,18 +1,27 @@
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Season
-from .services import activity_page, get_state, messages_page, perform_action, season_summary, tick_world
+from .services import (
+    activity_page,
+    get_state,
+    messages_page,
+    perform_action,
+    season_summary,
+    set_emblem,
+    tick_world,
+)
 
 
 class StateView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response(get_state(user=request.user, season_id=request.query_params.get('season_id')))
+        return Response(get_state(user=request.user, season_id=request.query_params.get('season_id'), request=request))
 
 
 class SeasonsView(APIView):
@@ -32,7 +41,7 @@ class ActionView(APIView):
 
     def post(self, request):
         try:
-            state = perform_action(request.user, request.data)
+            state = perform_action(request.user, request.data, request)
         except PermissionDenied as exc:
             # Authentication is checked before this view. This marker means the
             # command itself was definitively rejected after receipt lookup, so
@@ -40,6 +49,21 @@ class ActionView(APIView):
             # session with an unknown financial result.
             return Response({'detail': str(exc.detail), 'code': 'tribes_action_forbidden'}, status=403)
         return Response(state)
+
+
+class EmblemSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+    season_id = serializers.IntegerField(min_value=1)
+
+
+class EmblemView(APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = EmblemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(set_emblem(request.user, request=request, **serializer.validated_data))
 
 
 class ActivityView(APIView):
@@ -50,7 +74,7 @@ class ActivityView(APIView):
         before = None
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
-        return Response(activity_page(request.user, season_id, before))
+        return Response(activity_page(request.user, season_id, before, request))
 
 
 class MessagesView(APIView):
@@ -61,4 +85,4 @@ class MessagesView(APIView):
         before = None
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
-        return Response(messages_page(request.user, season_id, before))
+        return Response(messages_page(request.user, season_id, before, request))
