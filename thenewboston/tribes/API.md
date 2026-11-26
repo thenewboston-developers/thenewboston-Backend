@@ -9,25 +9,29 @@ State:
 {
  season:{id,status:'recruiting'|'active'|'finished',starts_at,ends_at}, server_time,
  catalog:{land:{forest:{resource:'timber',price:40},...},recipes:{lumber:{inputs:{timber:2},seconds:120,facility:null},...},units:{infantry:{damage:10,range:1},...},defenses:{barricade:30,stone_wall:100},buildings:{...},items:string[],trade_items:string[],market_items:string[],work_order_items:string[],max_members:8,queue_seconds:86400,gather_capacity:5,unit_capacity:100,building_capacity:3,currency:'TNB',gather_rate:10},
- viewer: null | {id,username,tribe_id:number|null,wallet_balance:number,inventory:{item:quantity},production:{item:quantity},experience:{item:quantity}},
- tribes:[{id,name,emblem,color,description,motto,founder_id,members:[{id,username}], treasury:number|null,inventory:object|null,applications:[{id,username}] (own founder only),invites:[{id,username}] (own founder only)}],
+ viewer: null | {id,username,avatar:string|null,tribe_id:number|null,wallet_balance:number,inventory:{item:quantity},production:{item:quantity},experience:{item:quantity}},
+ tribes:[{id,name,emblem,emblem_image:string|null,color,description,motto,founder_id,members:[{id,username,avatar:string|null}], treasury:number|null,inventory:object|null,applications:[{id,username,avatar}] (own founder only),invites:[{id,username,avatar}] (own founder only)}],
  invitations:[{tribe_id,name}], applications:[{tribe_id,name}],
  plots:[{id,x,y,terrain,tribe_id:number|null,price,buildings:string[]}],
  jobs:[{id,user_id,tribe_id,kind:'gather'|'craft'|'build',item,quantity,completed,plot_id,start_at,end_at,status:'queued'|'working'|'completed'|'cancelled',source:'personal'|'tribe',destination:'personal'|'tribe'}],
  units:[{id,tribe_id,controller_id,item,quantity,plot_id,target_id:number|null (omitted for rivals),valid_target_ids:number[]}],
  listings:[{id,kind:'sell'|'buy',item,quantity,price,user_id:null|number,tribe_id:null|number,account:'personal'|'tribe'}],
- messages:[{id,from_tribe_id,to_tribe_id,user_id,username,text,created_at}],
+ messages:[{id,from_tribe_id,to_tribe_id,user_id,username,avatar:string|null,text,created_at}],
  work_orders:[{id,tribe_id,title,item,quantity,contributed,description,status:'open'|'completed'|'cancelled'}],
- activity:[{id,tribe_id,user_id,username,text,created_at}],
+ activity:[{id,tribe_id,user_id,username,avatar:string|null,text,created_at}],
  battle:null|{standings:[{tribe_id,name,outgoing,incoming,raw_incoming,blocked,defense,score,rank,attacks:[]}],attacks:[{unit_id,tribe_id,target_id,controller_id,raw_damage,effective_damage}]}
 }
 ```
 `jobs` contains own tribe full jobs plus rivals military production only. `messages` is private tribe chat and correspondence involving own tribe. `work_orders` and activity own tribe only. Public finished battle/targets; private inventories/messages stay private after season. Treasury is actual TNB: no grants. End-of-season treasury divided equally among locked members, remainder to lowest IDs; buy order escrows refunded. Real app balances persist. System land/opening-stock payments remain permanently recorded as season revenue.
 
+Every `avatar` is the player's current profile picture (an address, or null without one), read when the response is built rather than stored in the season. `emblem_image` is the address of the tribe's uploaded emblem, or null; `emblem` is the older emoji/text emblem, kept as the fallback for tribes without a picture.
+
+Emblem upload: POST `/api/tribes/emblem` authenticated multipart `{season_id, image}` returns fresh state. Founder of a tribe in that season only, while the season is recruiting or active. The image must be exactly 512x512 pixels, the same rule as currency logos. A new upload replaces the previous emblem.
+
 Actions (flat fields besides common envelope):
 
-- create_tribe: name, emblem (emoji/text max8), color (#rrggbb), description, motto
-- update_tribe: name, emblem,color,description,motto (founder recruiting only)
+- create_tribe: name, color (#rrggbb), description, motto; optional emblem (emoji/text max8, default 🛡️)
+- update_tribe: name, color,description,motto (founder recruiting only); emblem is kept when omitted
 - apply: tribe_id
 - invite: username (founder own tribe)
 - accept_invite: tribe_id

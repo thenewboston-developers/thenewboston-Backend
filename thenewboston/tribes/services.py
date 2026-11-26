@@ -16,12 +16,14 @@ import re
 from datetime import timedelta
 from uuid import UUID
 
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from thenewboston.currencies.models import Currency
+from thenewboston.general.utils.image import process_image, validate_image_dimensions
 from thenewboston.users.models import User
 from thenewboston.wallets.models import Wallet
 
@@ -45,6 +47,7 @@ from .rules import (
 )
 
 logger = logging.getLogger(__name__)
+EMBLEM_IMAGE_SIZE = 512
 MAX_AMOUNT = 1_000_000_000
 MAX_TOTAL = 9_007_199_254_740_991
 
@@ -379,13 +382,29 @@ def season_summary(season):
     }
 
 
-def _serialize(season, user):
+def _media_url(name, request=None):
+    """Public address of a stored upload, or None when nothing was uploaded."""
+    if not name:
+        return None
+    url = default_storage.url(name)
+    return request.build_absolute_uri(url) if request else url
+
+
+def _avatars(user_ids, request=None):
+    """Current avatars by user ID. The season only stores IDs and names, so a new avatar shows at once."""
+    wanted = {user_id for user_id in user_ids if user_id is not None}
+    rows = User.objects.filter(pk__in=wanted).exclude(avatar='').values_list('pk', 'avatar')
+    return {user_id: _media_url(name, request) for user_id, name in rows}
+
+
+def _serialize(season, user, request=None):
     state = copy.deepcopy(season.state)
     user_id = user.pk if user is not None and user.is_authenticated else None
     own = _tribe(state, user_id, required=False)
     own_id = own['id'] if own else None
     invitations, applications = [], []
     for tribe in state['tribes']:
+        tribe['emblem_image'] = _media_url(tribe.get('emblem_image'), request)
         if any(m['id'] == user_id for m in tribe['invites']):
             invitations.append({'tribe_id': tribe['id'], 'name': tribe['name']})
         if any(m['id'] == user_id for m in tribe['applications']):
@@ -421,6 +440,7 @@ def _serialize(season, user):
         if job['tribe_id'] != own_id and season.status != 'finished':
             job.pop('target_id', None)
     messages = [m for m in state['messages'] if own_id is not None and own_id in (m['from_tribe_id'], m['to_tribe_id'])]
+    messages = messages[-200:]
     activity = []
     if own:
         activity = [
@@ -434,6 +454,14 @@ def _serialize(season, user):
             }
             for a in season.activity.filter(tribe_id=own_id).select_related('user').order_by('-id')[:200]
         ]
+    people = [m for t in state['tribes'] for group in ('members', 'applications', 'invites') for m in t[group]]
+    avatars = _avatars(
+        [p['id'] for p in people] + [row['user_id'] for row in (*messages, *activity)] + [user_id], request
+    )
+    for row in people:
+        row['avatar'] = avatars.get(row['id'])
+    for row in (*messages, *activity):
+        row['avatar'] = avatars.get(row['user_id'])
     viewer = None
     if user_id:
         player = state['players'].get(
@@ -441,7 +469,12 @@ def _serialize(season, user):
             {'id': user_id, 'username': user.username, 'inventory': {}, 'production': {}, 'experience': {}},
         )
         wallet = Wallet.objects.filter(owner_id=user_id, currency__ticker='TNB').first()
-        viewer = {**player, 'tribe_id': own_id, 'wallet_balance': wallet.balance if wallet else 0}
+        viewer = {
+            **player,
+            'avatar': avatars.get(user_id),
+            'tribe_id': own_id,
+            'wallet_balance': wallet.balance if wallet else 0,
+        }
     return {
         'season': season_summary(season),
         'server_time': timezone.now().isoformat(),
@@ -455,20 +488,20 @@ def _serialize(season, user):
         + [j for j in jobs if not (j['tribe_id'] == own_id and j['status'] in ('working', 'queued'))][-500:],
         'units': state['units'],
         'listings': [listing for listing in state['listings'] if listing['quantity'] > 0],
-        'messages': messages[-200:],
+        'messages': messages,
         'work_orders': [w for w in state['work_orders'] if w['tribe_id'] == own_id],
         'activity': activity,
         'battle': state['battle'],
     }
 
 
-def get_state(user=None, season_id=None):
+def get_state(user=None, season_id=None, request=None):
     current_id = tick_world()
     try:
         season = Season.objects.get(pk=season_id or current_id)
     except (Season.DoesNotExist, ValueError, TypeError):
         raise NotFound('Season not found.')
-    return _serialize(season, user)
+    return _serialize(season, user, request)
 
 
 def _recruit(season, user, action, data):
@@ -481,6 +514,7 @@ def _recruit(season, user, action, data):
             'id': _id(state),
             'name': '',
             'emblem': '🛡️',
+            'emblem_image': None,
             'color': '#46634a',
             'description': '',
             'motto': '',
@@ -501,7 +535,7 @@ def _recruit(season, user, action, data):
             raise ValidationError('A tribe already uses this name.')
         tribe.update(
             name=name,
-            emblem=_text(data, 'emblem', 8, '🛡️'),
+            emblem=_text(data, 'emblem', 8, tribe['emblem']),
             description=_text(data, 'description', 500),
             motto=_text(data, 'motto', 120),
             color=_text(data, 'color', 7, '#46634a'),
@@ -1034,7 +1068,42 @@ RECRUIT_ACTIONS = {
 }
 
 
-def perform_action(user, data):
+def _founded_tribe(season, user):
+    if season.status == 'finished' or timezone.now() >= season.ends_at:
+        raise ValidationError('This season has ended; all actions are locked.')
+    tribe = _tribe(season.state, user.pk, required=False)
+    if not tribe or tribe['founder_id'] != user.pk:
+        raise PermissionDenied('Only the founder can change the tribe emblem.')
+    return tribe
+
+
+def set_emblem(user, season_id, image, request=None):
+    """Make a square picture the emblem of the tribe the user founded, in any season that is still open."""
+    is_valid, error = validate_image_dimensions(image, EMBLEM_IMAGE_SIZE, EMBLEM_IMAGE_SIZE)
+    if not is_valid:
+        raise ValidationError({'image': [error]})
+    # Reading the dimensions leaves the file position at the end
+    image.seek(0)
+    tick_world()
+    try:
+        _founded_tribe(Season.objects.get(pk=season_id), user)
+    except Season.DoesNotExist:
+        raise NotFound('Season not found.')
+    # Only a founder gets this far, and the file is stored before the world lock is taken so that a slow
+    # upload never holds up other players. The founder is checked again once the season is locked.
+    file = process_image(image)
+    name = default_storage.save(f'images/{file.name}', file)
+    with transaction.atomic():
+        _lock_world()
+        season = Season.objects.select_for_update().get(pk=season_id)
+        tribe = _founded_tribe(season, user)
+        tribe['emblem_image'] = name
+        _log(season, tribe['id'], user.pk, 'Changed the tribe emblem.')
+        season.save(update_fields=['state'])
+        return _serialize(season, user, request)
+
+
+def perform_action(user, data, request=None):
     if not isinstance(data, dict):
         raise ValidationError('Expected an action object.')
     try:
@@ -1051,7 +1120,7 @@ def perform_action(user, data):
         if receipt:
             if receipt.fingerprint != fingerprint:
                 raise RequestConflict()
-            return _serialize(Season.objects.get(pk=receipt.season_id), user)
+            return _serialize(Season.objects.get(pk=receipt.season_id), user, request)
         try:
             season = Season.objects.select_for_update().get(pk=season_id)
         except Season.DoesNotExist:
@@ -1095,10 +1164,10 @@ def perform_action(user, data):
         ActionReceipt.objects.create(
             season=season, actor=user, request_id=request_id, fingerprint=fingerprint, action=action
         )
-        return _serialize(season, user)
+        return _serialize(season, user, request)
 
 
-def activity_page(user, season_id, before=None):
+def activity_page(user, season_id, before=None, request=None):
     try:
         season = Season.objects.get(pk=season_id)
     except Season.DoesNotExist:
@@ -1116,6 +1185,7 @@ def activity_page(user, season_id, before=None):
             'tribe_id': row.tribe_id,
             'user_id': row.user_id,
             'username': row.user.username if row.user else 'Tribes',
+            'avatar': _media_url(row.user.avatar.name, request) if row.user else None,
             'text': row.text,
             'created_at': row.created_at.isoformat(),
         }
@@ -1124,7 +1194,7 @@ def activity_page(user, season_id, before=None):
     return {'results': results, 'next_before': results[-1]['id'] if len(rows) > 100 else None}
 
 
-def messages_page(user, season_id, before=None):
+def messages_page(user, season_id, before=None, request=None):
     try:
         season = Season.objects.get(pk=season_id)
     except Season.DoesNotExist:
@@ -1142,5 +1212,6 @@ def messages_page(user, season_id, before=None):
         key=lambda message: message['id'],
         reverse=True,
     )
-    results = rows[:100]
+    avatars = _avatars([row['user_id'] for row in rows[:100]], request)
+    results = [{**row, 'avatar': avatars.get(row['user_id'])} for row in rows[:100]]
     return {'results': results, 'next_before': results[-1]['id'] if len(rows) > 100 else None}
