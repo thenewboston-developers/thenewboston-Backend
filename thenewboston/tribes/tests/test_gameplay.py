@@ -16,6 +16,135 @@ def own_tribe(game, state):
     return next(t for t in state['tribes'] if t['id'] == game['alice_tribe'])
 
 
+def give_goods(game, owner, **goods):
+    season = game['season']
+    season.refresh_from_db()
+    season.state['players'][str(game[f'{owner}_wallet'].owner_id)]['inventory'].update(goods)
+    season.save(update_fields=['state'])
+
+
+def activity(game, owner='alice'):
+    return list(
+        Activity.objects.filter(season=game['season'], tribe_id=game[f'{owner}_tribe'])
+        .order_by('id')
+        .values_list('text', flat=True)
+    )
+
+
+def test_moving_goods_is_recorded_in_terms_of_the_pack_and_the_warehouse(active_game):
+    game = active_game
+    alice, season = game['alice'], game['season']
+    teammate = baker.make('users.User', username='teammate')
+    season.refresh_from_db()
+    tribe = next(t for t in season.state['tribes'] if t['id'] == game['alice_tribe'])
+    tribe['members'].append({'id': teammate.pk, 'username': teammate.username})
+    season.state['players'][str(teammate.pk)] = {
+        'id': teammate.pk,
+        'username': teammate.username,
+        'inventory': {},
+        'production': {},
+        'experience': {},
+    }
+    season.save(update_fields=['state'])
+    give_goods(game, 'alice', iron_ore=30)
+
+    action(alice, season, 'transfer_items', item='iron_ore', quantity=12, source='personal', destination='tribe')
+    action(alice, season, 'transfer_items', item='iron_ore', quantity=5, source='tribe', destination='personal')
+    action(
+        alice,
+        season,
+        'transfer_items',
+        item='iron_ore',
+        quantity=3,
+        source='personal',
+        destination='personal',
+        recipient_user_id=teammate.pk,
+    )
+    state = action(
+        alice,
+        season,
+        'transfer_items',
+        item='iron_ore',
+        quantity=4,
+        source='tribe',
+        destination='tribe',
+        recipient_tribe_id=game['bob_tribe'],
+    )
+
+    assert state['viewer']['inventory']['iron_ore'] == 20
+    assert own_tribe(game, state)['inventory']['iron_ore'] == 3
+    assert snapshot(client_for(teammate), season)['viewer']['inventory'] == {'iron_ore': 3}
+    assert activity(game)[-4:] == [
+        'Stored 12 iron ore from their pack in the warehouse.',
+        'Took 5 iron ore from the warehouse into their pack.',
+        'Gave 3 iron ore from their pack to teammate.',
+        'Sent 4 iron ore from the warehouse to Golden Legion.',
+    ]
+    assert activity(game, 'bob')[-1] == 'Sent 4 iron ore from Iron Wolves into the warehouse.'
+    assert not any('personal' in text or 'player ' in text for text in activity(game) + activity(game, 'bob'))
+
+
+def test_shortages_name_the_pack_warehouse_wallet_or_treasury(active_game):
+    game = active_game
+    alice, season = game['alice'], game['season']
+    give_goods(game, 'alice', iron_ore=2)
+    fields = {'item': 'iron_ore', 'quantity': 5}
+
+    short = action(alice, season, 'transfer_items', source='personal', destination='tribe', expected=400, **fields)
+    assert short[0]['message'] == 'Not enough iron ore in your pack.'
+    short = action(alice, season, 'transfer_items', source='tribe', destination='personal', expected=400, **fields)
+    assert short[0]['message'] == 'Not enough iron ore in the warehouse.'
+    short = action(alice, season, 'create_listing', kind='sell', price=2, account='tribe', expected=400, **fields)
+    assert short[0]['message'] == 'Not enough iron ore in the warehouse.'
+    short = action(alice, season, 'treasury_withdraw', amount=5, expected=400)
+    assert short[0]['message'] == 'Not enough TNB in the treasury.'
+    short = action(alice, season, 'treasury_deposit', amount=game['alice_wallet'].balance + 1, expected=400)
+    assert short[0]['message'] == 'Not enough TNB in your wallet.'
+    stranger = action(
+        alice,
+        season,
+        'transfer_items',
+        source='personal',
+        destination='personal',
+        recipient_user_id=game['bob_wallet'].owner_id,
+        expected=400,
+        **fields,
+    )
+    assert stranger[0]['message'] == 'Goods can go into a pack only when it is yours or a teammate’s.'
+
+
+def test_treasury_and_market_records_name_the_wallet_and_the_treasury(active_game):
+    game = active_game
+    alice, bob, season = game['alice'], game['bob'], game['season']
+    give_goods(game, 'alice', iron_ore=10)
+
+    action(alice, season, 'treasury_deposit', amount=40)
+    action(alice, season, 'treasury_withdraw', amount=10)
+    action(alice, season, 'transfer_tnb', amount=5, recipient_tribe_id=game['bob_tribe'])
+    sale = action(alice, season, 'create_listing', kind='sell', item='iron_ore', quantity=4, price=3)['listings'][-1]
+    action(bob, season, 'fill_listing', listing_id=sale['id'], quantity=1, account='personal')
+    action(alice, season, 'cancel_listing', listing_id=sale['id'])
+    order = action(alice, season, 'create_listing', kind='buy', item='coal', quantity=2, price=6, account='tribe')[
+        'listings'
+    ][-1]
+    action(alice, season, 'cancel_listing', listing_id=order['id'])
+
+    assert activity(game)[-8:] == [
+        'Deposited 40 TNB from their wallet into the treasury.',
+        'Withdrew 10 TNB from the treasury into their wallet.',
+        'Sent 5 TNB from the treasury to Golden Legion.',
+        f'Listed sell order #{sale["id"]}: 4 iron ore at 3 TNB each, from their pack.',
+        f'Order #{sale["id"]} filled by Golden Legion: 1 iron ore for 3 TNB (paid into the owner’s wallet).',
+        f'Cancelled order #{sale["id"]}: 3 iron ore at 3 TNB each; goods returned to their pack.',
+        f'Listed buy order #{order["id"]}: 2 coal at 6 TNB each, paid from the treasury.',
+        f'Cancelled order #{order["id"]}: 2 coal at 6 TNB each; TNB returned to the treasury.',
+    ]
+    assert activity(game, 'bob')[-2:] == [
+        'Sent 5 TNB from Iron Wolves into the treasury.',
+        f'Filled order #{sale["id"]} with Iron Wolves: 1 iron ore at 3 TNB each (3 TNB paid from their wallet).',
+    ]
+
+
 def test_recruitment_applications_invitations_and_permissions(tribes_game):
     game = tribes_game
     member = baker.make('users.User', username='recruit')

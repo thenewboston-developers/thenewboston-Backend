@@ -28,6 +28,8 @@ Every `avatar` is the player's current profile picture (an address, or null with
 
 Emblem upload: POST `/api/tribes/emblem` authenticated multipart `{season_id, image}` returns fresh state. Founder of a tribe in that season only, while the season is recruiting or active. The image must be exactly 512x512 pixels, the same rule as currency logos. A new upload replaces the previous emblem.
 
+Accounts: every `source`, `destination` and `account` field is `personal` or `tribe`. Players never see those words. Goods in `personal` are in the player's **pack** and goods in `tribe` are in the **warehouse**; TNB in `personal` is in the player's **wallet** and TNB in `tribe` is in the **treasury**. Activity entries and error messages use those four names ("their pack" in the activity record, "your pack" in errors).
+
 Actions (flat fields besides common envelope):
 
 - create_tribe: name, color (#rrggbb), description, motto; optional emblem (emoji/text max8, default 🛡️)
