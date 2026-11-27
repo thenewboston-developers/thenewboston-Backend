@@ -1,0 +1,18 @@
+{% extends "admin/change_form.html" %}
+{% block object-tools-items %}
+  {% if roster_url %}<li><a href="{{ roster_url }}">Manage roster</a></li>{% endif %}
+  {{ block.super }}
+{% endblock %}
+{% block after_field_sets %}
+  {{ block.super }}
+  <p>All tournament dates and times use <strong>{{ timezone_name }}</strong>.</p>
+  {% if roster_url %}
+    <div class="module">
+      <h2>Teams and players</h2>
+      <p><a href="{{ roster_url }}">Manage registered players, tribe assignments, and captains</a>.</p>
+      <p>Rosters and tournament settings lock at the scheduled start. Each tribe can have up to eight players.</p>
+    </div>
+  {% else %}
+    <p>Save this tournament to enroll registered players, create tribes, and choose their captains.</p>
+  {% endif %}
+{% endblock %}
