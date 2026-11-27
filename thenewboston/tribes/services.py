@@ -50,6 +50,9 @@ logger = logging.getLogger(__name__)
 EMBLEM_IMAGE_SIZE = 512
 MAX_AMOUNT = 1_000_000_000
 MAX_TOTAL = 9_007_199_254_740_991
+# The names players see for the two accounts. Goods are kept in a player's own pack or the tribe's shared
+# warehouse; TNB is kept in a player's own wallet or the tribe's shared treasury.
+PLACES = {'goods': {'personal': 'pack', 'tribe': 'warehouse'}, 'tnb': {'personal': 'wallet', 'tribe': 'treasury'}}
 
 
 class RequestConflict(APIException):
@@ -123,14 +126,24 @@ def _log(season, tribe_id, user_id, text):
     Activity.objects.create(season=season, tribe_id=tribe_id, user_id=user_id, text=text)
 
 
+def _name(item):
+    return item.replace('_', ' ')
+
+
+def _place(account, kind='goods', owner='their'):
+    """Activity entries are read by the whole tribe ("their pack"); errors are read by the actor ("your pack")."""
+    name = PLACES[kind][account]
+    return f'the {name}' if account == 'tribe' else f'{owner} {name}'
+
+
 def _inventory(state, tribe, user_id, account):
     return tribe['inventory'] if account == 'tribe' else state['players'][str(user_id)]['inventory']
 
 
-def _items(inventory, item, amount):
+def _items(inventory, item, amount, place=None):
     current = inventory.get(item, 0)
     if current + amount < 0:
-        raise ValidationError(f'Not enough {item.replace("_", " ")}.')
+        raise ValidationError(f'Not enough {_name(item)}{f" in {place}" if place else ""}.')
     if current + amount > MAX_TOTAL:
         raise ValidationError('Inventory limit reached.')
     inventory[item] = current + amount
@@ -160,7 +173,7 @@ def _wallets(season, user_ids):
 def _money(season, wallet, amount, reason):
     """Positive amount moves wallet coins into season reserve; negative pays out."""
     if amount > 0 and wallet.balance < amount:
-        raise ValidationError('Insufficient TNB in your app wallet.')
+        raise ValidationError('Not enough TNB in your wallet.')
     if wallet.balance - amount > MAX_TOTAL:
         raise ValidationError('Wallet balance limit reached.')
     if amount > 0:
@@ -177,7 +190,7 @@ def _money(season, wallet, amount, reason):
 def _pay(season, tribe, user_id, account, amount, wallets, reason):
     if account == 'tribe':
         if tribe['treasury'] < amount:
-            raise ValidationError('Insufficient TNB in the tribal treasury.')
+            raise ValidationError('Not enough TNB in the treasury.')
         tribe['treasury'] -= amount
     else:
         _money(season, wallets[user_id], amount, reason)
@@ -685,7 +698,7 @@ def _queue(season, tribe, user, data, now):
         inputs = recipe['inputs']
         inventory = _inventory(state, tribe, user.pk, source)
         for ingredient, amount in inputs.items():
-            _items(inventory, ingredient, -amount * quantity)
+            _items(inventory, ingredient, -amount * quantity, _place(source, owner='your'))
     end = start + timedelta(seconds=seconds)
     if end > now + timedelta(seconds=QUEUE_SECONDS):
         raise ValidationError('Your worker queue cannot exceed 24 hours.')
@@ -739,7 +752,8 @@ def _queue(season, tribe, user, data, now):
         'target_id': target_id,
     }
     state['jobs'].append(job)
-    _log(season, tribe['id'], user.pk, f'Queued {quantity} {item.replace("_", " ")} ({kind}).')
+    bound = '' if item in BUILDINGS or item in UNITS or item in DEFENSES else f' for {_place(destination)}'
+    _log(season, tribe['id'], user.pk, f'Queued {quantity} {_name(item)} ({kind}){bound}.')
 
 
 def _cancel_job(season, tribe, user, data):
@@ -754,9 +768,8 @@ def _cancel_job(season, tribe, user, data):
     job['status'] = 'cancelled'
     # Keep later reservations at their advertised times; shifting would violate
     # other workers' gathering-capacity reservations. They can be cancelled too.
-    _log(
-        season, tribe['id'], user.pk, 'Cancelled an assignment; completed work was kept and unused materials returned.'
-    )
+    returned = f' and unused materials went back to {_place(job["source"])}' if job['inputs'] else ''
+    _log(season, tribe['id'], user.pk, f'Cancelled an assignment; completed work was kept{returned}.')
 
 
 def _restore_units(state, listing, tribe_id, controller_id, plot_id, quantity):
@@ -803,7 +816,7 @@ def _trade(season, tribe, user, action, data):
             if unit['quantity'] == 0:
                 state['units'].remove(unit)
         elif kind == 'sell':
-            _items(_inventory(state, tribe, user.pk, account), item, -quantity)
+            _items(_inventory(state, tribe, user.pk, account), item, -quantity, _place(account, owner='your'))
         else:
             wallets = _wallets(season, [user.pk]) if account == 'personal' else {}
             _pay(season, tribe, user.pk, account, quantity * price, wallets, 'buy_order_escrow')
@@ -820,11 +833,17 @@ def _trade(season, tribe, user, action, data):
         if escrow_unit:
             listing['escrow_unit'] = escrow_unit
         state['listings'].append(listing)
+        if kind == 'buy':
+            terms = f'paid from {_place(account, "tnb")}'
+        elif escrow_unit:
+            terms = f'paid into {_place(account, "tnb")}'
+        else:
+            terms = f'from {_place(account)}'
         _log(
             season,
             tribe['id'],
             user.pk,
-            f'Listed {kind} order #{listing["id"]}: {quantity} {item} at {price} TNB each from {account}.',
+            f'Listed {kind} order #{listing["id"]}: {quantity} {_name(item)} at {price} TNB each, {terms}.',
         )
         return
     listing = _find(state['listings'], _integer(data, 'listing_id'), 'Listing')
@@ -851,15 +870,23 @@ def _trade(season, tribe, user, action, data):
                 wallets,
                 'buy_order_refund',
             )
+        if listing.get('escrow_unit'):
+            returned = 'units returned to their plot'
+        elif listing['kind'] == 'sell':
+            returned = f'goods returned to {_place(listing["account"])}'
+        else:
+            returned = f'TNB returned to {_place(listing["account"], "tnb")}'
         _log(
             season,
             tribe['id'],
             user.pk,
-            f'Cancelled order #{listing["id"]}: {quantity} {listing["item"]} at {listing["price"]} TNB each; escrow returned to {listing["account"]}.',
+            f'Cancelled order #{listing["id"]}: {quantity} {_name(listing["item"])} at {listing["price"]} TNB each; {returned}.',
         )
         return
     if listing['user_id'] == user.pk or (listing['account'] == 'tribe' and listing['tribe_id'] == tribe['id']):
-        raise ValidationError('You cannot fill your own or your tribal treasury listing.')
+        raise ValidationError(
+            'You cannot fill your own listing, or one placed from your tribe’s warehouse or treasury.'
+        )
     quantity = _integer(data, 'quantity', 1, listing['quantity'])
     account = _choice(data, 'account', ('personal', 'tribe'), 'personal')
     amount = quantity * listing['price']
@@ -880,22 +907,27 @@ def _trade(season, tribe, user, action, data):
         else:
             _credit(season, owner_tribe, listing['user_id'], owner_account, amount, wallets, 'market_sale')
     else:
-        _items(_inventory(state, tribe, user.pk, account), listing['item'], -quantity)
+        _items(_inventory(state, tribe, user.pk, account), listing['item'], -quantity, _place(account, owner='your'))
         _items(_inventory(state, owner_tribe, listing['user_id'], owner_account), listing['item'], quantity)
         _credit(season, tribe, user.pk, account, amount, wallets, 'buy_order_filled')
     counterparty = owner_tribe['name'] if owner_tribe else 'the opening market'
+    name = _name(listing['item'])
+    # Whoever fills a sell order pays; whoever fills a buy order is paid. The order's owner is on the other side.
+    selling = listing['kind'] == 'sell'
     _log(
         season,
         tribe['id'],
         user.pk,
-        f'Filled order #{listing["id"]} with {counterparty}: {quantity} {listing["item"]} at {listing["price"]} TNB each ({amount} TNB, {account}).',
+        f'Filled order #{listing["id"]} with {counterparty}: {quantity} {name} at {listing["price"]} TNB each '
+        f'({amount} TNB {"paid from" if selling else "paid into"} {_place(account, "tnb")}).',
     )
     if owner_tribe:
         _log(
             season,
             owner_tribe['id'],
             user.pk,
-            f'Order #{listing["id"]} filled by {tribe["name"]}: {quantity} {listing["item"]} for {amount} TNB ({owner_account}).',
+            f'Order #{listing["id"]} filled by {tribe["name"]}: {quantity} {name} for {amount} TNB '
+            f'({"paid into" if selling else "paid from"} {_place(owner_account, "tnb", "the owner’s")}).',
         )
 
 
@@ -909,10 +941,13 @@ def _active_action(season, tribe, user, action, data, now):
             tribe['treasury'] += amount
         else:
             if tribe['treasury'] < amount:
-                raise ValidationError('Insufficient treasury TNB.')
+                raise ValidationError('Not enough TNB in the treasury.')
             tribe['treasury'] -= amount
             _money(season, wallet, -amount, action)
-        _log(season, tribe['id'], user.pk, f'{action.replace("_", " ")}: {amount} TNB.')
+        if action == 'treasury_deposit':
+            _log(season, tribe['id'], user.pk, f'Deposited {amount} TNB from their wallet into the treasury.')
+        else:
+            _log(season, tribe['id'], user.pk, f'Withdrew {amount} TNB from the treasury into their wallet.')
     elif action == 'purchase_land':
         plot = _find(state['plots'], _integer(data, 'plot_id'), 'Plot')
         if plot['tribe_id'] is not None:
@@ -940,24 +975,32 @@ def _active_action(season, tribe, user, action, data, now):
         if destination == 'personal' and (
             recipient_tribe_id != tribe['id'] or not any(m['id'] == recipient_id for m in tribe['members'])
         ):
-            raise ValidationError('Personal goods may be sent only to your teammates.')
-        _items(_inventory(state, tribe, user.pk, source), item, -quantity)
+            raise ValidationError('Goods can go into a pack only when it is yours or a teammate’s.')
+        _items(_inventory(state, tribe, user.pk, source), item, -quantity, _place(source, owner='your'))
         _items(_inventory(state, recipient_tribe, recipient_id, destination), item, quantity)
-        _log(
-            season,
-            tribe['id'],
-            user.pk,
-            f'Transferred {quantity} {item} to {recipient_tribe["name"]} ({destination}, player {recipient_id}).',
-        )
+        goods = f'{quantity} {_name(item)} from {_place(source)}'
         if recipient_tribe_id != tribe['id']:
-            _log(season, recipient_tribe_id, user.pk, f'Received {quantity} {item} from {tribe["name"]}.')
+            _log(season, tribe['id'], user.pk, f'Sent {goods} to {recipient_tribe["name"]}.')
+            _log(
+                season,
+                recipient_tribe_id,
+                user.pk,
+                f'Sent {quantity} {_name(item)} from {tribe["name"]} into the warehouse.',
+            )
+        elif destination == 'tribe':
+            _log(season, tribe['id'], user.pk, f'Stored {goods} in the warehouse.')
+        elif recipient_id == user.pk:
+            _log(season, tribe['id'], user.pk, f'Took {goods} into their pack.')
+        else:
+            recipient = next(member for member in tribe['members'] if member['id'] == recipient_id)
+            _log(season, tribe['id'], user.pk, f'Gave {goods} to {recipient["username"]}.')
     elif action == 'transfer_tnb':
         amount = _integer(data, 'amount')
         target = _find(state['tribes'], _integer(data, 'recipient_tribe_id'), 'Tribe')
         _pay(season, tribe, user.pk, 'tribe', amount, {}, 'tribal_transfer')
         target['treasury'] += amount
-        _log(season, tribe['id'], user.pk, f'Sent {amount} TNB to {target["name"]}.')
-        _log(season, target['id'], user.pk, f'Received {amount} TNB from {tribe["name"]}.')
+        _log(season, tribe['id'], user.pk, f'Sent {amount} TNB from the treasury to {target["name"]}.')
+        _log(season, target['id'], user.pk, f'Sent {amount} TNB from {tribe["name"]} into the treasury.')
     elif action in ('deploy', 'transfer_unit'):
         unit = _find(state['units'], _integer(data, 'unit_id'), 'Unit')
         if unit['controller_id'] != user.pk or unit['tribe_id'] != tribe['id']:
@@ -1046,12 +1089,17 @@ def _active_action(season, tribe, user, action, data, now):
             )
         quantity = _integer(data, 'quantity', 1, order['quantity'] - order['contributed'])
         source = _choice(data, 'source', ('personal', 'tribe'), 'personal')
-        _items(_inventory(state, tribe, user.pk, source), order['item'], -quantity)
+        _items(_inventory(state, tribe, user.pk, source), order['item'], -quantity, _place(source, owner='your'))
         order['contributed'] += quantity
         if order['contributed'] == order['quantity']:
             order['status'] = 'completed'
             _items(tribe['inventory'], order['item'], order['quantity'])
-        _log(season, tribe['id'], user.pk, f'Contributed {quantity} {order["item"]} to {order["title"]}.')
+        _log(
+            season,
+            tribe['id'],
+            user.pk,
+            f'Contributed {quantity} {_name(order["item"])} from {_place(source)} to {order["title"]}.',
+        )
     else:
         raise ValidationError('Unknown game action.')
 
