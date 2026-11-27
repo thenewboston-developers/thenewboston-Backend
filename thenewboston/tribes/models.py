@@ -1,17 +1,12 @@
+from typing import ClassVar
+
 from django.db import models
 
 
-class World(models.Model):
-    """The singleton serializes initial creation and transitions between seasons."""
-
-    id = models.PositiveSmallIntegerField(primary_key=True, default=1)
-
-    class Meta:
-        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='tribes_world_singleton')]
-
-
-class Season(models.Model):
-    status = models.CharField(max_length=16, default='recruiting')
+class Tournament(models.Model):
+    title = models.CharField(max_length=120)
+    max_players = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, default='upcoming')
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
     state = models.JSONField(default=dict)
@@ -21,10 +16,13 @@ class Season(models.Model):
     system_revenue = models.PositiveBigIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.title
+
     class Meta:
-        constraints = [
+        constraints: ClassVar[list] = [
             models.CheckConstraint(
-                condition=models.Q(status__in=['recruiting', 'active', 'finished']), name='tribes_season_status'
+                condition=models.Q(status__in=['upcoming', 'active', 'finished']), name='tribes_tournament_status'
             ),
             models.CheckConstraint(
                 condition=models.Q(total_withdrawn__lte=models.F('total_deposited')),
@@ -33,6 +31,7 @@ class Season(models.Model):
             models.CheckConstraint(
                 condition=models.Q(total_deposited__lte=9007199254740991), name='tribes_safe_payments'
             ),
+            models.CheckConstraint(condition=models.Q(max_players__gte=1), name='tribes_positive_capacity'),
             models.CheckConstraint(
                 condition=models.Q(ends_at__gt=models.F('starts_at')), name='tribes_positive_duration'
             ),
@@ -40,7 +39,7 @@ class Season(models.Model):
 
 
 class ActionReceipt(models.Model):
-    season = models.ForeignKey(Season, on_delete=models.PROTECT)
+    tournament = models.ForeignKey(Tournament, on_delete=models.PROTECT)
     actor = models.ForeignKey('users.User', on_delete=models.PROTECT)
     request_id = models.UUIDField()
     fingerprint = models.CharField(max_length=64)
@@ -48,13 +47,15 @@ class ActionReceipt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['actor', 'request_id'], name='tribes_action_once')]
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(fields=['tournament', 'actor', 'request_id'], name='tribes_action_once')
+        ]
 
 
 class MoneyEntry(models.Model):
-    """Permanent wallet movements; positive amounts enter the season reserve."""
+    """Permanent wallet movements; positive amounts enter the tournament reserve."""
 
-    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='money_entries')
+    tournament = models.ForeignKey(Tournament, on_delete=models.PROTECT, related_name='money_entries')
     wallet = models.ForeignKey('wallets.Wallet', on_delete=models.PROTECT)
     amount = models.BigIntegerField()
     reason = models.CharField(max_length=80)
@@ -62,8 +63,19 @@ class MoneyEntry(models.Model):
 
 
 class Activity(models.Model):
-    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='activity')
+    tournament = models.ForeignKey(Tournament, on_delete=models.PROTECT, related_name='activity')
     tribe_id = models.PositiveIntegerField()
     user = models.ForeignKey('users.User', on_delete=models.PROTECT, null=True)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class TournamentParticipant(models.Model):
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='participants')
+    user = models.ForeignKey('users.User', on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(fields=['tournament', 'user'], name='tribes_participant_once')
+        ]

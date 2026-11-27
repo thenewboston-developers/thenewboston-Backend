@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}{{ media }}{% endblock %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+    <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a> &rsaquo;
+    <a href="{% url 'admin:tribes_tournament_changelist' %}">Tournaments</a> &rsaquo;
+    <a href="{{ change_url }}">{{ tournament.title }}</a> &rsaquo; Roster
+  </div>
+{% endblock %}
+{% block content %}
+  <div id="content-main">
+    <p><a href="{{ change_url }}">Tournament settings</a> &middot;
+      <a href="{% url 'admin:tribes_tournament_history' tournament.pk %}">Admin history</a></p>
+    <div class="module">
+      <h2>{{ participant_count }} / {{ tournament.max_players }} players enrolled</h2>
+      <p>Starts {{ tournament.starts_at|date:"M j, Y, g:i A" }}. Ends {{ tournament.ends_at|date:"M j, Y, g:i A" }}. All times use <strong>{{ timezone_name }}</strong>. Status: {{ tournament.status }}.</p>
+      {% if is_locked %}
+        <p><strong>This tournament has started. Settings, enrollment, teams, and captains are read only.</strong></p>
+      {% elif can_manage %}
+        <p>Enroll registered users, then create tribes or assign players to existing tribes. Each tribe allows {{ max_tribe_members }} players.</p>
+        <p>Choose a replacement captain before moving or removing a captain with teammates. Unassigned players cannot play until assigned to a tribe.</p>
+      {% else %}
+        <p>You have read-only access to this tournament.</p>
+      {% endif %}
+    </div>
+    <div class="module">
+      <h2>Tribes</h2>
+      <table>
+        <thead><tr><th>Tribe</th><th>Captain</th><th>Players</th><th>Roster</th></tr></thead>
+        <tbody>
+          {% for tribe in tribes %}
+            <tr>
+              <td>{{ tribe.name }}</td><td>{{ tribe.captain_name }}</td>
+              <td>{{ tribe.members|length }} / {{ max_tribe_members }}</td>
+              <td>{% for member in tribe.members %}{{ member.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+            </tr>
+          {% empty %}<tr><td colspan="4">No tribes yet. Enroll a captain, then create the first tribe below.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="module">
+      <h2>Enrolled and unassigned ({{ unassigned|length }})</h2>
+      {% if unassigned and not is_locked %}<p><strong>Assign these players before the start. The roster locks automatically, and unassigned players will be unable to play in this tournament.</strong></p>{% endif %}
+      <ul>{% for user in unassigned %}<li>{{ user.username }}</li>{% empty %}<li>No unassigned players.</li>{% endfor %}</ul>
+    </div>
+    {% if can_manage %}
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="enroll">
+        <h2>Enroll a registered player</h2>
+        {{ forms.enroll.as_p }}
+        <div class="submit-row"><input type="submit" value="Enroll player"></div>
+      </form>
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="create_tribe">
+        <h2>Create a tribe</h2>
+        {{ forms.create_tribe.as_p }}
+        <div class="submit-row"><input type="submit" value="Create tribe"></div>
+      </form>
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="assign">
+        <h2>Assign or move an enrolled player</h2>
+        {{ forms.assign.as_p }}
+        <div class="submit-row"><input type="submit" value="Save assignment"></div>
+      </form>
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="captain">
+        <h2>Change a tribe captain</h2>
+        {{ forms.captain.as_p }}
+        <div class="submit-row"><input type="submit" value="Set captain"></div>
+      </form>
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="remove_player">
+        <h2>Remove a player from this tournament</h2>
+        <p>This does not delete the user account or affect other tournaments.</p>
+        {{ forms.remove_player.as_p }}
+        <div class="submit-row"><input type="submit" value="Remove player"></div>
+      </form>
+      <form method="post" class="module aligned">
+        {% csrf_token %}<input type="hidden" name="operation" value="remove_tribe">
+        <h2>Remove a tribe</h2>
+        {{ forms.remove_tribe.as_p }}
+        <div class="submit-row"><input type="submit" value="Remove tribe"></div>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

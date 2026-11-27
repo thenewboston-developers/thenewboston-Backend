@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.utils.decorators import method_decorator
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import MultiPartParser
@@ -5,39 +7,44 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Season
+from .models import Tournament
 from .services import (
     activity_page,
     get_state,
     messages_page,
     perform_action,
-    season_summary,
     set_emblem,
-    tick_world,
+    sweep_tournaments,
+    tournament_summary,
 )
 
 
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
 class StateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def get(self, request):
-        return Response(get_state(user=request.user, season_id=request.query_params.get('season_id'), request=request))
+        return Response(
+            get_state(user=request.user, tournament_id=request.query_params.get('tournament_id'), request=request)
+        )
 
 
-class SeasonsView(APIView):
-    permission_classes = [AllowAny]
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
+class TournamentsView(APIView):
+    permission_classes = (AllowAny,)
 
     def get(self, request):
-        tick_world()
-        query = Season.objects.order_by('-id')
+        sweep_tournaments()
+        query = Tournament.objects.order_by('-id')
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
             query = query.filter(pk__lt=before)
-        return Response([season_summary(s) for s in query[:100]])
+        return Response([tournament_summary(s, request.user) for s in query[:100]])
 
 
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
 class ActionView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         try:
@@ -53,12 +60,13 @@ class ActionView(APIView):
 
 class EmblemSerializer(serializers.Serializer):
     image = serializers.ImageField()
-    season_id = serializers.IntegerField(min_value=1)
+    tournament_id = serializers.IntegerField(min_value=1)
 
 
+@method_decorator(transaction.non_atomic_requests, name='dispatch')
 class EmblemView(APIView):
-    parser_classes = [MultiPartParser]
-    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         serializer = EmblemSerializer(data=request.data)
@@ -67,22 +75,22 @@ class EmblemView(APIView):
 
 
 class ActivityView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        season_id = serializers.IntegerField(min_value=1).run_validation(request.query_params.get('season_id'))
+        tournament_id = serializers.IntegerField(min_value=1).run_validation(request.query_params.get('tournament_id'))
         before = None
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
-        return Response(activity_page(request.user, season_id, before, request))
+        return Response(activity_page(request.user, tournament_id, before, request))
 
 
 class MessagesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        season_id = serializers.IntegerField(min_value=1).run_validation(request.query_params.get('season_id'))
+        tournament_id = serializers.IntegerField(min_value=1).run_validation(request.query_params.get('tournament_id'))
         before = None
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
-        return Response(messages_page(request.user, season_id, before, request))
+        return Response(messages_page(request.user, tournament_id, before, request))

@@ -23,7 +23,7 @@ docker() {
     local checked_command
     for checked_command in "$@"; do
         case "$checked_command" in
-            verify_product_analytics|verify_websocket_authentication|verify_casino|verify_tribes|start_tribes_season|announce_frontend_deployment)
+            verify_product_analytics|verify_websocket_authentication|verify_casino|verify_tribes|announce_frontend_deployment)
                 printf '%s\n' "$checked_command" >> "$DEPLOY_TEST_LOG"
                 cat >/dev/null
                 if [ "$checked_command" = "$DEPLOY_TEST_FAIL" ]; then
@@ -39,7 +39,7 @@ docker() {
 
 
 class DeployShellTests(unittest.TestCase):
-    def run_deploy(self, announce='', fail='', start_season=''):
+    def run_deploy(self, announce='', fail=''):
         workflow = WORKFLOW.read_text()
         match = re.search(r"<< 'EOF'\n(.*?)\n\s*EOF(?:\n|$)", workflow, re.DOTALL)
         self.assertIsNotNone(match, 'The remote deployment heredoc must be present')
@@ -58,7 +58,6 @@ class DeployShellTests(unittest.TestCase):
                     'DEPLOY_TEST_FAIL': fail,
                     'POSTHOG_CONFIG': 'synthetic-configuration',
                     'ANNOUNCE_PREVIOUS_ID': announce,
-                    'START_TRIBES_SEASON_ID': start_season,
                 },
             )
             return result, log.read_text().splitlines()
@@ -119,47 +118,23 @@ class DeployShellTests(unittest.TestCase):
         self.assertNotIn('announce_frontend_deployment', commands)
         self.assertNotIn('make:deploy-cleanup', commands)
 
-    def test_explicit_season_start_runs_after_checks_and_is_verified(self):
-        result, commands = self.run_deploy(start_season='1')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(
-            commands,
-            [
-                'make:deploy',
-                'verify_product_analytics',
-                'verify_websocket_authentication',
-                'verify_casino',
-                'verify_tribes',
-                'start_tribes_season',
-                'verify_tribes',
-                'make:deploy-cleanup',
-            ],
-        )
-
-    def test_failed_season_start_fails_deployment(self):
-        result, commands = self.run_deploy(announce='7', start_season='1', fail='start_tribes_season')
-        self.assertEqual(result.returncode, 23)
-        self.assertEqual(commands[-1], 'start_tribes_season')
-        self.assertNotIn('announce_frontend_deployment', commands)
-        self.assertNotIn('make:deploy-cleanup', commands)
-
-    def test_season_id_is_validated_before_ssh(self):
+    def test_announcement_id_is_validated_before_ssh(self):
         match = re.search(r'        run: \|\n(.*)', WORKFLOW.read_text(), re.DOTALL)
         self.assertIsNotNone(match)
         script = (
             "python3() { printf 'dummy-config'; }\n"
             "ssh() { printf 'ssh reached'; cat >/dev/null; }\n" + textwrap.dedent(match.group(1))
         )
-        for season_id, valid in [
+        for deployment_id, valid in [
             ('', True),
             ('1', True),
             ('123', True),
-            ('0', False),
+            ('0', True),
             ('-1', False),
             ("1'; echo unexpected; '", False),
             ('$(echo unexpected)', False),
         ]:
-            with self.subTest(season_id=season_id):
+            with self.subTest(deployment_id=deployment_id):
                 result = subprocess.run(
                     ['bash', '-s'],
                     input=script,
@@ -170,8 +145,7 @@ class DeployShellTests(unittest.TestCase):
                         **os.environ,
                         'POSTHOG_API_KEY': 'synthetic-key',
                         'POSTHOG_HOST': 'https://example.test',
-                        'ANNOUNCE_PREVIOUS_ID': '',
-                        'START_TRIBES_SEASON_ID': season_id,
+                        'ANNOUNCE_PREVIOUS_ID': deployment_id,
                         'EC2_USER': 'synthetic-user',
                         'EC2_HOST': 'example.test',
                     },

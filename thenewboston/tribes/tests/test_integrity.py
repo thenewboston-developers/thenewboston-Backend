@@ -10,11 +10,12 @@ from freezegun import freeze_time
 from model_bakery import baker
 from rest_framework.test import APIClient
 
-from thenewboston.tribes.models import ActionReceipt, Season
+from thenewboston.tribes.models import ActionReceipt, Tournament
 from thenewboston.tribes.rules import resolve_battle
+from thenewboston.tribes.services import add_participant, create_tournament, create_tribe
 from thenewboston.wallets.models import Wallet
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
 def client_for(user=None):
@@ -24,29 +25,29 @@ def client_for(user=None):
     return client
 
 
-def action(client, season, action_name, *, expected=200, request_id=None, **fields):
+def action(client, tournament, action_name, *, expected=200, request_id=None, **fields):
     response = client.post(
         '/api/tribes/actions',
-        {'season_id': season.pk, 'request_id': str(request_id or uuid4()), 'action': action_name, **fields},
+        {'tournament_id': tournament.pk, 'request_id': str(request_id or uuid4()), 'action': action_name, **fields},
         format='json',
     )
     assert response.status_code == expected, response.data
     return response.data
 
 
-def snapshot(client, season):
-    response = client.get('/api/tribes/state', {'season_id': season.pk})
+def snapshot(client, tournament):
+    response = client.get('/api/tribes/state', {'tournament_id': tournament.pk})
     assert response.status_code == 200, response.data
     return response.data
 
 
 def seed_army(game, *, owner='alice', quantity=10):
-    season = game['season']
-    season.refresh_from_db()
-    plot = next(p for p in season.state['plots'] if p['tribe_id'] == game[f'{owner}_tribe'])
-    unit_id = season.state['next_id']
-    season.state['next_id'] += 1
-    season.state['units'].append(
+    tournament = game['tournament']
+    tournament.refresh_from_db()
+    plot = next(p for p in tournament.state['plots'] if p['tribe_id'] == game[f'{owner}_tribe'])
+    unit_id = tournament.state['next_id']
+    tournament.state['next_id'] += 1
+    tournament.state['units'].append(
         {
             'id': unit_id,
             'tribe_id': game[f'{owner}_tribe'],
@@ -57,7 +58,7 @@ def seed_army(game, *, owner='alice', quantity=10):
             'target_id': game['bob_tribe'] if owner == 'alice' else game['alice_tribe'],
         }
     )
-    season.save(update_fields=['state'])
+    tournament.save(update_fields=['state'])
     return unit_id, plot['id']
 
 
@@ -66,43 +67,49 @@ def tribes_game(bucky_tnb_wallet, dmitry_tnb_wallet, monkeypatch):
     monkeypatch.setattr(Wallet, 'stream', lambda self: None)
     alice = client_for(bucky_tnb_wallet.owner)
     bob = client_for(dmitry_tnb_wallet.owner)
-    response = alice.get('/api/tribes/state')
-    assert response.status_code == 200, response.data
-    season = Season.objects.get(pk=response.data['season']['id'])
-    first = action(alice, season, 'create_tribe', name='Iron Wolves', emblem='🐺', color='#345678')
-    second = action(bob, season, 'create_tribe', name='Golden Legion', emblem='🦁', color='#876543')
+    admin = baker.make('users.User', is_staff=True, is_superuser=True)
+    tournament = create_tournament(
+        title='Test tournament', starts_at=timezone.now() + timedelta(days=1), max_players=12, actor=admin
+    )
+    add_participant(tournament.pk, bucky_tnb_wallet.owner_id, actor=admin)
+    add_participant(tournament.pk, dmitry_tnb_wallet.owner_id, actor=admin)
+    create_tribe(tournament.pk, name='Iron Wolves', founder_id=bucky_tnb_wallet.owner_id, actor=admin)
+    create_tribe(tournament.pk, name='Golden Legion', founder_id=dmitry_tnb_wallet.owner_id, actor=admin)
+    first = snapshot(alice, tournament)
+    second = snapshot(bob, tournament)
     return {
+        'admin': admin,
         'alice': alice,
         'alice_wallet': bucky_tnb_wallet,
         'alice_tribe': first['viewer']['tribe_id'],
         'bob': bob,
         'bob_wallet': dmitry_tnb_wallet,
         'bob_tribe': second['viewer']['tribe_id'],
-        'season': season,
+        'tournament': tournament,
     }
 
 
 @pytest.fixture
 def active_game(tribes_game):
-    season = tribes_game['season']
-    season.starts_at = timezone.now() - timedelta(seconds=1)
-    season.ends_at = season.starts_at + timedelta(days=7)
-    season.save(update_fields=['starts_at', 'ends_at'])
-    snapshot(tribes_game['alice'], season)
-    season.refresh_from_db()
-    assert season.status == 'active'
+    tournament = tribes_game['tournament']
+    tournament.starts_at = timezone.now() - timedelta(seconds=1)
+    tournament.ends_at = tournament.starts_at + timedelta(days=7)
+    tournament.save(update_fields=['starts_at', 'ends_at'])
+    snapshot(tribes_game['alice'], tournament)
+    tournament.refresh_from_db()
+    assert tournament.status == 'active'
     return tribes_game
 
 
 def test_actual_wallet_funding_is_idempotent_and_never_granted(active_game):
     game = active_game
     wallet = game['alice_wallet']
-    assert snapshot(game['alice'], game['season'])['viewer']['wallet_balance'] == 1000
+    assert snapshot(game['alice'], game['tournament'])['viewer']['wallet_balance'] == 1000
     request_id = uuid4()
-    first = action(game['alice'], game['season'], 'treasury_deposit', amount=600, request_id=request_id)
-    retry = action(game['alice'], game['season'], 'treasury_deposit', amount=600, request_id=request_id)
+    first = action(game['alice'], game['tournament'], 'treasury_deposit', amount=600, request_id=request_id)
+    retry = action(game['alice'], game['tournament'], 'treasury_deposit', amount=600, request_id=request_id)
     assert first['viewer']['wallet_balance'] == retry['viewer']['wallet_balance'] == 400
-    action(game['alice'], game['season'], 'treasury_deposit', amount=601, request_id=request_id, expected=409)
+    action(game['alice'], game['tournament'], 'treasury_deposit', amount=601, request_id=request_id, expected=409)
     wallet.refresh_from_db()
     assert wallet.balance == 400
     tribe = next(t for t in retry['tribes'] if t['id'] == game['alice_tribe'])
@@ -112,7 +119,7 @@ def test_actual_wallet_funding_is_idempotent_and_never_granted(active_game):
 
 def test_recruitment_cannot_take_treasury_funds_before_roster_locks(tribes_game):
     game = tribes_game
-    action(game['alice'], game['season'], 'treasury_deposit', amount=100, expected=400)
+    action(game['alice'], game['tournament'], 'treasury_deposit', amount=100, expected=400)
     game['alice_wallet'].refresh_from_db()
     assert game['alice_wallet'].balance == 1000
 
@@ -120,37 +127,39 @@ def test_recruitment_cannot_take_treasury_funds_before_roster_locks(tribes_game)
 @pytest.mark.parametrize('amount', [True, False, 0, -1, 1.5, '1', 10**20])
 def test_treasury_rejects_invalid_amounts_without_mutation(active_game, amount):
     game = active_game
-    action(game['alice'], game['season'], 'treasury_deposit', amount=amount, expected=400)
+    action(game['alice'], game['tournament'], 'treasury_deposit', amount=amount, expected=400)
     game['alice_wallet'].refresh_from_db()
     assert game['alice_wallet'].balance == 1000
 
 
 def test_roster_and_founder_permissions_lock_at_start(active_game):
     game = active_game
-    action(game['alice'], game['season'], 'leave', expected=400)
-    action(game['alice'], game['season'], 'invite', username='dmitry', expected=400)
-    action(game['bob'], game['season'], 'apply', tribe_id=game['alice_tribe'], expected=400)
-    action(game['alice'], game['season'], 'update_tribe', name='Changed', expected=400)
-    assert snapshot(game['alice'], game['season'])['viewer']['tribe_id'] == game['alice_tribe']
+    action(game['alice'], game['tournament'], 'leave', expected=400)
+    action(game['alice'], game['tournament'], 'invite', username='dmitry', expected=400)
+    action(game['bob'], game['tournament'], 'apply', tribe_id=game['alice_tribe'], expected=400)
+    action(game['alice'], game['tournament'], 'update_tribe', name='Changed', expected=400)
+    assert snapshot(game['alice'], game['tournament'])['viewer']['tribe_id'] == game['alice_tribe']
 
 
 @pytest.mark.parametrize('item', [[], {}, None, True, 123])
 def test_malformed_building_item_is_a_validation_error(active_game, item):
     game = active_game
-    own_plot = next(p for p in snapshot(game['alice'], game['season'])['plots'] if p['tribe_id'] == game['alice_tribe'])
-    action(game['alice'], game['season'], 'queue', kind='build', item=item, plot_id=own_plot['id'], expected=400)
+    own_plot = next(
+        p for p in snapshot(game['alice'], game['tournament'])['plots'] if p['tribe_id'] == game['alice_tribe']
+    )
+    action(game['alice'], game['tournament'], 'queue', kind='build', item=item, plot_id=own_plot['id'], expected=400)
 
 
 def test_public_and_rival_views_never_expose_treasury_or_correspondence(active_game):
     game = active_game
-    alice, bob, season = game['alice'], game['bob'], game['season']
-    action(alice, season, 'treasury_deposit', amount=123)
-    action(alice, season, 'message', to_tribe_id=game['alice_tribe'], text='Private military plan')
-    action(bob, season, 'message', to_tribe_id=game['alice_tribe'], text='A diplomatic proposal')
-    own = snapshot(alice, season)
-    rival = snapshot(bob, season)
-    stranger = snapshot(client_for(baker.make('users.User')), season)
-    public = snapshot(client_for(), season)
+    alice, bob, tournament = game['alice'], game['bob'], game['tournament']
+    action(alice, tournament, 'treasury_deposit', amount=123)
+    action(alice, tournament, 'message', to_tribe_id=game['alice_tribe'], text='Private military plan')
+    action(bob, tournament, 'message', to_tribe_id=game['alice_tribe'], text='A diplomatic proposal')
+    own = snapshot(alice, tournament)
+    rival = snapshot(bob, tournament)
+    stranger = snapshot(client_for(baker.make('users.User')), tournament)
+    public = snapshot(client_for(), tournament)
     assert {'Private military plan', 'A diplomatic proposal'} <= {m['text'] for m in own['messages']}
     assert {m['text'] for m in rival['messages']} == {'A diplomatic proposal'}
     for state in (stranger, public):
@@ -165,14 +174,14 @@ def test_public_and_rival_views_never_expose_treasury_or_correspondence(active_g
 
 def test_unit_targets_are_secret_and_transfers_clear_control_and_target(active_game):
     game = active_game
-    season = game['season']
-    season.refresh_from_db()
-    own_plot = next(p for p in season.state['plots'] if p['tribe_id'] == game['alice_tribe'])
-    other_plot = next(p for p in season.state['plots'] if p['tribe_id'] == game['bob_tribe'])
+    tournament = game['tournament']
+    tournament.refresh_from_db()
+    own_plot = next(p for p in tournament.state['plots'] if p['tribe_id'] == game['alice_tribe'])
+    other_plot = next(p for p in tournament.state['plots'] if p['tribe_id'] == game['bob_tribe'])
     other_plot.update(x=own_plot['x'] + 1, y=own_plot['y'] + 1)
-    unit_id = season.state['next_id']
-    season.state['next_id'] += 1
-    season.state['units'].append(
+    unit_id = tournament.state['next_id']
+    tournament.state['next_id'] += 1
+    tournament.state['units'].append(
         {
             'id': unit_id,
             'tribe_id': game['alice_tribe'],
@@ -183,14 +192,14 @@ def test_unit_targets_are_secret_and_transfers_clear_control_and_target(active_g
             'target_id': game['bob_tribe'],
         }
     )
-    season.save(update_fields=['state'])
-    own = snapshot(game['alice'], season)['units'][0]
+    tournament.save(update_fields=['state'])
+    own = snapshot(game['alice'], tournament)['units'][0]
     assert own['target_id'] == game['bob_tribe']
     for viewer in (game['bob'], client_for()):
-        assert 'target_id' not in snapshot(viewer, season)['units'][0]
+        assert 'target_id' not in snapshot(viewer, tournament)['units'][0]
     action(
         game['bob'],
-        season,
+        tournament,
         'deploy',
         unit_id=unit_id,
         plot_id=other_plot['id'],
@@ -199,53 +208,53 @@ def test_unit_targets_are_secret_and_transfers_clear_control_and_target(active_g
     )
     action(
         game['alice'],
-        season,
+        tournament,
         'transfer_unit',
         unit_id=unit_id,
         recipient_user_id=game['bob_wallet'].owner_id,
         plot_id=other_plot['id'],
     )
-    received = snapshot(game['bob'], season)['units'][0]
+    received = snapshot(game['bob'], tournament)['units'][0]
     assert received['target_id'] is None
     assert received['controller_id'] == game['bob_wallet'].owner_id
     assert received['tribe_id'] == game['bob_tribe']
     assert received['quantity'] == 3
-    action(game['alice'], season, 'deploy', unit_id=unit_id, plot_id=own_plot['id'], expected=403)
+    action(game['alice'], tournament, 'deploy', unit_id=unit_id, plot_id=own_plot['id'], expected=403)
 
 
 def test_gathering_progress_is_retained_when_cancelled_and_does_not_repeat(active_game):
     game = active_game
-    season = game['season']
-    own_plot = next(p for p in snapshot(game['alice'], season)['plots'] if p['tribe_id'] == game['alice_tribe'])
+    tournament = game['tournament']
+    own_plot = next(p for p in snapshot(game['alice'], tournament)['plots'] if p['tribe_id'] == game['alice_tribe'])
     now = timezone.now()
     with freeze_time(now):
         state = action(
-            game['alice'], season, 'queue', kind='gather', plot_id=own_plot['id'], hours=4, destination='personal'
+            game['alice'], tournament, 'queue', kind='gather', plot_id=own_plot['id'], hours=4, destination='personal'
         )
         job_id = state['jobs'][0]['id']
     with freeze_time(now + timedelta(hours=1, minutes=15)):
-        state = action(game['alice'], season, 'cancel_job', job_id=job_id)
+        state = action(game['alice'], tournament, 'cancel_job', job_id=job_id)
         assert state['viewer']['inventory']['wheat'] == 12
         assert state['jobs'][0]['completed'] == 12
         assert state['jobs'][0]['status'] == 'cancelled'
     with freeze_time(now + timedelta(hours=5)):
-        state = snapshot(game['alice'], season)
+        state = snapshot(game['alice'], tournament)
         assert state['viewer']['inventory']['wheat'] == 12
         assert state['viewer']['production']['wheat'] == 12
 
 
 def test_crafting_cancellation_returns_only_unfinished_materials(active_game):
     game = active_game
-    season = game['season']
-    season.refresh_from_db()
-    season.state['players'][str(game['alice_wallet'].owner_id)]['inventory']['timber'] = 20
-    season.save(update_fields=['state'])
-    own_plot = next(p for p in season.state['plots'] if p['tribe_id'] == game['alice_tribe'])
+    tournament = game['tournament']
+    tournament.refresh_from_db()
+    tournament.state['players'][str(game['alice_wallet'].owner_id)]['inventory']['timber'] = 20
+    tournament.save(update_fields=['state'])
+    own_plot = next(p for p in tournament.state['plots'] if p['tribe_id'] == game['alice_tribe'])
     now = timezone.now()
     with freeze_time(now):
         state = action(
             game['alice'],
-            season,
+            tournament,
             'queue',
             kind='craft',
             item='lumber',
@@ -257,65 +266,64 @@ def test_crafting_cancellation_returns_only_unfinished_materials(active_game):
         job_id = state['jobs'][0]['id']
         assert state['viewer']['inventory']['timber'] == 0
     with freeze_time(now + timedelta(minutes=5)):
-        state = action(game['alice'], season, 'cancel_job', job_id=job_id)
+        state = action(game['alice'], tournament, 'cancel_job', job_id=job_id)
         assert state['viewer']['inventory']['lumber'] == 2
         assert state['viewer']['inventory']['timber'] == 16
-        action(game['alice'], season, 'cancel_job', job_id=job_id, expected=400)
+        action(game['alice'], tournament, 'cancel_job', job_id=job_id, expected=400)
     with freeze_time(now + timedelta(hours=1)):
-        assert snapshot(game['alice'], season)['viewer']['inventory'] == {'timber': 16, 'lumber': 2}
+        assert snapshot(game['alice'], tournament)['viewer']['inventory'] == {'timber': 16, 'lumber': 2}
 
 
 def test_cutoff_refunds_treasury_and_buy_escrow_once_and_replays_receipt(active_game):
     game = active_game
-    alice, season, wallet = game['alice'], game['season'], game['alice_wallet']
+    alice, tournament, wallet = game['alice'], game['tournament'], game['alice_wallet']
     request_id = uuid4()
-    action(alice, season, 'treasury_deposit', amount=333, request_id=request_id)
-    action(alice, season, 'create_listing', kind='buy', item='coal', quantity=10, price=7, account='personal')
-    action(alice, season, 'create_listing', kind='buy', item='wheat', quantity=10, price=3, account='tribe')
+    action(alice, tournament, 'treasury_deposit', amount=333, request_id=request_id)
+    action(alice, tournament, 'create_listing', kind='buy', item='coal', quantity=10, price=7, account='personal')
+    action(alice, tournament, 'create_listing', kind='buy', item='wheat', quantity=10, price=3, account='tribe')
     wallet.refresh_from_db()
     assert wallet.balance == 597
-    with freeze_time(season.ends_at + timedelta(days=2)):
+    with freeze_time(tournament.ends_at + timedelta(days=2)):
         for _ in range(2):
-            state = snapshot(alice, season)
-            assert state['season']['status'] == 'finished'
+            state = snapshot(alice, tournament)
+            assert state['tournament']['status'] == 'finished'
             assert state['viewer']['wallet_balance'] == 1000
-        action(alice, season, 'treasury_deposit', amount=333, request_id=request_id)
-        action(alice, season, 'treasury_deposit', amount=1, expected=400)
-        new = alice.get('/api/tribes/state').data
-        assert new['season']['id'] != season.pk
-        assert new['viewer']['inventory'] == {}
-        assert new['viewer']['tribe_id'] is None
-        assert new['viewer']['wallet_balance'] == 1000
-    season.refresh_from_db()
-    assert season.total_deposited == season.total_withdrawn
-    assert all(t['treasury'] == 0 for t in season.state['tribes'])
+        action(alice, tournament, 'treasury_deposit', amount=333, request_id=request_id)
+        action(alice, tournament, 'treasury_deposit', amount=1, expected=400)
+        assert alice.get('/api/tribes/state').status_code == 400
+        assert Tournament.objects.count() == 1
+    tournament.refresh_from_db()
+    assert tournament.total_deposited == tournament.total_withdrawn
+    assert all(t['treasury'] == 0 for t in tournament.state['tribes'])
 
 
 def test_late_worker_wakeup_cannot_produce_beyond_final_cutoff(active_game):
     game = active_game
-    season = game['season']
-    own_plot = next(p for p in snapshot(game['alice'], season)['plots'] if p['tribe_id'] == game['alice_tribe'])
+    tournament = game['tournament']
+    own_plot = next(p for p in snapshot(game['alice'], tournament)['plots'] if p['tribe_id'] == game['alice_tribe'])
     now = timezone.now()
     with freeze_time(now):
-        action(game['alice'], season, 'queue', kind='gather', plot_id=own_plot['id'], hours=4, destination='personal')
+        action(
+            game['alice'], tournament, 'queue', kind='gather', plot_id=own_plot['id'], hours=4, destination='personal'
+        )
     # A shortened administrative deadline, or an old queued assignment crossing
     # a changed schedule, must still obey the server's absolute cutoff.
-    season.ends_at = now + timedelta(hours=1)
-    season.save(update_fields=['ends_at'])
+    tournament.ends_at = now + timedelta(hours=1)
+    tournament.save(update_fields=['ends_at'])
     with freeze_time(now + timedelta(days=2)):
-        first = snapshot(game['alice'], season)
-        second = snapshot(game['alice'], season)
-    assert first['season']['status'] == 'finished'
+        first = snapshot(game['alice'], tournament)
+        second = snapshot(game['alice'], tournament)
+    assert first['tournament']['status'] == 'finished'
     assert first['viewer']['inventory']['wheat'] == second['viewer']['inventory']['wheat'] == 10
 
 
 def test_military_market_conserves_units_tnb_and_target_privacy(active_game):
     game = active_game
-    season = game['season']
+    tournament = game['tournament']
     unit_id, _ = seed_army(game)
     created = action(
         game['alice'],
-        season,
+        tournament,
         'create_listing',
         kind='sell',
         item='catapult',
@@ -325,7 +333,7 @@ def test_military_market_conserves_units_tnb_and_target_privacy(active_game):
         account='personal',
     )
     listing = next(row for row in created['listings'] if row['item'] == 'catapult')
-    public_listing = next(row for row in snapshot(client_for(), season)['listings'] if row['id'] == listing['id'])
+    public_listing = next(row for row in snapshot(client_for(), tournament)['listings'] if row['id'] == listing['id'])
     assert 'target_id' not in public_listing
     assert 'target_id' not in public_listing.get('escrow_unit', {})
     buyer_plot = next(p for p in created['plots'] if p['tribe_id'] == game['bob_tribe'])
@@ -333,7 +341,7 @@ def test_military_market_conserves_units_tnb_and_target_privacy(active_game):
     for _ in range(2):
         bought = action(
             game['bob'],
-            season,
+            tournament,
             'fill_listing',
             listing_id=listing['id'],
             quantity=3,
@@ -344,7 +352,7 @@ def test_military_market_conserves_units_tnb_and_target_privacy(active_game):
     purchased = [u for u in bought['units'] if u['tribe_id'] == game['bob_tribe']]
     assert sum(u['quantity'] for u in purchased) == 3
     assert all(u['controller_id'] == game['bob_wallet'].owner_id and u['target_id'] is None for u in purchased)
-    cancelled = action(game['alice'], season, 'cancel_listing', listing_id=listing['id'])
+    cancelled = action(game['alice'], tournament, 'cancel_listing', listing_id=listing['id'])
     assert sum(u['quantity'] for u in cancelled['units']) == 10
     assert sum(u['quantity'] for u in cancelled['units'] if u['tribe_id'] == game['alice_tribe']) == 7
     for wallet in (game['alice_wallet'], game['bob_wallet']):
@@ -354,12 +362,12 @@ def test_military_market_conserves_units_tnb_and_target_privacy(active_game):
 
 def test_military_sale_capacity_failure_does_not_charge_or_consume_listing(active_game):
     game = active_game
-    season = game['season']
+    tournament = game['tournament']
     unit_id, _ = seed_army(game)
     _, buyer_plot_id = seed_army(game, owner='bob', quantity=100)
     created = action(
         game['alice'],
-        season,
+        tournament,
         'create_listing',
         kind='sell',
         item='catapult',
@@ -371,7 +379,7 @@ def test_military_sale_capacity_failure_does_not_charge_or_consume_listing(activ
     listing = next(row for row in created['listings'] if row['item'] == 'catapult')
     action(
         game['bob'],
-        season,
+        tournament,
         'fill_listing',
         listing_id=listing['id'],
         quantity=1,
@@ -379,7 +387,7 @@ def test_military_sale_capacity_failure_does_not_charge_or_consume_listing(activ
         plot_id=buyer_plot_id,
         expected=400,
     )
-    final = snapshot(game['bob'], season)
+    final = snapshot(game['bob'], tournament)
     assert next(row for row in final['listings'] if row['id'] == listing['id'])['quantity'] == 10
     for wallet in (game['alice_wallet'], game['bob_wallet']):
         wallet.refresh_from_db()
@@ -388,12 +396,12 @@ def test_military_sale_capacity_failure_does_not_charge_or_consume_listing(activ
 
 def test_military_sale_reserves_origin_capacity_until_cancellation(active_game):
     game = active_game
-    season = game['season']
+    tournament = game['tournament']
     seller_unit, seller_plot = seed_army(game, quantity=100)
     buyer_unit, _ = seed_army(game, owner='bob', quantity=1)
     created = action(
         game['alice'],
-        season,
+        tournament,
         'create_listing',
         kind='sell',
         item='catapult',
@@ -405,14 +413,14 @@ def test_military_sale_reserves_origin_capacity_until_cancellation(active_game):
     listing = next(row for row in created['listings'] if row['item'] == 'catapult')
     action(
         game['bob'],
-        season,
+        tournament,
         'transfer_unit',
         unit_id=buyer_unit,
         plot_id=seller_plot,
         recipient_user_id=game['alice_wallet'].owner_id,
         expected=400,
     )
-    restored = action(game['alice'], season, 'cancel_listing', listing_id=listing['id'])
+    restored = action(game['alice'], tournament, 'cancel_listing', listing_id=listing['id'])
     assert sum(u['quantity'] for u in restored['units'] if u['tribe_id'] == game['alice_tribe']) == 100
 
 

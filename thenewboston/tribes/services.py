@@ -1,7 +1,7 @@
 """Authoritative Tribes state machine.
 
-World -> Season -> Wallet (sorted owner IDs) is the lock order. The single world
-lock deliberately serializes the MVP's economy, production, and final battle.
+Tournament -> Wallet (sorted owner IDs) is the lock order. Each tournament has
+its own lock; shared wallet row locks prevent spending across games twice.
 Every real TNB movement has a permanent ledger entry and conservation is checked
 before committing. Clients never supply balances, rates, output, or combat scores.
 """
@@ -12,7 +12,6 @@ import json
 import logging
 import math
 import random
-import re
 from datetime import timedelta
 from uuid import UUID
 
@@ -27,7 +26,7 @@ from thenewboston.general.utils.image import process_image, validate_image_dimen
 from thenewboston.users.models import User
 from thenewboston.wallets.models import Wallet
 
-from .models import ActionReceipt, Activity, MoneyEntry, Season, World
+from .models import ActionReceipt, Activity, MoneyEntry, Tournament, TournamentParticipant
 from .rules import (
     BUILDING_CAPACITY,
     BUILDINGS,
@@ -112,7 +111,7 @@ def _find(rows, item_id, label):
 def _tribe(state, user_id, required=True):
     tribe = next((t for t in state['tribes'] if any(m['id'] == user_id for m in t['members'])), None)
     if tribe is None and required:
-        raise ValidationError('Join a tribe during recruitment first.')
+        raise ValidationError('An administrator must assign you to a tribe first.')
     return tribe
 
 
@@ -122,8 +121,8 @@ def _player(state, user):
     )
 
 
-def _log(season, tribe_id, user_id, text):
-    Activity.objects.create(season=season, tribe_id=tribe_id, user_id=user_id, text=text)
+def _log(tournament, tribe_id, user_id, text):
+    Activity.objects.create(tournament=tournament, tribe_id=tribe_id, user_id=user_id, text=text)
 
 
 def _name(item):
@@ -159,71 +158,63 @@ def _publish(wallet):
     transaction.on_commit(publish)
 
 
-def _wallets(season, user_ids):
-    if season.currency_id is None:
-        season.currency = Currency.objects.filter(ticker='TNB').first()
-    if season.currency is None:
+def _wallets(tournament, user_ids):
+    if tournament.currency_id is None:
+        tournament.currency = Currency.objects.filter(ticker='TNB').first()
+    if tournament.currency is None:
         raise ValidationError('TNB is not configured yet.')
     wallets = {}
     for user_id in sorted(set(user_ids)):
-        wallets[user_id], _ = Wallet.objects.get_or_create(owner_id=user_id, currency=season.currency, _for_update=True)
+        wallets[user_id], _ = Wallet.objects.get_or_create(
+            owner_id=user_id, currency=tournament.currency, _for_update=True
+        )
     return wallets
 
 
-def _money(season, wallet, amount, reason):
-    """Positive amount moves wallet coins into season reserve; negative pays out."""
+def _money(tournament, wallet, amount, reason):
+    """Positive amount moves wallet coins into tournament reserve; negative pays out."""
     if amount > 0 and wallet.balance < amount:
         raise ValidationError('Not enough TNB in your wallet.')
     if wallet.balance - amount > MAX_TOTAL:
         raise ValidationError('Wallet balance limit reached.')
     if amount > 0:
-        season.total_deposited += amount
+        tournament.total_deposited += amount
     else:
-        season.total_withdrawn -= amount
-    if max(season.total_deposited, season.total_withdrawn) > MAX_TOTAL:
-        raise ValidationError('Season payment limit reached.')
+        tournament.total_withdrawn -= amount
+    if max(tournament.total_deposited, tournament.total_withdrawn) > MAX_TOTAL:
+        raise ValidationError('Tournament payment limit reached.')
     wallet.change_balance(-amount, should_stream=False)
-    MoneyEntry.objects.create(season=season, wallet=wallet, amount=amount, reason=reason)
+    MoneyEntry.objects.create(tournament=tournament, wallet=wallet, amount=amount, reason=reason)
     _publish(wallet)
 
 
-def _pay(season, tribe, user_id, account, amount, wallets, reason):
+def _pay(tournament, tribe, user_id, account, amount, wallets, reason):
     if account == 'tribe':
         if tribe['treasury'] < amount:
             raise ValidationError('Not enough TNB in the treasury.')
         tribe['treasury'] -= amount
     else:
-        _money(season, wallets[user_id], amount, reason)
+        _money(tournament, wallets[user_id], amount, reason)
 
 
-def _credit(season, tribe, user_id, account, amount, wallets, reason):
+def _credit(tournament, tribe, user_id, account, amount, wallets, reason):
     if account == 'tribe':
         tribe['treasury'] += amount
     else:
-        _money(season, wallets[user_id], -amount, reason)
+        _money(tournament, wallets[user_id], -amount, reason)
 
 
-def _conserve(season):
-    held = sum(t['treasury'] for t in season.state['tribes'])
+def _conserve(tournament):
+    held = sum(t['treasury'] for t in tournament.state['tribes'])
     held += sum(
-        listing['quantity'] * listing['price'] for listing in season.state['listings'] if listing['kind'] == 'buy'
+        listing['quantity'] * listing['price'] for listing in tournament.state['listings'] if listing['kind'] == 'buy'
     )
-    if season.total_deposited != season.total_withdrawn + season.system_revenue + held:
+    if tournament.total_deposited != tournament.total_withdrawn + tournament.system_revenue + held:
         raise RuntimeError('Tribes TNB conservation check failed.')
 
 
-def _new_season(now):
-    starts = now + timedelta(days=1)
-    return Season.objects.create(starts_at=starts, ends_at=starts + timedelta(days=7), state=new_state())
-
-
-def _lock_world():
-    World.objects.get_or_create(pk=1)
-    return World.objects.select_for_update().get(pk=1)
-
-
-def _start(season):
-    state = season.state
+def _start(tournament):
+    state = tournament.state
     count = len(state['tribes'])
     width = max(1, math.ceil(math.sqrt(count)))
     # Equal 5x5 home regions, surrounded by a one-tile border. Each region gets
@@ -252,8 +243,7 @@ def _start(season):
         home.update(tribe_id=tribe['id'], terrain='plains', price=0)
         for terrain, (dx, dy) in zip(resources, offsets):
             by_position[x + dx, y + dy].update(terrain=terrain, price=LAND[terrain]['price'])
-        tribe['applications'], tribe['invites'] = [], []
-        _log(season, tribe['id'], None, 'The season began. Rosters are locked and your home plot is ready.')
+        _log(tournament, tribe['id'], None, 'The tournament began. Rosters are locked and your home plot is ready.')
     players = sum(len(t['members']) for t in state['tribes'])
     for item, (per_player, price) in OPENING_STOCK.items():
         state['listings'].append(
@@ -268,11 +258,11 @@ def _start(season):
                 'account': 'tribe',
             }
         )
-    season.status = 'active'
+    tournament.status = 'active'
 
 
-def _produce(season, until):
-    state = season.state
+def _produce(tournament, until):
+    state = tournament.state
     for job in sorted(state['jobs'], key=lambda j: (j['start_at'], j['id'])):
         if job['status'] in ('completed', 'cancelled'):
             continue
@@ -320,15 +310,22 @@ def _produce(season, until):
                     order['contributed'] = min(order['quantity'], order['contributed'] + delta)
                     if order['contributed'] == order['quantity']:
                         order['status'] = 'completed'
-                        _log(season, tribe['id'], job['user_id'], f'Completed production work order: {order["title"]}.')
+                        _log(
+                            tournament,
+                            tribe['id'],
+                            job['user_id'],
+                            f'Completed production work order: {order["title"]}.',
+                        )
             job['completed'] = produced
         job['status'] = 'completed' if until >= end else 'working'
         if job['status'] == 'completed':
-            _log(season, tribe['id'], job['user_id'], f'Completed {job["quantity"]} {job["item"].replace("_", " ")}.')
+            _log(
+                tournament, tribe['id'], job['user_id'], f'Completed {job["quantity"]} {job["item"].replace("_", " ")}.'
+            )
 
 
-def _finish(season):
-    state = season.state
+def _finish(tournament):
+    state = tournament.state
     state['battle'] = resolve_battle(state['tribes'], state['units'], state['plots'])
     refunds = {}
     for listing in state['listings']:
@@ -350,48 +347,62 @@ def _finish(season):
                     refunds[user_id] = refunds.get(user_id, 0) + amount
             tribe['treasury'] = 0
         _log(
-            season,
+            tournament,
             tribe['id'],
             None,
             'The Great War is complete. Remaining treasury TNB was divided equally among the roster.',
         )
     if refunds:
-        wallets = _wallets(season, refunds)
+        wallets = _wallets(tournament, refunds)
         for user_id, amount in sorted(refunds.items()):
-            _money(season, wallets[user_id], -amount, 'season_refund')
-    season.status = 'finished'
+            _money(tournament, wallets[user_id], -amount, 'tournament_refund')
+    tournament.status = 'finished'
 
 
-def _advance(season, now):
-    if season.status == 'recruiting' and now >= season.starts_at:
-        _start(season)
-    if season.status == 'active':
-        _produce(season, min(now, season.ends_at))
-        if now >= season.ends_at:
-            _finish(season)
-    _conserve(season)
-    season.save()
+def _advance(tournament, now):
+    if tournament.status == 'upcoming' and now >= tournament.starts_at:
+        _start(tournament)
+    if tournament.status == 'active':
+        _produce(tournament, min(now, tournament.ends_at))
+        if now >= tournament.ends_at:
+            _finish(tournament)
+    _conserve(tournament)
+    tournament.save()
 
 
 @transaction.atomic
-def tick_world():
-    _lock_world()
-    now = timezone.now()
-    season = Season.objects.select_for_update().order_by('-id').first()
-    if season is None:
-        season = _new_season(now)
-    _advance(season, now)
-    if season.status == 'finished':
-        season = _new_season(now)
-    return season.pk
+def advance_tournament(tournament_id):
+    """Commit scheduled transitions independently of any subsequent action rejection."""
+    tournament = _locked_tournament(tournament_id)
+    _advance(tournament, timezone.now())
+    return tournament
 
 
-def season_summary(season):
+def sweep_tournaments():
+    """A failed game must not prevent unrelated games from starting or finishing."""
+    processed, failed = [], []
+    for tournament_id in Tournament.objects.exclude(status='finished').order_by('id').values_list('id', flat=True):
+        try:
+            advance_tournament(tournament_id)
+        except Exception:
+            logger.exception('Could not advance Tribes tournament %s', tournament_id)
+            failed.append(tournament_id)
+        else:
+            processed.append(tournament_id)
+    return {'processed': processed, 'failed': failed}
+
+
+def tournament_summary(tournament, user=None):
+    user_id = user.pk if user is not None and user.is_authenticated else None
     return {
-        'id': season.pk,
-        'status': season.status,
-        'starts_at': season.starts_at.isoformat(),
-        'ends_at': season.ends_at.isoformat(),
+        'id': tournament.pk,
+        'title': tournament.title,
+        'status': tournament.status,
+        'starts_at': tournament.starts_at.isoformat(),
+        'ends_at': tournament.ends_at.isoformat(),
+        'max_players': tournament.max_players,
+        'player_count': tournament.participants.count(),
+        'is_participant': bool(user_id and tournament.participants.filter(user_id=user_id).exists()),
     }
 
 
@@ -404,32 +415,25 @@ def _media_url(name, request=None):
 
 
 def _avatars(user_ids, request=None):
-    """Current avatars by user ID. The season only stores IDs and names, so a new avatar shows at once."""
+    """Current avatars by user ID. The tournament only stores IDs and names, so a new avatar shows at once."""
     wanted = {user_id for user_id in user_ids if user_id is not None}
     rows = User.objects.filter(pk__in=wanted).exclude(avatar='').values_list('pk', 'avatar')
     return {user_id: _media_url(name, request) for user_id, name in rows}
 
 
-def _serialize(season, user, request=None):
-    state = copy.deepcopy(season.state)
+def _serialize(tournament, user, request=None):
+    state = copy.deepcopy(tournament.state)
     user_id = user.pk if user is not None and user.is_authenticated else None
     own = _tribe(state, user_id, required=False)
     own_id = own['id'] if own else None
-    invitations, applications = [], []
     for tribe in state['tribes']:
         tribe['emblem_image'] = _media_url(tribe.get('emblem_image'), request)
-        if any(m['id'] == user_id for m in tribe['invites']):
-            invitations.append({'tribe_id': tribe['id'], 'name': tribe['name']})
-        if any(m['id'] == user_id for m in tribe['applications']):
-            applications.append({'tribe_id': tribe['id'], 'name': tribe['name']})
         if tribe['id'] != own_id:
             tribe['treasury'], tribe['inventory'] = None, None
-        if tribe['founder_id'] != user_id:
-            tribe['applications'], tribe['invites'] = [], []
     plots = {p['id']: p for p in state['plots']}
     for unit in state['units']:
         unit.pop('job_id', None)
-        if unit['tribe_id'] != own_id and season.status != 'finished':
+        if unit['tribe_id'] != own_id and tournament.status != 'finished':
             unit.pop('target_id', None)
         unit['valid_target_ids'] = []
         if unit['item'] in UNITS:
@@ -450,7 +454,7 @@ def _serialize(season, user, request=None):
     ]
     for job in jobs:
         job.pop('inputs', None)
-        if job['tribe_id'] != own_id and season.status != 'finished':
+        if job['tribe_id'] != own_id and tournament.status != 'finished':
             job.pop('target_id', None)
     messages = [m for m in state['messages'] if own_id is not None and own_id in (m['from_tribe_id'], m['to_tribe_id'])]
     messages = messages[-200:]
@@ -465,9 +469,9 @@ def _serialize(season, user, request=None):
                 'text': a.text,
                 'created_at': a.created_at.isoformat(),
             }
-            for a in season.activity.filter(tribe_id=own_id).select_related('user').order_by('-id')[:200]
+            for a in tournament.activity.filter(tribe_id=own_id).select_related('user').order_by('-id')[:200]
         ]
-    people = [m for t in state['tribes'] for group in ('members', 'applications', 'invites') for m in t[group]]
+    people = [m for t in state['tribes'] for m in t['members']]
     avatars = _avatars(
         [p['id'] for p in people] + [row['user_id'] for row in (*messages, *activity)] + [user_id], request
     )
@@ -486,16 +490,15 @@ def _serialize(season, user, request=None):
             **player,
             'avatar': avatars.get(user_id),
             'tribe_id': own_id,
+            'is_participant': tournament.participants.filter(user_id=user_id).exists(),
             'wallet_balance': wallet.balance if wallet else 0,
         }
     return {
-        'season': season_summary(season),
+        'tournament': tournament_summary(tournament, user),
         'server_time': timezone.now().isoformat(),
         'catalog': catalog(),
         'viewer': viewer,
         'tribes': state['tribes'],
-        'invitations': invitations,
-        'applications': applications,
         'plots': state['plots'],
         'jobs': [j for j in jobs if j['tribe_id'] == own_id and j['status'] in ('working', 'queued')]
         + [j for j in jobs if not (j['tribe_id'] == own_id and j['status'] in ('working', 'queued'))][-500:],
@@ -508,118 +511,185 @@ def _serialize(season, user, request=None):
     }
 
 
-def get_state(user=None, season_id=None, request=None):
-    current_id = tick_world()
+def get_state(user=None, tournament_id=None, request=None):
+    if tournament_id is None:
+        raise ValidationError({'tournament_id': 'Select a tournament.'})
     try:
-        season = Season.objects.get(pk=season_id or current_id)
-    except (Season.DoesNotExist, ValueError, TypeError):
-        raise NotFound('Season not found.')
-    return _serialize(season, user, request)
+        tournament_id = int(tournament_id)
+    except (ValueError, TypeError):
+        raise ValidationError({'tournament_id': 'Enter a valid tournament ID.'})
+    tournament = advance_tournament(tournament_id)
+    return _serialize(tournament, user, request)
 
 
-def _recruit(season, user, action, data):
-    state = season.state
-    tribe = _tribe(state, user.pk, required=False)
-    if action == 'create_tribe':
-        if tribe:
-            raise ValidationError('You already belong to a tribe.')
-        tribe = {
-            'id': _id(state),
-            'name': '',
-            'emblem': '🛡️',
-            'emblem_image': None,
-            'color': '#46634a',
-            'description': '',
-            'motto': '',
-            'founder_id': user.pk,
-            'members': [{'id': user.pk, 'username': user.username}],
-            'treasury': 0,
-            'inventory': {},
-            'applications': [],
-            'invites': [],
-        }
-        state['tribes'].append(tribe)
-        _player(state, user)
-    if action in ('create_tribe', 'update_tribe'):
-        if not tribe or tribe['founder_id'] != user.pk:
-            raise PermissionDenied('Only the founder can edit recruitment details.')
-        name = _text(data, 'name', 40, required=True)
-        if any(t['id'] != tribe['id'] and t['name'].casefold() == name.casefold() for t in state['tribes']):
-            raise ValidationError('A tribe already uses this name.')
-        tribe.update(
-            name=name,
-            emblem=_text(data, 'emblem', 8, tribe['emblem']),
-            description=_text(data, 'description', 500),
-            motto=_text(data, 'motto', 120),
-            color=_text(data, 'color', 7, '#46634a'),
-        )
-        if not re.fullmatch(r'#[0-9a-fA-F]{6}', tribe['color']):
-            raise ValidationError('Choose a six-digit hex tribe color.')
-    elif action in ('apply', 'accept_invite'):
-        if tribe:
-            raise ValidationError('Leave your current tribe first.')
-        target = _find(state['tribes'], _integer(data, 'tribe_id'), 'Tribe')
-        member = {'id': user.pk, 'username': user.username}
-        if action == 'apply':
-            if not any(m['id'] == user.pk for m in target['applications']):
-                target['applications'].append(member)
-        else:
-            if not any(m['id'] == user.pk for m in target['invites']):
-                raise PermissionDenied('This tribe has not invited you.')
-            _join(state, target, user)
-        tribe = target
-    elif action in ('invite', 'accept_application', 'remove_member'):
-        if not tribe or tribe['founder_id'] != user.pk:
-            raise PermissionDenied('Only the founder can manage recruitment.')
-        if action == 'invite':
-            target = User.objects.filter(
-                username__iexact=_text(data, 'username', 150, required=True), is_active=True
-            ).first()
-            if target is None:
-                raise NotFound('Player not found.')
-            if _tribe(state, target.pk, False):
-                raise ValidationError('That player already belongs to a tribe.')
-            if not any(m['id'] == target.pk for m in tribe['invites']):
-                tribe['invites'].append({'id': target.pk, 'username': target.username})
-        else:
-            target_id = _integer(data, 'user_id')
-            if action == 'accept_application':
-                if not any(m['id'] == target_id for m in tribe['applications']):
-                    raise ValidationError('No application from that player.')
-                target = User.objects.filter(pk=target_id, is_active=True).first()
-                if target is None:
-                    raise ValidationError('Player is unavailable.')
-                _join(state, tribe, target)
-            else:
-                if target_id == user.pk:
-                    raise ValidationError('Use Leave to leave your tribe.')
-                if not any(m['id'] == target_id for m in tribe['members']):
-                    raise ValidationError('Player is not a member.')
-                tribe['members'] = [m for m in tribe['members'] if m['id'] != target_id]
-    elif action == 'leave':
-        if not tribe:
-            raise ValidationError('You do not belong to a tribe.')
-        if tribe['founder_id'] == user.pk and len(tribe['members']) > 1:
-            raise ValidationError('The founder can leave only after other members have left.')
-        tribe['members'] = [m for m in tribe['members'] if m['id'] != user.pk]
-        if not tribe['members']:
-            state['tribes'].remove(tribe)
-    else:
-        raise ValidationError('Unknown recruitment action.')
-    if tribe:
-        _log(season, tribe['id'], user.pk, action.replace('_', ' ').capitalize() + '.')
+def _require_admin(actor, permission='change_tournament'):
+    if (
+        not actor
+        or not actor.is_active
+        or not actor.is_staff
+        or not (actor.is_superuser or actor.has_perm(f'tribes.{permission}'))
+    ):
+        raise PermissionDenied('Tournament administration permission is required.')
 
 
-def _join(state, tribe, user):
-    if _tribe(state, user.pk, False):
-        raise ValidationError('Player already belongs to a tribe.')
-    if len(tribe['members']) >= MAX_MEMBERS:
-        raise ValidationError('This tribe already has eight members.')
-    tribe['members'].append({'id': user.pk, 'username': user.username})
-    for other in state['tribes']:
-        other['applications'] = [m for m in other['applications'] if m['id'] != user.pk]
-        other['invites'] = [m for m in other['invites'] if m['id'] != user.pk]
-    _player(state, user)
+def _locked_tournament(tournament_id):
+    try:
+        return Tournament.objects.select_for_update().get(pk=tournament_id)
+    except (Tournament.DoesNotExist, ValueError, TypeError):
+        raise NotFound('Tournament not found.')
+
+
+def _editable_tournament(tournament_id, actor):
+    _require_admin(actor)
+    tournament = _locked_tournament(tournament_id)
+    if tournament.status != 'upcoming' or timezone.now() >= tournament.starts_at:
+        raise ValidationError('The tournament has started. Its schedule and roster are locked.')
+    return tournament
+
+
+def _configuration(*, title, starts_at, ends_at, max_players):
+    title = _text({'title': title}, 'title', 120, required=True)
+    max_players = _integer({'max_players': max_players}, 'max_players', maximum=10_000)
+    if starts_at is None or timezone.is_naive(starts_at):
+        raise ValidationError('Choose a start time with a time zone.')
+    if starts_at <= timezone.now():
+        raise ValidationError('The tournament must start in the future.')
+    ends_at = ends_at or starts_at + timedelta(days=7)
+    if timezone.is_naive(ends_at) or ends_at <= starts_at:
+        raise ValidationError('The end time must be after the start time.')
+    return {'title': title, 'starts_at': starts_at, 'ends_at': ends_at, 'max_players': max_players}
+
+
+@transaction.atomic
+def create_tournament(*, title, starts_at, max_players, actor, ends_at=None):
+    _require_admin(actor, 'add_tournament')
+    values = _configuration(title=title, starts_at=starts_at, ends_at=ends_at, max_players=max_players)
+    return Tournament.objects.create(**values, state=new_state())
+
+
+@transaction.atomic
+def update_tournament(tournament_id, *, title, starts_at, max_players, actor, ends_at=None):
+    tournament = _editable_tournament(tournament_id, actor)
+    values = _configuration(title=title, starts_at=starts_at, ends_at=ends_at, max_players=max_players)
+    if tournament.participants.count() > max_players:
+        raise ValidationError('Capacity cannot be lower than the enrolled player count.')
+    for key, value in values.items():
+        setattr(tournament, key, value)
+    tournament.save(update_fields=list(values))
+    return tournament
+
+
+def _participant(tournament, user_id):
+    try:
+        return tournament.participants.select_related('user').get(user_id=user_id).user
+    except TournamentParticipant.DoesNotExist:
+        raise ValidationError('Add this player to the tournament roster first.')
+
+
+@transaction.atomic
+def add_participant(tournament_id, user_id, *, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    if tournament.participants.filter(user_id=user_id).exists():
+        return tournament
+    if tournament.participants.count() >= tournament.max_players:
+        raise ValidationError('This tournament is full.')
+    user = User.objects.filter(pk=user_id, is_active=True).first()
+    if user is None:
+        raise ValidationError('Choose an active user.')
+    TournamentParticipant.objects.create(tournament=tournament, user=user)
+    _player(tournament.state, user)
+    tournament.save(update_fields=['state'])
+    return tournament
+
+
+def _unassign(tournament, user_id):
+    tribe = _tribe(tournament.state, user_id, required=False)
+    if tribe is None:
+        return
+    if tribe['founder_id'] == user_id and len(tribe['members']) > 1:
+        raise ValidationError('Choose a replacement captain before moving or removing this captain.')
+    tribe['members'] = [member for member in tribe['members'] if member['id'] != user_id]
+    if not tribe['members']:
+        tournament.state['tribes'].remove(tribe)
+
+
+@transaction.atomic
+def remove_participant(tournament_id, user_id, *, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    _participant(tournament, user_id)
+    _unassign(tournament, user_id)
+    tournament.participants.filter(user_id=user_id).delete()
+    tournament.state['players'].pop(str(user_id), None)
+    tournament.save(update_fields=['state'])
+    return tournament
+
+
+@transaction.atomic
+def create_tribe(tournament_id, *, name, founder_id, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    founder = _participant(tournament, founder_id)
+    if _tribe(tournament.state, founder_id, required=False):
+        raise ValidationError('The captain already belongs to a tribe in this tournament.')
+    name = _text({'name': name}, 'name', 40, required=True)
+    if any(tribe['name'].casefold() == name.casefold() for tribe in tournament.state['tribes']):
+        raise ValidationError('A tribe already uses this name.')
+    colors = ['#46634a', '#b65b45', '#467aaa', '#a778b8', '#b28b32', '#398b89', '#a54e7c', '#727780']
+    tribe = {
+        'id': _id(tournament.state),
+        'name': name,
+        'emblem': '🛡️',
+        'emblem_image': None,
+        'color': colors[len(tournament.state['tribes']) % len(colors)],
+        'description': '',
+        'motto': '',
+        'founder_id': founder_id,
+        'members': [{'id': founder.pk, 'username': founder.username}],
+        'treasury': 0,
+        'inventory': {},
+    }
+    tournament.state['tribes'].append(tribe)
+    _log(tournament, tribe['id'], actor.pk, 'Created tribe and assigned its captain.')
+    tournament.save(update_fields=['state'])
+    return tournament
+
+
+@transaction.atomic
+def assign_participant(tournament_id, user_id, tribe_id, *, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    user = _participant(tournament, user_id)
+    target = _find(tournament.state['tribes'], tribe_id, 'Tribe') if tribe_id is not None else None
+    current = _tribe(tournament.state, user_id, required=False)
+    if target is current:
+        return tournament
+    if target and len(target['members']) >= MAX_MEMBERS:
+        raise ValidationError(f'A tribe can have at most {MAX_MEMBERS} members.')
+    _unassign(tournament, user_id)
+    if target:
+        target['members'].append({'id': user.pk, 'username': user.username})
+        _log(tournament, target['id'], actor.pk, f'Assigned {user.username} to the tribe.')
+    tournament.save(update_fields=['state'])
+    return tournament
+
+
+@transaction.atomic
+def set_tribe_captain(tournament_id, tribe_id, user_id, *, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    tribe = _find(tournament.state['tribes'], tribe_id, 'Tribe')
+    if not any(member['id'] == user_id for member in tribe['members']):
+        raise ValidationError('The captain must be a member of this tribe.')
+    tribe['founder_id'] = user_id
+    _log(tournament, tribe_id, actor.pk, 'Changed the tribe captain.')
+    tournament.save(update_fields=['state'])
+    return tournament
+
+
+@transaction.atomic
+def remove_tribe(tournament_id, tribe_id, *, actor):
+    tournament = _editable_tournament(tournament_id, actor)
+    tribe = _find(tournament.state['tribes'], tribe_id, 'Tribe')
+    tournament.state['tribes'].remove(tribe)
+    tournament.save(update_fields=['state'])
+    return tournament
 
 
 def _owned_plot(state, tribe_id, plot_id):
@@ -647,8 +717,8 @@ def _placement(state, plot_id, quantity, exclude_unit=None):
         )
 
 
-def _queue(season, tribe, user, data, now):
-    state = season.state
+def _queue(tournament, tribe, user, data, now):
+    state = tournament.state
     kind = _choice(data, 'kind', ('gather', 'craft', 'build'))
     plot = _owned_plot(state, tribe['id'], _integer(data, 'plot_id'))
     source = _choice(data, 'source', ('personal', 'tribe'), 'tribe')
@@ -702,7 +772,7 @@ def _queue(season, tribe, user, data, now):
     end = start + timedelta(seconds=seconds)
     if end > now + timedelta(seconds=QUEUE_SECONDS):
         raise ValidationError('Your worker queue cannot exceed 24 hours.')
-    if end > season.ends_at:
+    if end > tournament.ends_at:
         raise ValidationError('This assignment would finish after the final battle.')
     if kind == 'gather':
         overlaps = [
@@ -753,23 +823,23 @@ def _queue(season, tribe, user, data, now):
     }
     state['jobs'].append(job)
     bound = '' if item in BUILDINGS or item in UNITS or item in DEFENSES else f' for {_place(destination)}'
-    _log(season, tribe['id'], user.pk, f'Queued {quantity} {_name(item)} ({kind}){bound}.')
+    _log(tournament, tribe['id'], user.pk, f'Queued {quantity} {_name(item)} ({kind}){bound}.')
 
 
-def _cancel_job(season, tribe, user, data):
-    job = _find(season.state['jobs'], _integer(data, 'job_id'), 'Job')
+def _cancel_job(tournament, tribe, user, data):
+    job = _find(tournament.state['jobs'], _integer(data, 'job_id'), 'Job')
     if job['user_id'] != user.pk:
         raise PermissionDenied('Only the worker can cancel their assignment.')
     if job['status'] in ('completed', 'cancelled'):
         raise ValidationError('That assignment is no longer active.')
-    inventory = _inventory(season.state, tribe, user.pk, job['source'])
+    inventory = _inventory(tournament.state, tribe, user.pk, job['source'])
     for item, amount in job['inputs'].items():
         _items(inventory, item, amount * (job['quantity'] - job['completed']))
     job['status'] = 'cancelled'
     # Keep later reservations at their advertised times; shifting would violate
     # other workers' gathering-capacity reservations. They can be cancelled too.
     returned = f' and unused materials went back to {_place(job["source"])}' if job['inputs'] else ''
-    _log(season, tribe['id'], user.pk, f'Cancelled an assignment; completed work was kept{returned}.')
+    _log(tournament, tribe['id'], user.pk, f'Cancelled an assignment; completed work was kept{returned}.')
 
 
 def _restore_units(state, listing, tribe_id, controller_id, plot_id, quantity):
@@ -788,8 +858,8 @@ def _restore_units(state, listing, tribe_id, controller_id, plot_id, quantity):
     )
 
 
-def _trade(season, tribe, user, action, data):
-    state = season.state
+def _trade(tournament, tribe, user, action, data):
+    state = tournament.state
     if action == 'create_listing':
         kind = _choice(data, 'kind', ('sell', 'buy'))
         item = _choice(data, 'item', [*TRADE_ITEMS, *UNITS, *DEFENSES])
@@ -818,8 +888,8 @@ def _trade(season, tribe, user, action, data):
         elif kind == 'sell':
             _items(_inventory(state, tribe, user.pk, account), item, -quantity, _place(account, owner='your'))
         else:
-            wallets = _wallets(season, [user.pk]) if account == 'personal' else {}
-            _pay(season, tribe, user.pk, account, quantity * price, wallets, 'buy_order_escrow')
+            wallets = _wallets(tournament, [user.pk]) if account == 'personal' else {}
+            _pay(tournament, tribe, user.pk, account, quantity * price, wallets, 'buy_order_escrow')
         listing = {
             'id': _id(state),
             'kind': kind,
@@ -840,7 +910,7 @@ def _trade(season, tribe, user, action, data):
         else:
             terms = f'from {_place(account)}'
         _log(
-            season,
+            tournament,
             tribe['id'],
             user.pk,
             f'Listed {kind} order #{listing["id"]}: {quantity} {_name(item)} at {price} TNB each, {terms}.',
@@ -860,9 +930,9 @@ def _trade(season, tribe, user, action, data):
         elif listing['kind'] == 'sell':
             _items(_inventory(state, owner_tribe, user.pk, listing['account']), listing['item'], quantity)
         else:
-            wallets = _wallets(season, [user.pk]) if listing['account'] == 'personal' else {}
+            wallets = _wallets(tournament, [user.pk]) if listing['account'] == 'personal' else {}
             _credit(
-                season,
+                tournament,
                 owner_tribe,
                 user.pk,
                 listing['account'],
@@ -877,7 +947,7 @@ def _trade(season, tribe, user, action, data):
         else:
             returned = f'TNB returned to {_place(listing["account"], "tnb")}'
         _log(
-            season,
+            tournament,
             tribe['id'],
             user.pk,
             f'Cancelled order #{listing["id"]}: {quantity} {_name(listing["item"])} at {listing["price"]} TNB each; {returned}.',
@@ -894,28 +964,28 @@ def _trade(season, tribe, user, action, data):
     ids = [user.pk] if account == 'personal' else []
     if listing['user_id'] and owner_account == 'personal':
         ids.append(listing['user_id'])
-    wallets = _wallets(season, ids) if ids else {}
+    wallets = _wallets(tournament, ids) if ids else {}
     listing['quantity'] -= quantity
     if listing['kind'] == 'sell':
-        _pay(season, tribe, user.pk, account, amount, wallets, 'market_purchase')
+        _pay(tournament, tribe, user.pk, account, amount, wallets, 'market_purchase')
         if listing.get('escrow_unit'):
             _restore_units(state, listing, tribe['id'], user.pk, _integer(data, 'plot_id'), quantity)
         else:
             _items(_inventory(state, tribe, user.pk, account), listing['item'], quantity)
         if listing['user_id'] is None:
-            season.system_revenue += amount
+            tournament.system_revenue += amount
         else:
-            _credit(season, owner_tribe, listing['user_id'], owner_account, amount, wallets, 'market_sale')
+            _credit(tournament, owner_tribe, listing['user_id'], owner_account, amount, wallets, 'market_sale')
     else:
         _items(_inventory(state, tribe, user.pk, account), listing['item'], -quantity, _place(account, owner='your'))
         _items(_inventory(state, owner_tribe, listing['user_id'], owner_account), listing['item'], quantity)
-        _credit(season, tribe, user.pk, account, amount, wallets, 'buy_order_filled')
+        _credit(tournament, tribe, user.pk, account, amount, wallets, 'buy_order_filled')
     counterparty = owner_tribe['name'] if owner_tribe else 'the opening market'
     name = _name(listing['item'])
     # Whoever fills a sell order pays; whoever fills a buy order is paid. The order's owner is on the other side.
     selling = listing['kind'] == 'sell'
     _log(
-        season,
+        tournament,
         tribe['id'],
         user.pk,
         f'Filled order #{listing["id"]} with {counterparty}: {quantity} {name} at {listing["price"]} TNB each '
@@ -923,7 +993,7 @@ def _trade(season, tribe, user, action, data):
     )
     if owner_tribe:
         _log(
-            season,
+            tournament,
             owner_tribe['id'],
             user.pk,
             f'Order #{listing["id"]} filled by {tribe["name"]}: {quantity} {name} for {amount} TNB '
@@ -931,39 +1001,39 @@ def _trade(season, tribe, user, action, data):
         )
 
 
-def _active_action(season, tribe, user, action, data, now):
-    state = season.state
+def _active_action(tournament, tribe, user, action, data, now):
+    state = tournament.state
     if action in ('treasury_deposit', 'treasury_withdraw'):
         amount = _integer(data, 'amount')
-        wallet = _wallets(season, [user.pk])[user.pk]
+        wallet = _wallets(tournament, [user.pk])[user.pk]
         if action == 'treasury_deposit':
-            _money(season, wallet, amount, action)
+            _money(tournament, wallet, amount, action)
             tribe['treasury'] += amount
         else:
             if tribe['treasury'] < amount:
                 raise ValidationError('Not enough TNB in the treasury.')
             tribe['treasury'] -= amount
-            _money(season, wallet, -amount, action)
+            _money(tournament, wallet, -amount, action)
         if action == 'treasury_deposit':
-            _log(season, tribe['id'], user.pk, f'Deposited {amount} TNB from their wallet into the treasury.')
+            _log(tournament, tribe['id'], user.pk, f'Deposited {amount} TNB from their wallet into the treasury.')
         else:
-            _log(season, tribe['id'], user.pk, f'Withdrew {amount} TNB from the treasury into their wallet.')
+            _log(tournament, tribe['id'], user.pk, f'Withdrew {amount} TNB from the treasury into their wallet.')
     elif action == 'purchase_land':
         plot = _find(state['plots'], _integer(data, 'plot_id'), 'Plot')
         if plot['tribe_id'] is not None:
             raise ValidationError('This land is already owned.')
         if not any(p['tribe_id'] == tribe['id'] and distance(p, plot) == 1 for p in state['plots']):
             raise ValidationError('New land must be adjacent to your existing territory.')
-        _pay(season, tribe, user.pk, 'tribe', plot['price'], {}, 'land_purchase')
-        season.system_revenue += plot['price']
+        _pay(tournament, tribe, user.pk, 'tribe', plot['price'], {}, 'land_purchase')
+        tournament.system_revenue += plot['price']
         plot['tribe_id'] = tribe['id']
-        _log(season, tribe['id'], user.pk, f'Purchased land ({plot["x"]}, {plot["y"]}) for {plot["price"]} TNB.')
+        _log(tournament, tribe['id'], user.pk, f'Purchased land ({plot["x"]}, {plot["y"]}) for {plot["price"]} TNB.')
     elif action == 'queue':
-        _queue(season, tribe, user, data, now)
+        _queue(tournament, tribe, user, data, now)
     elif action == 'cancel_job':
-        _cancel_job(season, tribe, user, data)
+        _cancel_job(tournament, tribe, user, data)
     elif action in ('create_listing', 'fill_listing', 'cancel_listing'):
-        _trade(season, tribe, user, action, data)
+        _trade(tournament, tribe, user, action, data)
     elif action == 'transfer_items':
         item = _choice(data, 'item', TRADE_ITEMS)
         quantity = _integer(data, 'quantity', 1, 1_000_000)
@@ -980,27 +1050,27 @@ def _active_action(season, tribe, user, action, data, now):
         _items(_inventory(state, recipient_tribe, recipient_id, destination), item, quantity)
         goods = f'{quantity} {_name(item)} from {_place(source)}'
         if recipient_tribe_id != tribe['id']:
-            _log(season, tribe['id'], user.pk, f'Sent {goods} to {recipient_tribe["name"]}.')
+            _log(tournament, tribe['id'], user.pk, f'Sent {goods} to {recipient_tribe["name"]}.')
             _log(
-                season,
+                tournament,
                 recipient_tribe_id,
                 user.pk,
                 f'Sent {quantity} {_name(item)} from {tribe["name"]} into the warehouse.',
             )
         elif destination == 'tribe':
-            _log(season, tribe['id'], user.pk, f'Stored {goods} in the warehouse.')
+            _log(tournament, tribe['id'], user.pk, f'Stored {goods} in the warehouse.')
         elif recipient_id == user.pk:
-            _log(season, tribe['id'], user.pk, f'Took {goods} into their pack.')
+            _log(tournament, tribe['id'], user.pk, f'Took {goods} into their pack.')
         else:
             recipient = next(member for member in tribe['members'] if member['id'] == recipient_id)
-            _log(season, tribe['id'], user.pk, f'Gave {goods} to {recipient["username"]}.')
+            _log(tournament, tribe['id'], user.pk, f'Gave {goods} to {recipient["username"]}.')
     elif action == 'transfer_tnb':
         amount = _integer(data, 'amount')
         target = _find(state['tribes'], _integer(data, 'recipient_tribe_id'), 'Tribe')
-        _pay(season, tribe, user.pk, 'tribe', amount, {}, 'tribal_transfer')
+        _pay(tournament, tribe, user.pk, 'tribe', amount, {}, 'tribal_transfer')
         target['treasury'] += amount
-        _log(season, tribe['id'], user.pk, f'Sent {amount} TNB from the treasury to {target["name"]}.')
-        _log(season, target['id'], user.pk, f'Sent {amount} TNB from {tribe["name"]} into the treasury.')
+        _log(tournament, tribe['id'], user.pk, f'Sent {amount} TNB from the treasury to {target["name"]}.')
+        _log(tournament, target['id'], user.pk, f'Sent {amount} TNB from {tribe["name"]} into the treasury.')
     elif action in ('deploy', 'transfer_unit'):
         unit = _find(state['units'], _integer(data, 'unit_id'), 'Unit')
         if unit['controller_id'] != user.pk or unit['tribe_id'] != tribe['id']:
@@ -1016,7 +1086,7 @@ def _active_action(season, tribe, user, action, data, now):
             # Detach a produced batch from its job: future completed units stay with the original worker.
             unit.pop('job_id', None)
             _log(
-                season,
+                tournament,
                 target_tribe['id'],
                 user.pk,
                 f'Received {unit["quantity"]} {unit["item"]}; targeting control transferred to player {recipient_id}.',
@@ -1039,7 +1109,7 @@ def _active_action(season, tribe, user, action, data, now):
         if action == 'transfer_unit':
             recipient = next(member for member in target_tribe['members'] if member['id'] == recipient_id)
             _log(
-                season,
+                tournament,
                 tribe['id'],
                 user.pk,
                 f'Transferred {unit["quantity"]} {unit["item"]} to {recipient["username"]} of {target_tribe["name"]} at ({plot["x"]}, {plot["y"]}); targets cleared.',
@@ -1047,7 +1117,7 @@ def _active_action(season, tribe, user, action, data, now):
         else:
             target_name = _find(state['tribes'], target, 'Tribe')['name'] if target is not None else 'unassigned'
             _log(
-                season,
+                tournament,
                 tribe['id'],
                 user.pk,
                 f'Deployed {unit["quantity"]} {unit["item"]} at ({plot["x"]}, {plot["y"]}); target: {target_name}.',
@@ -1066,7 +1136,7 @@ def _active_action(season, tribe, user, action, data, now):
                 'status': 'open',
             }
         )
-        _log(season, tribe['id'], user.pk, 'Created a tribal work order.')
+        _log(tournament, tribe['id'], user.pk, 'Created a tribal work order.')
     elif action == 'cancel_work_order':
         order = _find(state['work_orders'], _integer(data, 'work_order_id'), 'Work order')
         if order['tribe_id'] != tribe['id']:
@@ -1076,7 +1146,12 @@ def _active_action(season, tribe, user, action, data, now):
         if order['item'] in TRADE_ITEMS:
             _items(tribe['inventory'], order['item'], order['contributed'])
         order['status'] = 'cancelled'
-        _log(season, tribe['id'], user.pk, f'Cancelled {order["title"]}; reserved materials returned to the warehouse.')
+        _log(
+            tournament,
+            tribe['id'],
+            user.pk,
+            f'Cancelled {order["title"]}; reserved materials returned to the warehouse.',
+        )
     elif action == 'contribute_work_order':
         order = _find(state['work_orders'], _integer(data, 'work_order_id'), 'Work order')
         if order['tribe_id'] != tribe['id']:
@@ -1095,7 +1170,7 @@ def _active_action(season, tribe, user, action, data, now):
             order['status'] = 'completed'
             _items(tribe['inventory'], order['item'], order['quantity'])
         _log(
-            season,
+            tournament,
             tribe['id'],
             user.pk,
             f'Contributed {quantity} {_name(order["item"])} from {_place(source)} to {order["title"]}.',
@@ -1104,126 +1179,121 @@ def _active_action(season, tribe, user, action, data, now):
         raise ValidationError('Unknown game action.')
 
 
-RECRUIT_ACTIONS = {
-    'create_tribe',
-    'update_tribe',
-    'apply',
-    'invite',
-    'accept_invite',
-    'accept_application',
-    'remove_member',
-    'leave',
-}
-
-
-def _founded_tribe(season, user):
-    if season.status == 'finished' or timezone.now() >= season.ends_at:
-        raise ValidationError('This season has ended; all actions are locked.')
-    tribe = _tribe(season.state, user.pk, required=False)
+def _founded_tribe(tournament, user):
+    if tournament.status == 'finished' or timezone.now() >= tournament.ends_at:
+        raise ValidationError('This tournament has ended; all actions are locked.')
+    tribe = _tribe(tournament.state, user.pk, required=False)
     if not tribe or tribe['founder_id'] != user.pk:
         raise PermissionDenied('Only the founder can change the tribe emblem.')
     return tribe
 
 
-def set_emblem(user, season_id, image, request=None):
-    """Make a square picture the emblem of the tribe the user founded, in any season that is still open."""
+def set_emblem(user, tournament_id, image, request=None):
+    """Make a square picture the emblem of the tribe the user founded, in any tournament that is still open."""
     is_valid, error = validate_image_dimensions(image, EMBLEM_IMAGE_SIZE, EMBLEM_IMAGE_SIZE)
     if not is_valid:
         raise ValidationError({'image': [error]})
     # Reading the dimensions leaves the file position at the end
     image.seek(0)
-    tick_world()
+    advance_tournament(tournament_id)
     try:
-        _founded_tribe(Season.objects.get(pk=season_id), user)
-    except Season.DoesNotExist:
-        raise NotFound('Season not found.')
-    # Only a founder gets this far, and the file is stored before the world lock is taken so that a slow
-    # upload never holds up other players. The founder is checked again once the season is locked.
+        _founded_tribe(Tournament.objects.get(pk=tournament_id), user)
+    except Tournament.DoesNotExist:
+        raise NotFound('Tournament not found.')
+    # Only a founder gets this far, and the file is stored before the tournament lock is taken so that a slow
+    # upload never holds up other players. The founder is checked again once the tournament is locked.
     file = process_image(image)
     name = default_storage.save(f'images/{file.name}', file)
     with transaction.atomic():
-        _lock_world()
-        season = Season.objects.select_for_update().get(pk=season_id)
-        tribe = _founded_tribe(season, user)
+        tournament = Tournament.objects.select_for_update().get(pk=tournament_id)
+        tribe = _founded_tribe(tournament, user)
         tribe['emblem_image'] = name
-        _log(season, tribe['id'], user.pk, 'Changed the tribe emblem.')
-        season.save(update_fields=['state'])
-        return _serialize(season, user, request)
+        _log(tournament, tribe['id'], user.pk, 'Changed the tribe emblem.')
+        tournament.save(update_fields=['state'])
+        return _serialize(tournament, user, request)
 
 
 def perform_action(user, data, request=None):
     if not isinstance(data, dict):
         raise ValidationError('Expected an action object.')
+    tournament_id = _integer(data, 'tournament_id')
+    advance_tournament(tournament_id)
     try:
         request_id = UUID(str(data.get('request_id')))
     except (ValueError, TypeError, AttributeError):
         raise ValidationError('A valid request_id UUID is required.')
-    season_id = _integer(data, 'season_id')
     action = _text(data, 'action', 40, required=True)
     fingerprint = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-    tick_world()
+    rejection = None
     with transaction.atomic():
-        _lock_world()
-        receipt = ActionReceipt.objects.filter(actor=user, request_id=request_id).first()
+        tournament = _locked_tournament(tournament_id)
+        now = timezone.now()
+        _advance(tournament, now)
+        receipt = ActionReceipt.objects.filter(tournament=tournament, actor=user, request_id=request_id).first()
         if receipt:
             if receipt.fingerprint != fingerprint:
-                raise RequestConflict()
-            return _serialize(Season.objects.get(pk=receipt.season_id), user, request)
-        try:
-            season = Season.objects.select_for_update().get(pk=season_id)
-        except Season.DoesNotExist:
-            raise NotFound('Season not found.')
-        now = timezone.now()
-        if season.status == 'finished' or now >= season.ends_at:
-            raise ValidationError('This season has ended; all actions are locked.')
-        _advance(season, now)
-        if action in RECRUIT_ACTIONS:
-            if season.status != 'recruiting':
-                raise ValidationError('Team rosters are locked during the season.')
-            _recruit(season, user, action, data)
-        else:
-            tribe = _tribe(season.state, user.pk)
-            if action == 'message':
-                target = _find(season.state['tribes'], _integer(data, 'to_tribe_id', default=tribe['id']), 'Tribe')
-                text = _text(data, 'text', 2000, required=True)
-                last = [
-                    m for m in season.state['messages'] if m['user_id'] == user.pk and m['to_tribe_id'] == target['id']
-                ]
-                if last and (now - parse_datetime(last[-1]['created_at'])).total_seconds() < 2:
-                    raise ValidationError('Please wait a moment before sending another message.')
-                season.state['messages'].append(
-                    {
-                        'id': _id(season.state),
-                        'from_tribe_id': tribe['id'],
-                        'to_tribe_id': target['id'],
-                        'user_id': user.pk,
-                        'username': user.username,
-                        'text': text,
-                        'created_at': now.isoformat(),
-                    }
-                )
-                _log(season, tribe['id'], user.pk, f'Sent a message to {target["name"]}.')
+                rejection = RequestConflict()
             else:
-                if season.status != 'active':
-                    raise ValidationError('Production, trading and treasury TNB open when the season starts.')
-                _active_action(season, tribe, user, action, data, now)
-        _conserve(season)
-        season.save()
-        ActionReceipt.objects.create(
-            season=season, actor=user, request_id=request_id, fingerprint=fingerprint, action=action
+                return _serialize(tournament, user, request)
+        else:
+            # Savepoint rolls back a rejected command, while the outer transaction
+            # commits start/finish if a deadline passed while waiting for the lock.
+            try:
+                with transaction.atomic():
+                    if tournament.status == 'finished':
+                        raise ValidationError('This tournament has ended; all actions are locked.')
+                    if not tournament.participants.filter(user=user).exists():
+                        raise PermissionDenied('You are not enrolled in this tournament.')
+                    tribe = _tribe(tournament.state, user.pk)
+                    _execute_action(tournament, tribe, user, action, data, now)
+                    _conserve(tournament)
+                    tournament.save()
+                    ActionReceipt.objects.create(
+                        tournament=tournament, actor=user, request_id=request_id, fingerprint=fingerprint, action=action
+                    )
+            except APIException as exc:
+                rejection = exc
+        if rejection is None:
+            result = _serialize(tournament, user, request)
+    if rejection is not None:
+        raise rejection
+    return result
+
+
+def _execute_action(tournament, tribe, user, action, data, now):
+    if action == 'message':
+        target = _find(tournament.state['tribes'], _integer(data, 'to_tribe_id', default=tribe['id']), 'Tribe')
+        text = _text(data, 'text', 2000, required=True)
+        last = [m for m in tournament.state['messages'] if m['user_id'] == user.pk and m['to_tribe_id'] == target['id']]
+        if last and (now - parse_datetime(last[-1]['created_at'])).total_seconds() < 2:
+            raise ValidationError('Please wait a moment before sending another message.')
+        tournament.state['messages'].append(
+            {
+                'id': _id(tournament.state),
+                'from_tribe_id': tribe['id'],
+                'to_tribe_id': target['id'],
+                'user_id': user.pk,
+                'username': user.username,
+                'text': text,
+                'created_at': now.isoformat(),
+            }
         )
-        return _serialize(season, user, request)
+        _log(tournament, tribe['id'], user.pk, f'Sent a message to {target["name"]}.')
+    else:
+        if tournament.status != 'active':
+            raise ValidationError('Production, trading and treasury TNB open when the tournament starts.')
+        _active_action(tournament, tribe, user, action, data, now)
 
 
-def activity_page(user, season_id, before=None, request=None):
+def activity_page(user, tournament_id, before=None, request=None):
     try:
-        season = Season.objects.get(pk=season_id)
-    except Season.DoesNotExist:
-        raise NotFound('Season not found.')
-    tribe = _tribe(season.state, user.pk, required=False)
+        tournament = Tournament.objects.get(pk=tournament_id)
+    except Tournament.DoesNotExist:
+        raise NotFound('Tournament not found.')
+    tribe = _tribe(tournament.state, user.pk, required=False)
     if tribe is None:
-        raise PermissionDenied('Activity is private to this season’s tribe members.')
-    query = season.activity.filter(tribe_id=tribe['id']).select_related('user').order_by('-id')
+        raise PermissionDenied('Activity is private to this tournament’s tribe members.')
+    query = tournament.activity.filter(tribe_id=tribe['id']).select_related('user').order_by('-id')
     if before is not None:
         query = query.filter(pk__lt=before)
     rows = list(query[:101])
@@ -1242,18 +1312,18 @@ def activity_page(user, season_id, before=None, request=None):
     return {'results': results, 'next_before': results[-1]['id'] if len(rows) > 100 else None}
 
 
-def messages_page(user, season_id, before=None, request=None):
+def messages_page(user, tournament_id, before=None, request=None):
     try:
-        season = Season.objects.get(pk=season_id)
-    except Season.DoesNotExist:
-        raise NotFound('Season not found.')
-    tribe = _tribe(season.state, user.pk, required=False)
+        tournament = Tournament.objects.get(pk=tournament_id)
+    except Tournament.DoesNotExist:
+        raise NotFound('Tournament not found.')
+    tribe = _tribe(tournament.state, user.pk, required=False)
     if tribe is None:
-        raise PermissionDenied('Correspondence is private to this season’s tribe members.')
+        raise PermissionDenied('Correspondence is private to this tournament’s tribe members.')
     rows = sorted(
         (
             message
-            for message in season.state['messages']
+            for message in tournament.state['messages']
             if tribe['id'] in (message['from_tribe_id'], message['to_tribe_id'])
             and (before is None or message['id'] < before)
         ),
