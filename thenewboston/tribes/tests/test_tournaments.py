@@ -58,6 +58,7 @@ def test_public_directory_metadata_and_unassigned_participant(tribes_game):
     assert public == {
         'id': tournament.pk,
         'title': 'Test tournament',
+        'cover_image': None,
         'status': 'upcoming',
         'starts_at': tournament.starts_at.isoformat(),
         'ends_at': tournament.ends_at.isoformat(),

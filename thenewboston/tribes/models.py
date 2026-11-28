@@ -5,6 +5,7 @@ from django.db import models
 
 class Tournament(models.Model):
     title = models.CharField(max_length=120)
+    cover_image = models.ImageField(upload_to='images/tribes/covers/', blank=True)
     max_players = models.PositiveIntegerField()
     status = models.CharField(max_length=16, default='upcoming')
     starts_at = models.DateTimeField()

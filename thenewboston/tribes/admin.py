@@ -60,7 +60,7 @@ class TournamentAdmin(admin.ModelAdmin):
         return super().get_queryset(request).annotate(_participant_count=Count('participants'))
 
     def get_fieldsets(self, request, obj=None):
-        fieldsets = [(None, {'fields': ('title', 'starts_at', 'ends_at', 'max_players')})]
+        fieldsets = [(None, {'fields': ('title', 'cover_image', 'starts_at', 'ends_at', 'max_players')})]
         if obj:
             fieldsets.extend(
                 [
@@ -90,6 +90,11 @@ class TournamentAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         values = {field: form.cleaned_data[field] for field in ('title', 'starts_at', 'ends_at', 'max_players')}
+        # A missing upload retains the current file; ClearableFileInput returns False for an explicit clear.
+        if form.cleaned_data.get('cover_image') is False:
+            values['cover_image'] = False
+        elif 'cover_image' in request.FILES:
+            values['cover_image'] = form.cleaned_data['cover_image']
         if change:
             saved = services.update_tournament(obj.pk, actor=request.user, **values)
         else:
