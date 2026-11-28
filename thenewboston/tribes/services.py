@@ -26,6 +26,7 @@ from thenewboston.general.utils.image import process_image, validate_image_dimen
 from thenewboston.users.models import User
 from thenewboston.wallets.models import Wallet
 
+from .images import prepare_cover_image
 from .models import ActionReceipt, Activity, MoneyEntry, Tournament, TournamentParticipant
 from .rules import (
     BUILDING_CAPACITY,
@@ -392,11 +393,12 @@ def sweep_tournaments():
     return {'processed': processed, 'failed': failed}
 
 
-def tournament_summary(tournament, user=None):
+def tournament_summary(tournament, user=None, request=None):
     user_id = user.pk if user is not None and user.is_authenticated else None
     return {
         'id': tournament.pk,
         'title': tournament.title,
+        'cover_image': _media_url(tournament.cover_image.name, request),
         'status': tournament.status,
         'starts_at': tournament.starts_at.isoformat(),
         'ends_at': tournament.ends_at.isoformat(),
@@ -494,7 +496,7 @@ def _serialize(tournament, user, request=None):
             'wallet_balance': wallet.balance if wallet else 0,
         }
     return {
-        'tournament': tournament_summary(tournament, user),
+        'tournament': tournament_summary(tournament, user, request),
         'server_time': timezone.now().isoformat(),
         'catalog': catalog(),
         'viewer': viewer,
@@ -561,22 +563,35 @@ def _configuration(*, title, starts_at, ends_at, max_players):
 
 
 @transaction.atomic
-def create_tournament(*, title, starts_at, max_players, actor, ends_at=None):
+def create_tournament(*, title, starts_at, max_players, actor, ends_at=None, cover_image=None):
     _require_admin(actor, 'add_tournament')
     values = _configuration(title=title, starts_at=starts_at, ends_at=ends_at, max_players=max_players)
-    return Tournament.objects.create(**values, state=new_state())
+    cover = prepare_cover_image(cover_image) if cover_image else ''
+    return Tournament.objects.create(**values, state=new_state(), cover_image=cover)
 
 
 @transaction.atomic
-def update_tournament(tournament_id, *, title, starts_at, max_players, actor, ends_at=None):
+def update_tournament(tournament_id, *, title, starts_at, max_players, actor, ends_at=None, cover_image=None):
     tournament = _editable_tournament(tournament_id, actor)
     values = _configuration(title=title, starts_at=starts_at, ends_at=ends_at, max_players=max_players)
     if tournament.participants.count() > max_players:
         raise ValidationError('Capacity cannot be lower than the enrolled player count.')
+    old_cover = tournament.cover_image.name
+    if cover_image is not None:
+        values['cover_image'] = prepare_cover_image(cover_image) if cover_image else ''
     for key, value in values.items():
         setattr(tournament, key, value)
     tournament.save(update_fields=list(values))
+    if old_cover and old_cover != tournament.cover_image.name:
+        transaction.on_commit(lambda: _delete_cover(old_cover))
     return tournament
+
+
+def _delete_cover(name):
+    try:
+        Tournament._meta.get_field('cover_image').storage.delete(name)
+    except Exception:
+        logger.exception('Could not delete replaced tournament cover %s', name)
 
 
 def _participant(tournament, user_id):

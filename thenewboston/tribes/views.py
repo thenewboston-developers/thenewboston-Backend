@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Tournament
+from .rules import catalog
 from .services import (
     activity_page,
     get_state,
@@ -17,6 +18,13 @@ from .services import (
     sweep_tournaments,
     tournament_summary,
 )
+
+
+class CatalogView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        return Response(catalog())
 
 
 @method_decorator(transaction.non_atomic_requests, name='dispatch')
@@ -39,7 +47,7 @@ class TournamentsView(APIView):
         if 'before' in request.query_params:
             before = serializers.IntegerField(min_value=1).run_validation(request.query_params['before'])
             query = query.filter(pk__lt=before)
-        return Response([tournament_summary(s, request.user) for s in query[:100]])
+        return Response([tournament_summary(s, request.user, request) for s in query[:100]])
 
 
 @method_decorator(transaction.non_atomic_requests, name='dispatch')

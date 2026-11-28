@@ -1,8 +1,9 @@
 from django.urls import path
 
-from .views import ActionView, ActivityView, EmblemView, MessagesView, StateView, TournamentsView
+from .views import ActionView, ActivityView, CatalogView, EmblemView, MessagesView, StateView, TournamentsView
 
 urlpatterns = [
+    path('tribes/catalog', CatalogView.as_view(), name='tribes-catalog'),
     path('tribes/messages', MessagesView.as_view(), name='tribes-messages'),
     path('tribes/activity', ActivityView.as_view(), name='tribes-activity'),
     path('tribes/state', StateView.as_view(), name='tribes-state'),

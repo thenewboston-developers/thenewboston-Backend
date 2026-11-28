@@ -5,10 +5,23 @@ from django.contrib.admin.widgets import AdminSplitDateTime
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from .images import MAX_COVER_BYTES, validate_cover_image
 from .models import Tournament, TournamentParticipant
 
 
+class TournamentCoverField(forms.ImageField):
+    def to_python(self, data):
+        if data and getattr(data, 'size', 0) > MAX_COVER_BYTES:
+            raise forms.ValidationError('Choose an image no larger than 10 MB.')
+        image = super().to_python(data)
+        return validate_cover_image(image) if image else image
+
+
 class TournamentForm(forms.ModelForm):
+    cover_image = TournamentCoverField(
+        required=False,
+        help_text='Optional JPEG, PNG, or WebP, up to 10 MB. Resized to fit 1600 pixels and saved as JPEG.',
+    )
     ends_at = forms.SplitDateTimeField(
         required=False,
         widget=AdminSplitDateTime(),
@@ -17,7 +30,7 @@ class TournamentForm(forms.ModelForm):
 
     class Meta:
         model = Tournament
-        fields = ('title', 'starts_at', 'ends_at', 'max_players')
+        fields = ('title', 'cover_image', 'starts_at', 'ends_at', 'max_players')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

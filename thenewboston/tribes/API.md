@@ -1,7 +1,11 @@
 # Tribes API contract
 
-GET `/api/tribes/tournaments` returns up to 100 public tournament summaries, newest first. Optional `before` selects older IDs. Summary: `{id,title,status,starts_at,ends_at,max_players,player_count,is_participant}`. Status is `upcoming`, `active`, or `finished`.
-GET `/api/tribes/state?tournament_id=123` returns the selected game's state. The tournament ID is required everywhere; there is no default game and no automatically created game.
+GET `/api/tribes/tournaments` returns up to 100 public tournament summaries, newest first. Optional `before` selects older IDs. Summary: `{id,title,cover_image,status,starts_at,ends_at,max_players,player_count,is_participant}`. Status is `upcoming`, `active`, or `finished`.
+GET `/api/tribes/catalog` returns the public rules catalog directly (the same object as `state.catalog`), requires no authentication or tournament ID, and does not create or advance tournaments.
+
+`cover_image` is an absolute public URL or `null`. Administrators can upload, replace, or clear a tournament cover in the tournament form before kickoff. Uploads accept JPEG, PNG, or WebP up to 10 MB and 25 million pixels; images preserve their aspect ratio, fit within 1600×1600, and are stored as JPEG under unique names. Saving other settings without an upload retains the cover.
+
+GET `/api/tribes/state?tournament_id=123` returns the selected game's state. Game operations require an explicit tournament ID; there is no default game and no automatically created game.
 
 Only administrators create tournaments, enroll existing site users, and assign tribes/captains through Django admin. Users may belong to multiple tournaments and at most one tribe in each. Enrollment can precede tribe assignment. Capacity counts enrolled users. Each tribe has up to eight members; administrators must finish assignment before the scheduled start. All setup and scheduling changes lock at the start time. Empty tournaments still follow their schedule; unassigned enrolled users remain spectators. The default playing duration is seven days, independently configurable per tournament. There are no public creation, application, invitation, join, or leave actions.
 POST `/api/tribes/actions` authenticated `{tournament_id,request_id:UUID,action,...fields}`. All POSTs return fresh state below, retries reuse the UUID and exact payload. Errors use the app’s standard `[{code, message}]` shape (some authentication errors may use `{detail}`); 409 for a reused UUID with a different payload within the same tournament and actor. UUID scope is `(tournament_id, actor_id, request_id)`. IDs are numbers except player dictionary keys. Timestamps ISO UTC.
@@ -10,7 +14,7 @@ State:
 
 ```
 {
- tournament:{id,title,status:'upcoming'|'active'|'finished',starts_at,ends_at,max_players,player_count,is_participant}, server_time,
+ tournament:{id,title,cover_image:string|null,status:'upcoming'|'active'|'finished',starts_at,ends_at,max_players,player_count,is_participant}, server_time,
  catalog:{land:{forest:{resource:'timber',price:40},...},recipes:{lumber:{inputs:{timber:2},seconds:120,facility:null},...},units:{infantry:{damage:10,range:1},...},defenses:{barricade:30,stone_wall:100},buildings:{...},items:string[],trade_items:string[],market_items:string[],work_order_items:string[],max_members:8,queue_seconds:86400,gather_capacity:5,unit_capacity:100,building_capacity:3,currency:'TNB',gather_rate:10},
  viewer: null | {id,username,avatar:string|null,tribe_id:number|null,is_participant:boolean,wallet_balance:number,inventory:{item:quantity},production:{item:quantity},experience:{item:quantity}},
  tribes:[{id,name,emblem,emblem_image:string|null,color,description,motto,founder_id,members:[{id,username,avatar:string|null}], treasury:number|null,inventory:object|null}],
